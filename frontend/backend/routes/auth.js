@@ -90,6 +90,7 @@ router.post("/login", async (req, res) => {
     }
 
     const cleanUsername = username.trim();
+    console.log("[AUTH] Login attempt for:", cleanUsername);
 
     const { data: user, error: lookupError } = await supabase
       .from("users")
@@ -98,7 +99,8 @@ router.post("/login", async (req, res) => {
       .maybeSingle();
 
     if (lookupError) {
-      return res.status(500).json({ error: "Internal server error." });
+      console.error("[AUTH] Supabase lookup error:", lookupError);
+      return res.status(500).json({ error: "Database error." });
     }
 
     const dummyHash = "$2a$12$invalidhashfortimingprotection000000000000000000000000";
@@ -120,12 +122,25 @@ router.post("/login", async (req, res) => {
       user: { id: user.id, username: user.username, avatarUrl: user.avatar_url || null },
     });
   } catch (err) {
-    return res.status(500).json({ error: "Internal server error." });
+    console.error("[AUTH] Login error:", err);
+    return res.status(500).json({ error: "Internal server error.", details: err.message });
   }
 });
 
 router.get("/me", requireAuth, (req, res) => {
   return res.status(200).json({ user: req.user });
+});
+
+router.get("/test", async (_req, res) => {
+  try {
+    const { data, error } = await supabase.from("users").select("count").limit(1);
+    if (error) {
+      return res.status(500).json({ status: "db_error", error: error.message });
+    }
+    return res.json({ status: "ok", message: "Auth service running" });
+  } catch (err) {
+    return res.status(500).json({ status: "error", message: err.message });
+  }
 });
 
 module.exports = router;
