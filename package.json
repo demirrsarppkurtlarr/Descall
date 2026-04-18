@@ -1,0 +1,13 @@
+{
+  "name": "descall-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install-backend": "cd frontend/backend && npm install",
+    "start": "cd frontend/backend && npm start",
+    "build": "cd frontend && npm install && npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

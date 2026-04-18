@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: descall-backend
+    runtime: node
+    buildCommand: cd frontend/backend && npm install
+    startCommand: cd frontend/backend && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: PORT
+        value: 3000
+      - key: ALLOW_ALL_ORIGINS
+        value: "true"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
