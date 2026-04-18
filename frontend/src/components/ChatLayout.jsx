@@ -273,6 +273,8 @@ export default function ChatLayout({
   const [activeGroup, setActiveGroup] = useState(null);
   const [newGroupName, setNewGroupName] = useState("");
   const [selectedMembers, setSelectedMembers] = useState([]);
+  const [groupMessages, setGroupMessages] = useState([]);
+  const [groupComposer, setGroupComposer] = useState("");
   const fileInputRef = useRef(null);
 
   const messagesRef = useRef(null);
@@ -326,7 +328,24 @@ export default function ChatLayout({
 
   const handleOpenGroup = (group) => {
     setActiveGroup(group);
-    // TODO: Load group messages
+    setActiveDmUser(null); // DM'yi kapat
+    // TODO: Load group messages from API
+    setGroupMessages([]);
+  };
+
+  const handleSendGroupMessage = (e) => {
+    e?.preventDefault();
+    const text = groupComposer.trim();
+    if (!text || !activeGroup) return;
+    // TODO: Send via API
+    const newMsg = {
+      id: Date.now().toString(),
+      content: text,
+      sender: { id: me?.id, username: me?.username },
+      created_at: new Date().toISOString(),
+    };
+    setGroupMessages((prev) => [...prev, newMsg]);
+    setGroupComposer("");
   };
 
   const sortedFriends = useMemo(() => [...friends].sort((a, b) => a.username.localeCompare(b.username)), [friends]);
@@ -482,7 +501,7 @@ export default function ChatLayout({
                     key={friend.id}
                     type="button"
                     className={`dm-item ${activeDmUser?.id === friend.id ? "active" : ""}`}
-                    onClick={() => onOpenDm(friend)}
+                    onClick={() => { setActiveGroup(null); onOpenDm(friend); }}
                     whileHover={{ x: 2 }}
                   >
                     <Avatar name={friend.username} size={34} imageUrl={friend.avatarUrl} />
@@ -647,7 +666,7 @@ export default function ChatLayout({
           <div className="panel-title-wrap">
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeDmUser ? `dm-${activeDmUser.id}` : "empty"}
+                key={activeDmUser ? `dm-${activeDmUser.id}` : activeGroup ? `group-${activeGroup.id}` : "empty"}
                 className="panel-title-block"
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -655,10 +674,10 @@ export default function ChatLayout({
                 transition={{ duration: 0.2 }}
               >
                 <strong className="panel-title">
-                  {activeDmUser ? `@${activeDmUser.username}` : "Descall"}
+                  {activeDmUser ? `@${activeDmUser.username}` : activeGroup ? activeGroup.name : "Descall"}
                 </strong>
                 <span className="panel-sub">
-                  {activeDmUser ? "Direct message" : "Select a conversation"}
+                  {activeDmUser ? "Direct message" : activeGroup ? "Group chat" : "Select a conversation"}
                 </span>
               </motion.div>
             </AnimatePresence>
@@ -672,6 +691,16 @@ export default function ChatLayout({
                 </RippleButton>
               </div>
             )}
+            {activeGroup && (
+              <div className="header-call-btns">
+                <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "voice", [])} title="Group voice call">
+                  📞
+                </RippleButton>
+                <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} title="Group video call">
+                  📹
+                </RippleButton>
+              </div>
+            )}
           </div>
           <div className="panel-header-right">
             <span className={`connection-chip ${isOnline ? "online" : "reconnect"}`}>{connectionLabel}</span>
@@ -680,7 +709,7 @@ export default function ChatLayout({
 
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeDmUser ? `dm-${activeDmUser.id}` : "empty"}
+            key={activeDmUser ? `dm-${activeDmUser.id}` : activeGroup ? `group-${activeGroup.id}` : "empty"}
             className="messages-wrap"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -690,7 +719,7 @@ export default function ChatLayout({
             <div className="messages custom-scroll" ref={messagesRef} onScroll={handleMessagesScroll}>
               {loadingOlderDm && activeDmUser && <div className="load-older-banner">Loading older messages…</div>}
 
-              {!activeDmUser && (
+              {!activeDmUser && !activeGroup && (
                 <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Welcome to Descall</h4>
                   <p>Select a friend or start a new conversation to begin messaging.</p>
@@ -749,34 +778,84 @@ export default function ChatLayout({
               <AnimatePresence>
                 {activeDmUser && typingNamesDm.length > 0 && <TypingIndicator key="td" names={typingNamesDm} />}
               </AnimatePresence>
+
+              {/* Group Messages */}
+              {activeGroup && groupMessages.length === 0 && (
+                <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+                  <h4>Group: {activeGroup.name}</h4>
+                  <p>No messages yet. Start the conversation!</p>
+                </motion.div>
+              )}
+
+              {activeGroup && groupMessages.map((msg) => {
+                const fromSelf = msg.sender?.id === me?.id;
+                return (
+                  <motion.article
+                    key={msg.id}
+                    className={`dm-msg ${fromSelf ? "own" : ""}`}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <button type="button" className="dm-msg-avatar" onClick={() => setProfileUser({ username: msg.sender?.username ?? "?", userId: msg.sender?.id })}>
+                      <Avatar name={msg.sender?.username ?? "?"} size={36} />
+                    </button>
+                    <div>
+                      <div className="msg-meta-line">
+                        <span className="msg-author">{msg.sender?.username}</span>
+                        <span className="msg-time msg-time-wrap" data-tooltip={new Date(msg.created_at).toLocaleString()}>
+                          {formatTime(msg.created_at)}
+                        </span>
+                      </div>
+                      <p className="dm-msg-text">{msg.content}</p>
+                    </div>
+                  </motion.article>
+                );
+              })}
             </div>
           </motion.div>
         </AnimatePresence>
 
-        <form
-          className={`composer glass-composer ${inCall ? "composer-dimmed" : ""}`}
-          onSubmit={submitMessage}
-          onBlur={() => flushTyping()}
-        >
-          <input
-            placeholder={activeDmUser ? `Message @${activeDmUser.username}` : "Select a conversation…"}
-            value={composer}
-            onChange={handleComposerChange}
-            disabled={!activeDmUser}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-            className="hidden-file-input"
-            onChange={handleFileUpload}
-            disabled={!activeDmUser || uploading}
-          />
-          <RippleButton type="button" className="attach-btn" onClick={() => fileInputRef.current?.click()} disabled={!activeDmUser || uploading} title="Attach file">
-            {uploading ? "⏳" : "📎"}
-          </RippleButton>
-          <RippleButton type="submit" disabled={!activeDmUser}>Send</RippleButton>
-        </form>
+        {/* DM Composer */}
+        {activeDmUser && (
+          <form
+            className={`composer glass-composer ${inCall ? "composer-dimmed" : ""}`}
+            onSubmit={submitMessage}
+            onBlur={() => flushTyping()}
+          >
+            <input
+              placeholder={`Message @${activeDmUser.username}`}
+              value={composer}
+              onChange={handleComposerChange}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
+              className="hidden-file-input"
+              onChange={handleFileUpload}
+              disabled={uploading}
+            />
+            <RippleButton type="button" className="attach-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Attach file">
+              {uploading ? "⏳" : "📎"}
+            </RippleButton>
+            <RippleButton type="submit">Send</RippleButton>
+          </form>
+        )}
+
+        {/* Group Composer */}
+        {activeGroup && (
+          <form
+            className={`composer glass-composer ${inCall ? "composer-dimmed" : ""}`}
+            onSubmit={handleSendGroupMessage}
+          >
+            <input
+              placeholder={`Message #${activeGroup.name}`}
+              value={groupComposer}
+              onChange={(e) => setGroupComposer(e.target.value)}
+            />
+            <RippleButton type="submit">Send</RippleButton>
+          </form>
+        )}
       </section>
 
       <aside className="right-rail custom-scroll">
