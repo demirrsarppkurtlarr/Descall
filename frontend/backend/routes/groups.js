@@ -1,9 +1,18 @@
 const express = require("express");
 const supabase = require("../db/supabase");
 const { requireAuth } = require("../middleware/auth");
+const { socketToUser } = require("../runtime/sharedState");
 
 const router = express.Router();
 const MAX_GROUP_SIZE = 15;
+
+// Kullanicinin socket ID'sini bul
+function getUserSocketId(userId) {
+  for (const [socketId, id] of socketToUser.entries()) {
+    if (id === userId) return socketId;
+  }
+  return null;
+}
 
 // Get all groups where user is member
 router.get("/my", requireAuth, async (req, res) => {
@@ -82,6 +91,20 @@ router.post("/create", requireAuth, async (req, res) => {
       .insert(memberRows);
     
     if (memberError) throw memberError;
+    
+    // Socket bildirimi - diger uyelere grup olustugunu bildir
+    const io = req.app.get("io");
+    if (io) {
+      memberIds.forEach(memberId => {
+        const memberSocketId = getUserSocketId(memberId);
+        if (memberSocketId) {
+          io.to(memberSocketId).emit("group:invited", {
+            group: { ...group, memberCount: allMembers.length },
+            invitedBy: req.user.id
+          });
+        }
+      });
+    }
     
     res.json({ 
       message: "Group created", 
