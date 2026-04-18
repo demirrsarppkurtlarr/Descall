@@ -472,20 +472,39 @@ export default function App() {
       )}
       <ChatLayout
         me={me}
+        connectionLabel={connectionLabel}
+        reconnectState={reconnectState}
+        authError={authError}
+        myStatus={myStatus}
         onlineUsers={onlineUsers}
         friends={friends}
+        friendRequests={friendRequests}
+        notifications={notifications}
         activeDmUser={activeDmUser}
         dmMessages={dmMessages}
         dmUnread={dmUnread}
+        dmByUserId={dmByUserId}
+        typingDmUser={typingDmUser}
         onOpenDm={handleOpenDm}
         onSendDm={handleSendDm}
+        onSendDmMedia={handleSendDmMedia}
         onSendFriendRequest={handleSendFriendRequest}
         onAcceptFriend={handleAcceptFriend}
         onDeclineFriend={handleDeclineFriend}
         onRemoveFriend={handleRemoveFriend}
         onLogout={handleLogout}
         onStatusChange={handleStatusChange}
+        friendNotice={friendNotice}
         call={call}
+        onTypingDmStart={emitTypingDmStart}
+        onTypingDmStop={emitTypingDmStop}
+        loadOlderDm={loadOlderDm}
+        dmHasMore={dmHasMore}
+        loadingOlderDm={loadingOlderDm}
+        onNotificationRead={handleNotificationRead}
+        onNotificationReadAll={handleNotificationReadAll}
+        peerScreenSharing={peerScreenSharing}
+        groupCall={groupCall}
       />
     </>
   );
