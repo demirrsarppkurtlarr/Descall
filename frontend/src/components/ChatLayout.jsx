@@ -1,46 +1,241 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useToast } from "../context/ToastContext";
+import "../styles/discord.css";
 import { 
-  Hash, Users, Bell, Pin, Inbox, HelpCircle, 
-  Mic, Headphones, Settings, Plus, Smile, Gift, 
-  Paperclip, Send, Phone, Video, MoreVertical,
-  Search, AtSign, X, ChevronDown, ChevronRight
+  MessageSquare, Users, UserPlus, Bell, Circle, 
+  PanelLeftClose, Settings, Send, Paperclip, 
+  Phone, Video, X, Plus, Clock, Hash, AtSign,
+  Search, LogOut, MoreVertical, ChevronRight, ChevronDown,
+  Smile, Gift, Pin, Inbox, HelpCircle, Headphones, Mic
 } from "lucide-react";
 import SettingsPanel from "./settings/SettingsPanel";
+import VideoConference from "./VideoConference";
 import UserProfilePopover from "./social/UserProfilePopover";
 import RippleButton from "./ui/RippleButton";
+import Avatar from "./ui/Avatar";
+import Modal from "./ui/Modal";
+import { uploadFile } from "../api/media";
+import { getMediaUrl } from "../api/media";
 import { getMyGroups, createGroup } from "../api/groups";
-import "../styles/discord-theme.css";
 
-// Animasyon varyantları
-const slideIn = {
-  hidden: { x: -20, opacity: 0 },
-  visible: { x: 0, opacity: 1, transition: { duration: 0.3 } }
+// ============ ANIMATION VARIANTS ============
+const slideInLeft = {
+  hidden: { x: -30, opacity: 0 },
+  visible: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 30 } }
+};
+
+const slideInRight = {
+  hidden: { x: 30, opacity: 0 },
+  visible: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 30 } }
 };
 
 const fadeIn = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.2 } }
+  visible: { opacity: 1, transition: { duration: 0.3 } }
 };
 
-const messageSlide = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.3 } }
-};
-
-const popIn = {
+const scaleIn = {
   hidden: { scale: 0.8, opacity: 0 },
-  visible: { 
-    scale: 1, 
-    opacity: 1, 
-    transition: { type: "spring", stiffness: 400, damping: 25 }
+  visible: { scale: 1, opacity: 1, transition: { type: "spring", stiffness: 400, damping: 25 } }
+};
+
+const messageVariant = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 500, damping: 30 } }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05, delayChildren: 0.1 }
   }
 };
 
+// ============ STATUS BADGE ============
+function StatusBadge({ status = "offline", size = 12 }) {
+  const colors = {
+    online: "#3ba55d",
+    idle: "#faa61a", 
+    dnd: "#ed4245",
+    offline: "#747f8d"
+  };
+  return (
+    <span 
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: colors[status] || colors.offline,
+        border: `2px solid #2f3136`,
+        display: "inline-block"
+      }} 
+    />
+  );
+}
+
+// ============ SERVER ICON ============
+function ServerIcon({ children, active, onClick, tooltip, delay = 0 }) {
+  return (
+    <motion.div
+      className={`server-icon ${active ? "active" : ""}`}
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ delay, type: "spring", stiffness: 400, damping: 20 }}
+      whileHover={{ scale: 1.08, borderRadius: 16 }}
+      whileTap={{ scale: 0.92 }}
+      onClick={onClick}
+      title={tooltip}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ============ DM ITEM ============
+function DMItem({ friend, active, unread, preview, onClick, index }) {
+  return (
+    <motion.div
+      className={`dm-item ${active ? "active" : ""}`}
+      initial={{ x: -20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ delay: index * 0.03, type: "spring", stiffness: 400 }}
+      whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+      onClick={onClick}
+    >
+      <div className="dm-avatar">
+        <Avatar name={friend.username} size={32} imageUrl={friend.avatarUrl} />
+        <div className="dm-status">
+          <StatusBadge status={friend.status} size={10} />
+        </div>
+      </div>
+      <div className="dm-info">
+        <div className="dm-name">{friend.username}</div>
+        <div className="dm-preview">{preview || "No messages yet"}</div>
+      </div>
+      {unread > 0 && (
+        <motion.div 
+          className="dm-badge"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 500 }}
+        >
+          {unread > 99 ? "99+" : unread}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+// ============ CHANNEL ITEM ============
+function ChannelItem({ icon: Icon, name, active, onClick, index }) {
+  return (
+    <motion.div
+      className={`channel-item ${active ? "active" : ""}`}
+      initial={{ x: -20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ delay: index * 0.03 }}
+      whileHover={{ backgroundColor: "rgba(255,255,255,0.03)", x: 4 }}
+      onClick={onClick}
+    >
+      <Icon size={18} />
+      <span className="channel-name">{name}</span>
+    </motion.div>
+  );
+}
+
+// ============ MESSAGE ============
+function Message({ msg, me, index, onProfileClick }) {
+  const fromSelf = msg.from?.id === me?.id;
+  return (
+    <motion.div
+      className={`message ${fromSelf ? "own" : ""}`}
+      variants={messageVariant}
+      initial="hidden"
+      animate="visible"
+      transition={{ delay: index * 0.03 }}
+      whileHover={{ backgroundColor: "rgba(255,255,255,0.02)" }}
+    >
+      <motion.div 
+        className="message-avatar"
+        whileHover={{ scale: 1.1, rotate: 5 }}
+        onClick={() => onProfileClick(msg.from)}
+      >
+        <Avatar name={msg.from?.username} size={40} imageUrl={msg.from?.avatarUrl} />
+      </motion.div>
+      <div className="message-content">
+        <div className="message-header">
+          <span 
+            className="message-author" 
+            style={{ color: fromSelf ? "#5865F2" : "#fff" }}
+          >
+            {msg.from?.username}
+          </span>
+          <span className="message-time">
+            {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        </div>
+        <div className="message-text">{msg.text}</div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============ COMPOSER ============
+function Composer({ value, onChange, onSubmit, placeholder, disabled }) {
+  return (
+    <motion.form 
+      className="composer"
+      initial={{ y: 50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: 0.2, type: "spring" }}
+      onSubmit={onSubmit}
+    >
+      <div className="composer-inner">
+        <motion.button type="button" className="composer-btn" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+          <Plus size={22} />
+        </motion.button>
+        <motion.button type="button" className="composer-btn" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+          <Gift size={22} />
+        </motion.button>
+        
+        <input
+          className="composer-input"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+        />
+        
+        <motion.button type="button" className="composer-btn" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+          <Paperclip size={22} />
+        </motion.button>
+        <motion.button type="button" className="composer-btn" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+          <Smile size={22} />
+        </motion.button>
+        
+        <motion.button
+          type="submit"
+          className="composer-send"
+          disabled={disabled || !value.trim()}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+        >
+          <Send size={20} />
+        </motion.button>
+      </div>
+    </motion.form>
+  );
+}
+
+// ============ MAIN COMPONENT ============
 export default function ChatLayout({
   me,
   connectionLabel,
+  reconnectState,
+  authError,
+  myStatus,
   onlineUsers,
   friends,
   friendRequests,
@@ -48,19 +243,37 @@ export default function ChatLayout({
   activeDmUser,
   dmMessages,
   dmUnread = {},
+  dmByUserId = {},
+  typingDmUser,
   onOpenDm,
   onSendDm,
+  onSendDmMedia,
   onSendFriendRequest,
   onAcceptFriend,
   onDeclineFriend,
   onRemoveFriend,
   onLogout,
   onStatusChange,
+  friendNotice,
   call,
+  onTypingDmStart,
+  onTypingDmStop,
+  loadOlderDm,
+  dmHasMore,
+  loadingOlderDm,
+  onNotificationRead,
+  onNotificationReadAll,
+  peerScreenSharing = false,
+  groupCall,
 }) {
   const { toast } = useToast();
-  const [sidebarView, setSidebarView] = useState("dms"); // dms, friends
-  const [activeGroup, setActiveGroup] = useState(null);
+  const [sidebarView, setSidebarView] = useState("dms");
+  const [activeGroup, setActiveGroup] = useState(() => {
+    try {
+      const saved = localStorage.getItem("descall_active_group");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [myGroups, setMyGroups] = useState([]);
   const [composer, setComposer] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -70,44 +283,73 @@ export default function ChatLayout({
   const [selectedMembers, setSelectedMembers] = useState([]);
   
   const messagesEndRef = useRef(null);
+  const typingTimerRef = useRef(null);
+  const wasTypingRef = useRef(false);
 
-  // Grupları çek
+  // ============ GROUPS ============
   useEffect(() => {
     if (!me) return;
+    console.log("[ChatLayout] Fetching groups...");
     getMyGroups()
-      .then((data) => setMyGroups(data.groups || []))
-      .catch((err) => console.error("[Groups] Failed:", err));
+      .then((data) => {
+        console.log("[ChatLayout] Groups received:", data);
+        setMyGroups(data.groups || []);
+      })
+      .catch((err) => {
+        console.error("[ChatLayout] Groups error:", err);
+        setMyGroups([]);
+      });
   }, [me]);
 
-  // Scroll to bottom
+  // ============ TYPING ============
+  const flushTyping = useCallback(() => {
+    if (wasTypingRef.current && activeDmUser) {
+      onTypingDmStop?.(activeDmUser.id);
+      wasTypingRef.current = false;
+    }
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+  }, [activeDmUser, onTypingDmStop]);
+
+  useEffect(() => () => flushTyping(), [flushTyping]);
+
+  // ============ SCROLL ============
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [dmMessages, activeDmUser]);
+  }, [dmMessages, activeDmUser, scrollToBottom]);
 
-  // Status renkleri
-  const getStatusColor = (status) => {
-    const colors = {
-      online: "#3ba55d",
-      idle: "#faa61a",
-      dnd: "#ed4245",
-      offline: "#747f8d"
-    };
-    return colors[status] || colors.offline;
-  };
-
-  // Mesaj gönder
+  // ============ HANDLERS ============
   const handleSend = (e) => {
     e.preventDefault();
     if (!composer.trim() || !activeDmUser) return;
+    flushTyping();
     onSendDm?.(activeDmUser.id, composer.trim());
     setComposer("");
+    scrollToBottom();
   };
 
-  // Grup oluştur
+  const handleComposerChange = (value) => {
+    setComposer(value);
+    if (!wasTypingRef.current && activeDmUser) {
+      wasTypingRef.current = true;
+      onTypingDmStart?.(activeDmUser.id);
+    }
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => flushTyping(), 1800);
+  };
+
+  const handleOpenGroup = (group) => {
+    setActiveGroup(group);
+    try { localStorage.setItem("descall_active_group", JSON.stringify(group)); } catch {}
+    onOpenDm?.(null);
+  };
+
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!newGroupName.trim() || selectedMembers.length === 0) return;
@@ -126,272 +368,241 @@ export default function ChatLayout({
     }
   };
 
-  // DM listesi
+  // ============ DM LIST ============
   const dmList = useMemo(() => {
-    return friends.map((f) => {
-      const messages = dmMessages?.filter(m => 
-        m.from?.id === f.id || m.to?.id === f.id
-      ) || [];
-      const lastMsg = messages[messages.length - 1];
-      return {
-        friend: f,
-        unread: dmUnread[f.id] || 0,
-        preview: lastMsg?.text || "",
-        lastTime: lastMsg?.timestamp,
-      };
-    }).sort((a, b) => {
-      if (!a.lastTime) return 1;
-      if (!b.lastTime) return -1;
-      return new Date(b.lastTime) - new Date(a.lastTime);
-    });
-  }, [friends, dmMessages, dmUnread]);
+    return friends
+      .map((f) => {
+        const messages = dmByUserId[f.id] || [];
+        const last = messages[messages.length - 1];
+        return {
+          friend: f,
+          unread: dmUnread[f.id] || 0,
+          preview: last?.text || "",
+        };
+      })
+      .sort((a, b) => (b.unread > 0 ? 1 : -1));
+  }, [friends, dmByUserId, dmUnread]);
+
+  // ============ RENDER ============
+  const inCall = call?.mode === "active" || call?.mode === "outgoing";
+  const typingNamesDm = typingDmUser ? [typingDmUser.username] : [];
 
   return (
-    <div className="discord-app" style={{ display: "flex", height: "100vh", background: "#36393f" }}>
-      {/* NAV RAIL - Sunucu İkonları */}
-      <nav className="nav-rail-discord">
+    <div className="discord-app">
+      {/* ============ NAV RAIL ============ */}
+      <motion.nav 
+        className="nav-rail"
+        variants={slideInLeft}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Home */}
-        <motion.div 
-          className="server-icon server-home active"
-          whileHover={{ scale: 1.05, borderRadius: 16 }}
-          whileTap={{ scale: 0.95 }}
-          title="Direct Messages"
+        <ServerIcon 
+          active={!activeGroup} 
+          onClick={() => { setActiveGroup(null); onOpenDm?.(null); }}
+          tooltip="Direct Messages"
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
           </svg>
-        </motion.div>
+        </ServerIcon>
 
         <div className="server-divider" />
 
-        {/* Gruplar */}
-        {myGroups.map((group, i) => (
-          <motion.div
-            key={group.id}
-            className={`server-icon ${activeGroup?.id === group.id ? "active" : ""}`}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: i * 0.05 }}
-            whileHover={{ scale: 1.05, borderRadius: 16 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setActiveGroup(group)}
-            title={group.name}
-          >
-            {group.name.charAt(0).toUpperCase()}
-          </motion.div>
-        ))}
+        {/* Groups */}
+        <AnimatePresence>
+          {myGroups.map((group, i) => (
+            <ServerIcon
+              key={group.id}
+              active={activeGroup?.id === group.id}
+              onClick={() => handleOpenGroup(group)}
+              tooltip={group.name}
+              delay={i * 0.05}
+            >
+              {group.name.charAt(0).toUpperCase()}
+            </ServerIcon>
+          ))}
+        </AnimatePresence>
 
-        {/* Add Group Button */}
-        <motion.div
-          className="server-icon server-add"
-          whileHover={{ scale: 1.05, borderRadius: 16 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setCreateGroupOpen(true)}
-          title="Create Group"
-        >
+        {/* Add Group */}
+        <ServerIcon onClick={() => setCreateGroupOpen(true)} tooltip="Create Group">
           <Plus size={24} />
-        </motion.div>
-      </nav>
+        </ServerIcon>
+      </motion.nav>
 
-      {/* SIDEBAR - DM/Friends List */}
-      <aside className="sidebar-discord">
+      {/* ============ SIDEBAR ============ */}
+      <motion.aside 
+        className="sidebar"
+        variants={slideInLeft}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.1 }}
+      >
         {/* Header */}
         <div className="sidebar-header">
           <h2>{sidebarView === "dms" ? "Direct Messages" : "Friends"}</h2>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
+          <div className="header-actions">
+            <motion.button 
+              className="header-btn"
+              whileHover={{ scale: 1.1, backgroundColor: "rgba(255,255,255,0.1)" }}
               whileTap={{ scale: 0.9 }}
-              style={{ 
-                width: 28, 
-                height: 28, 
-                borderRadius: 4,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#b9bbbe",
-                background: "transparent"
-              }}
-              onClick={() => setSidebarView("friends")}
+              onClick={() => setSidebarView(sidebarView === "dms" ? "friends" : "dms")}
             >
-              <Users size={18} />
+              {sidebarView === "dms" ? <Users size={18} /> : <MessageSquare size={18} />}
             </motion.button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="sidebar-content">
-          {sidebarView === "dms" ? (
-            <>
-              {/* DM List */}
-              {dmList.map(({ friend, unread, preview }, i) => (
-                <motion.div
-                  key={friend.id}
-                  className={`dm-item-discord ${activeDmUser?.id === friend.id ? "active" : ""}`}
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
-                  whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
-                  onClick={() => onOpenDm(friend)}
-                >
-                  <div className="dm-avatar-discord" style={{ background: friend.color || "#5865F2" }}>
-                    {friend.username.charAt(0).toUpperCase()}
-                    <span 
-                      className="status-indicator" 
-                      style={{ 
-                        background: getStatusColor(friend.status),
-                        border: "3px solid #2f3136"
-                      }}
-                    />
-                  </div>
-                  <div className="dm-info">
-                    <div className="dm-name">{friend.username}</div>
-                    <div className="dm-preview">
-                      {unread > 0 ? `${unread} new message${unread > 1 ? "s" : ""}` : preview}
-                    </div>
-                  </div>
-                  {unread > 0 && (
-                    <motion.div 
-                      className="unread-badge"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                    >
-                      {unread}
-                    </motion.div>
-                  )}
-                </motion.div>
-              ))}
+        <motion.div 
+          className="sidebar-content"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          <AnimatePresence mode="wait">
+            {sidebarView === "dms" ? (
+              <motion.div key="dms" variants={fadeIn}>
+                {/* Online Friends Count */}
+                <div className="category-header">
+                  <ChevronRight size={12} />
+                  ONLINE — {onlineUsers.filter(u => u.status === "online").length}
+                </div>
 
-              {/* Friends Online */}
-              <div className="channel-category">
-                <ChevronRight size={12} />
-                ONLINE — {onlineUsers.filter(u => u.status === "online").length}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Friends View */}
-              <div className="channel-category">FRIENDS</div>
-              {friends.map((friend, i) => (
-                <motion.div
-                  key={friend.id}
-                  className="channel-item"
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
-                  onClick={() => { setSidebarView("dms"); onOpenDm(friend); }}
-                >
-                  <Users size={20} />
-                  <span className="channel-name">{friend.username}</span>
-                  <div className="channel-actions">
-                    <motion.button
-                      className="channel-action-btn"
-                      whileHover={{ scale: 1.1 }}
-                      onClick={(e) => { e.stopPropagation(); call?.startCall?.(friend, "voice"); }}
-                    >
-                      <Phone size={16} />
-                    </motion.button>
-                    <motion.button
-                      className="channel-action-btn"
-                      whileHover={{ scale: 1.1 }}
-                      onClick={(e) => { e.stopPropagation(); call?.startCall?.(friend, "video"); }}
-                    >
-                      <Video size={16} />
-                    </motion.button>
-                  </div>
-                </motion.div>
-              ))}
-            </>
-          )}
-        </div>
+                {/* DM List */}
+                {dmList.map(({ friend, unread, preview }, i) => (
+                  <DMItem
+                    key={friend.id}
+                    friend={friend}
+                    active={activeDmUser?.id === friend.id}
+                    unread={unread}
+                    preview={preview}
+                    onClick={() => { 
+                      setActiveGroup(null);
+                      try { localStorage.removeItem("descall_active_group"); } catch {};
+                      onOpenDm?.(friend); 
+                    }}
+                    index={i}
+                  />
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div key="friends" variants={fadeIn}>
+                <div className="category-header">FRIENDS</div>
+                {friends.map((friend, i) => (
+                  <ChannelItem
+                    key={friend.id}
+                    icon={Users}
+                    name={friend.username}
+                    onClick={() => { 
+                      setSidebarView("dms"); 
+                      onOpenDm?.(friend); 
+                    }}
+                    index={i}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* User Bar */}
-        <div style={{ 
-          padding: "8px 16px", 
-          background: "#292b2f",
-          display: "flex",
-          alignItems: "center",
-          gap: 12
-        }}>
-          <div 
-            className="dm-avatar-discord" 
-            style={{ cursor: "pointer" }}
-            onClick={() => setProfileUser(me)}
-          >
-            {me?.username?.charAt(0).toUpperCase()}
-            <span 
-              className="status-indicator" 
-              style={{ background: "#3ba55d", border: "3px solid #292b2f" }}
-            />
+        <motion.div 
+          className="user-bar"
+          initial={{ y: 50 }}
+          animate={{ y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="user-info" onClick={() => setProfileUser(me)}>
+            <div className="user-avatar">
+              <Avatar name={me?.username} size={32} imageUrl={me?.avatarUrl} />
+              <div className="user-status">
+                <StatusBadge status={myStatus} size={10} />
+              </div>
+            </div>
+            <div className="user-details">
+              <div className="user-name">{me?.username}</div>
+              <div className="user-status-text">{myStatus}</div>
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{me?.username}</div>
-            <div style={{ fontSize: 12, color: "#b9bbbe" }}>Online</div>
+          <div className="user-actions">
+            <motion.button 
+              className="user-btn"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings size={18} />
+            </motion.button>
+            <motion.button 
+              className="user-btn"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onLogout}
+            >
+              <LogOut size={18} />
+            </motion.button>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            style={{ color: "#b9bbbe" }}
-            onClick={() => setSettingsOpen(true)}
-          >
-            <Settings size={20} />
-          </motion.button>
-        </div>
-      </aside>
+        </motion.div>
+      </motion.aside>
 
-      {/* MAIN CHAT AREA */}
-      <main className="chat-container">
+      {/* ============ MAIN CHAT ============ */}
+      <main className="main-chat">
         {/* Header */}
         <motion.header 
           className="chat-header"
-          initial={{ y: -50 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.3 }}
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 400 }}
         >
           {activeDmUser ? (
             <>
-              <div className="chat-header-icon">
-                <AtSign size={24} color="#72767d" />
+              <div className="chat-icon">
+                <AtSign size={24} />
               </div>
-              <div className="chat-header-title">{activeDmUser.username}</div>
-              <div className="chat-header-divider" />
-              <div className="chat-header-topic">
+              <div className="chat-title">{activeDmUser.username}</div>
+              <div className="chat-divider" />
+              <div className="chat-topic">
                 This is the beginning of your direct message history with @{activeDmUser.username}
               </div>
-              <div className="chat-header-actions">
+              <div className="chat-actions">
                 <motion.button 
-                  className="chat-header-btn"
+                  className="chat-action-btn"
                   whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => call?.startCall?.(activeDmUser, "voice")}
+                  disabled={inCall}
                 >
                   <Phone size={20} />
                 </motion.button>
                 <motion.button 
-                  className="chat-header-btn"
+                  className="chat-action-btn"
                   whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => call?.startCall?.(activeDmUser, "video")}
+                  disabled={inCall}
                 >
                   <Video size={20} />
                 </motion.button>
-                <motion.button className="chat-header-btn" whileHover={{ scale: 1.1 }}>
+                <motion.button className="chat-action-btn" whileHover={{ scale: 1.1 }}>
                   <Pin size={20} />
                 </motion.button>
-                <motion.button className="chat-header-btn" whileHover={{ scale: 1.1 }}>
+                <motion.button className="chat-action-btn" whileHover={{ scale: 1.1 }}>
                   <Users size={20} />
                 </motion.button>
               </div>
             </>
           ) : activeGroup ? (
             <>
-              <div className="chat-header-icon">
-                <Hash size={24} color="#72767d" />
+              <div className="chat-icon">
+                <Hash size={24} />
               </div>
-              <div className="chat-header-title">{activeGroup.name}</div>
-              <div className="chat-header-divider" />
-              <div className="chat-header-topic">Group chat</div>
+              <div className="chat-title">{activeGroup.name}</div>
+              <div className="chat-divider" />
+              <div className="chat-topic">Group chat</div>
             </>
           ) : (
-            <div className="chat-header-title">Select a conversation</div>
+            <div className="chat-title">Select a conversation</div>
           )}
         </motion.header>
 
@@ -407,67 +618,57 @@ export default function ChatLayout({
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.4 }}
               >
-                <motion.div 
-                  className="welcome-icon"
+                <motion.div
                   animate={{ 
                     y: [0, -10, 0],
                     rotate: [0, 5, -5, 0]
                   }}
-                  transition={{ 
-                    duration: 4, 
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
+                  transition={{ duration: 4, repeat: Infinity }}
                 >
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="#5865F2">
+                  <svg width="80" height="80" viewBox="0 0 24 24" fill="#5865F2">
                     <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
                   </svg>
                 </motion.div>
-                <div className="welcome-title">Welcome to Descall</div>
-                <div className="welcome-subtitle">
-                  Select a friend from the sidebar to start messaging
-                </div>
+                <h1>Welcome to Descall</h1>
+                <p>Select a friend from the sidebar to start messaging</p>
               </motion.div>
             ) : (
               <motion.div
                 key="messages"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                className="messages-list"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
               >
+                {loadingOlderDm && activeDmUser && (
+                  <div className="loading-banner">Loading older messages…</div>
+                )}
+                
                 {dmMessages?.map((msg, i) => (
-                  <motion.div
+                  <Message
                     key={msg.id || i}
-                    className="message"
-                    variants={messageSlide}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <motion.div 
-                      className="message-avatar"
-                      whileHover={{ scale: 1.1 }}
-                      style={{ 
-                        background: msg.from?.id === me?.id 
-                          ? "#5865F2" 
-                          : "#3ba55d"
-                      }}
-                    >
-                      {msg.from?.username?.charAt(0).toUpperCase()}
-                    </motion.div>
-                    <div className="message-content">
-                      <div className="message-header">
-                        <span className="message-author">
-                          {msg.from?.username}
-                        </span>
-                        <span className="message-timestamp">
-                          {new Date(msg.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="message-text">{msg.text}</div>
-                    </div>
-                  </motion.div>
+                    msg={msg}
+                    me={me}
+                    index={i}
+                    onProfileClick={setProfileUser}
+                  />
                 ))}
+                
+                {typingNamesDm.length > 0 && (
+                  <motion.div 
+                    className="typing-indicator"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <div className="typing-dots">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <span>{typingNamesDm.join(", ")} is typing...</span>
+                  </motion.div>
+                )}
+                
                 <div ref={messagesEndRef} />
               </motion.div>
             )}
@@ -476,248 +677,155 @@ export default function ChatLayout({
 
         {/* Composer */}
         {activeDmUser && (
-          <motion.div 
-            className="composer-discord"
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <form className="composer-inner" onSubmit={handleSend}>
-              <motion.button
-                type="button"
-                className="composer-btn"
-                whileHover={{ scale: 1.1, backgroundColor: "rgba(255,255,255,0.1)" }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Plus size={20} />
-              </motion.button>
-              
-              <input
-                className="composer-input"
-                placeholder={`Message @${activeDmUser.username}`}
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-              />
-              
-              <motion.button
-                type="button"
-                className="composer-btn"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Gift size={20} />
-              </motion.button>
-              
-              <motion.button
-                type="button"
-                className="composer-btn"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Paperclip size={20} />
-              </motion.button>
-              
-              <motion.button
-                type="button"
-                className="composer-btn"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Smile size={20} />
-              </motion.button>
-              
-              <motion.button
-                type="submit"
-                className="composer-send"
-                disabled={!composer.trim()}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Send size={18} />
-              </motion.button>
-            </form>
-          </motion.div>
+          <Composer
+            value={composer}
+            onChange={handleComposerChange}
+            onSubmit={handleSend}
+            placeholder={`Message @${activeDmUser.username}`}
+            disabled={!activeDmUser}
+          />
         )}
       </main>
 
-      {/* RIGHT PANEL - User Profile */}
-      <aside className="right-panel">
-        <AnimatePresence>
-          {activeDmUser && (
-            <motion.div
-              initial={{ x: 50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 50, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="user-profile-card">
-                <motion.div 
-                  className="user-profile-avatar"
-                  whileHover={{ scale: 1.05 }}
-                  style={{ background: activeDmUser.color || "#5865F2" }}
-                >
-                  {activeDmUser.username.charAt(0).toUpperCase()}
-                </motion.div>
-                <div className="user-profile-name">{activeDmUser.username}</div>
-                <div className="user-profile-status">
-                  <span 
-                    style={{ 
-                      width: 8, 
-                      height: 8, 
-                      borderRadius: "50%",
-                      background: getStatusColor(activeDmUser.status)
-                    }}
-                  />
-                  {activeDmUser.status?.toUpperCase() || "OFFLINE"}
+      {/* ============ RIGHT PANEL ============ */}
+      <AnimatePresence>
+        {activeDmUser && (
+          <motion.aside 
+            className="right-panel"
+            variants={slideInRight}
+            initial="hidden"
+            animate="visible"
+            exit={{ x: 50, opacity: 0 }}
+          >
+            <div className="profile-card">
+              <motion.div 
+                className="profile-avatar-large"
+                whileHover={{ scale: 1.05 }}
+              >
+                <Avatar name={activeDmUser.username} size={80} imageUrl={activeDmUser.avatarUrl} />
+                <div className="profile-status-large">
+                  <StatusBadge status={activeDmUser.status} size={16} />
                 </div>
+              </motion.div>
+              
+              <h2 className="profile-name">{activeDmUser.username}</h2>
+              <div className="profile-status">
+                <StatusBadge status={activeDmUser.status} size={8} />
+                <span>{activeDmUser.status?.toUpperCase() || "OFFLINE"}</span>
               </div>
 
-              <div className="user-actions">
+              <div className="profile-actions">
                 <motion.button
-                  className="user-action-btn"
-                  whileHover={{ x: 4, backgroundColor: "rgba(255,255,255,0.1)" }}
+                  className="profile-action-btn primary"
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => call?.startCall?.(activeDmUser, "voice")}
+                  disabled={inCall}
                 >
-                  <Phone size={16} />
+                  <Phone size={18} />
                   Voice Call
                 </motion.button>
                 <motion.button
-                  className="user-action-btn"
-                  whileHover={{ x: 4, backgroundColor: "rgba(255,255,255,0.1)" }}
+                  className="profile-action-btn primary"
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => call?.startCall?.(activeDmUser, "video")}
+                  disabled={inCall}
                 >
-                  <Video size={16} />
+                  <Video size={18} />
                   Video Call
                 </motion.button>
                 <motion.button
-                  className="user-action-btn"
-                  whileHover={{ x: 4, backgroundColor: "rgba(255,255,255,0.1)" }}
+                  className="profile-action-btn"
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <Users size={16} />
+                  <Users size={18} />
                   View Profile
                 </motion.button>
+                <motion.button
+                  className="profile-action-btn danger"
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onRemoveFriend?.(activeDmUser.id)}
+                >
+                  <X size={18} />
+                  Remove Friend
+                </motion.button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </aside>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
-      {/* Create Group Modal */}
+      {/* ============ MODALS ============ */}
       <AnimatePresence>
         {createGroupOpen && (
           <motion.div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.7)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1000
-            }}
+            className="modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setCreateGroupOpen(false)}
           >
             <motion.div
-              style={{
-                background: "#36393f",
-                borderRadius: 8,
-                padding: 24,
-                width: 400,
-                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)"
-              }}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              className="modal-content"
+              variants={scaleIn}
+              initial="hidden"
+              animate="visible"
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16, color: "#fff" }}>
-                Create Group
-              </h2>
+              <h2>Create Group</h2>
               <form onSubmit={handleCreateGroup}>
                 <input
-                  style={{
-                    width: "100%",
-                    padding: 12,
-                    background: "#40444b",
-                    border: "1px solid #202225",
-                    borderRadius: 4,
-                    color: "#fff",
-                    marginBottom: 16,
-                    fontSize: 16
-                  }}
+                  className="modal-input"
                   placeholder="Group Name"
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
+                  maxLength={50}
                 />
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: "#b9bbbe", marginBottom: 8, textTransform: "uppercase" }}>
-                    Select Friends ({selectedMembers.length}/14)
-                  </div>
-                  <div style={{ maxHeight: 200, overflowY: "auto" }}>
-                    {friends.map((f) => (
-                      <motion.label
-                        key={f.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          padding: 8,
-                          borderRadius: 4,
-                          cursor: "pointer",
-                          background: selectedMembers.includes(f.id) ? "rgba(88,101,242,0.2)" : "transparent"
-                        }}
-                        whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedMembers.includes(f.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              if (selectedMembers.length < 14) {
-                                setSelectedMembers([...selectedMembers, f.id]);
-                              }
-                            } else {
-                              setSelectedMembers(selectedMembers.filter(id => id !== f.id));
+                <div className="member-count">{selectedMembers.length}/14 friends selected</div>
+                <div className="friends-list">
+                  {friends.map((f) => (
+                    <motion.label
+                      key={f.id}
+                      className={`friend-checkbox ${selectedMembers.includes(f.id) ? "selected" : ""}`}
+                      whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedMembers.includes(f.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            if (selectedMembers.length < 14) {
+                              setSelectedMembers([...selectedMembers, f.id]);
                             }
-                          }}
-                        />
-                        <div className="dm-avatar-discord" style={{ width: 28, height: 28 }}>
-                          {f.username.charAt(0).toUpperCase()}
-                        </div>
-                        <span style={{ color: "#fff" }}>{f.username}</span>
-                      </motion.label>
-                    ))}
-                  </div>
+                          } else {
+                            setSelectedMembers(selectedMembers.filter(id => id !== f.id));
+                          }
+                        }}
+                      />
+                      <Avatar name={f.username} size={28} imageUrl={f.avatarUrl} />
+                      <span>{f.username}</span>
+                    </motion.label>
+                  ))}
                 </div>
-                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                <div className="modal-actions">
                   <motion.button
                     type="button"
-                    style={{
-                      padding: "10px 24px",
-                      borderRadius: 4,
-                      background: "transparent",
-                      color: "#fff",
-                      border: "none"
-                    }}
-                    whileHover={{ background: "rgba(255,255,255,0.1)" }}
+                    className="modal-btn secondary"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setCreateGroupOpen(false)}
                   >
                     Cancel
                   </motion.button>
                   <motion.button
                     type="submit"
-                    style={{
-                      padding: "10px 24px",
-                      borderRadius: 4,
-                      background: "#5865F2",
-                      color: "#fff",
-                      border: "none",
-                      fontWeight: 600
-                    }}
-                    whileHover={{ background: "#4752C4" }}
+                    className="modal-btn primary"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     disabled={!newGroupName.trim() || selectedMembers.length === 0}
                   >
                     Create
@@ -729,17 +837,72 @@ export default function ChatLayout({
         )}
       </AnimatePresence>
 
-      {/* Settings Modal */}
       {settingsOpen && (
-        <SettingsPanel onClose={() => setSettingsOpen(false)} me={me} />
+        <SettingsPanel 
+          onClose={() => setSettingsOpen(false)} 
+          me={me}
+          onLogout={onLogout}
+        />
       )}
 
-      {/* User Profile Popover */}
       <UserProfilePopover
         open={!!profileUser}
         onClose={() => setProfileUser(null)}
         user={profileUser}
         onlineUsers={onlineUsers}
+      />
+
+      {/* Call Bar */}
+      {inCall && (
+        <motion.div 
+          className="call-bar"
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          exit={{ y: 100 }}
+        >
+          <div className="call-info">
+            <Phone size={20} />
+            <span>In call with {call.peer?.username}</span>
+          </div>
+          <div className="call-actions">
+            <motion.button 
+              className="call-btn"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Mic size={20} />
+            </motion.button>
+            <motion.button 
+              className="call-btn end"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => call?.endCall?.()}
+            >
+              <Phone size={20} />
+            </motion.button>
+          </div>
+        </motion.div>
+      )}
+
+      <VideoConference
+        isOpen={groupCall?.isInCall || false}
+        onClose={groupCall?.leaveCall || (() => {})}
+        call={groupCall}
+        participants={groupCall?.participants || []}
+        localStream={groupCall?.localStream}
+        screenStream={groupCall?.screenStream}
+        isMuted={groupCall?.isMuted || false}
+        isCameraOn={groupCall?.isCameraOn || false}
+        isScreenSharing={groupCall?.isScreenSharing || false}
+        toggleMute={groupCall?.toggleMute || (() => {})}
+        toggleCamera={groupCall?.toggleCamera || (() => {})}
+        startScreenShare={groupCall?.startScreenShare || (() => {})}
+        stopScreenShare={groupCall?.stopScreenShare || (() => {})}
+        leaveCall={groupCall?.leaveCall || (() => {})}
+        callType={groupCall?.callType}
+        dominantSpeaker={groupCall?.dominantSpeaker}
+        focusedParticipant={groupCall?.focusedParticipant}
+        setFocusedParticipant={groupCall?.setFocusedParticipant || (() => {})}
       />
     </div>
   );
