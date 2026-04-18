@@ -1,0 +1,60 @@
+{
+  "name": "descall-frontend",
+  "productName": "Descall",
+  "description": "Descall Application",
+  "author": "Dimaru",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server.js",
+    "electron": "electron .",
+    "dist": "electron-builder"
+  },
+
+  "engines": {
+    "node": ">=20"
+  },
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/demirrsarppkurtlarr/Descall"
+  },
+
+  "build": {
+    "appId": "com.descall.frontend",
+    "productName": "Descall",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis"
+    },
+    "publish": null
+  },
+
+  "dependencies": {
+    "framer-motion": "^11.11.17",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io-client": "^4.8.1"
+  },
+
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron-builder": "^26.8.1",
+    "vite": "^5.4.10",
+    "electron": "28.2.0"
+  }
+}

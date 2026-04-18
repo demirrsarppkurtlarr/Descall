@@ -1,0 +1,28 @@
+{
+  "name": "descall-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
+    "socket.io-client": "^4.7.4",
+    "@supabase/supabase-js": "^2.39.7",
+    "framer-motion": "^11.0.8",
+    "react-virtual": "^2.10.4",
+    "date-fns": "^3.3.1",
+    "zustand": "^4.5.1",
+    "react-intersection-observer": "^9.5.3",
+    "workbox-window": "^7.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.4",
+    "vite-plugin-pwa": "^0.19.2"
+  },
+  "scripts": {
+    "dev": "vite --port 3001",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
