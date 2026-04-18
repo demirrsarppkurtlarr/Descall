@@ -557,13 +557,15 @@ select {
 }
 
 .nav-rail {
-  background: #12141a;
+  width: 56px;
+  min-height: 100vh;
+  background: #0a0c0f;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 0;
-  gap: 10px;
+  padding: 10px 0;
+  gap: 6px;
 }
 
 .rail-btn {
@@ -590,7 +592,7 @@ select {
 }
 
 .sidebar-secondary {
-  background: linear-gradient(180deg, #1a1d26, #14161c);
+  background: #0f1115;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -1063,8 +1065,7 @@ html[data-reduce-motion="true"] *::after {
 }
 
 .glass-sidebar {
-  backdrop-filter: blur(var(--glass-blur));
-  background: linear-gradient(180deg, rgba(26, 29, 38, 0.92), rgba(18, 20, 26, 0.96));
+  background: #0f1115;
   border-right: 1px solid var(--border);
 }
 
