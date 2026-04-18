@@ -27,6 +27,8 @@ export function useCall(socket) {
   const [connectionQuality, setConnectionQuality] = useState("unknown");
 
   const pcRef = useRef(null);
+  const modeRef = useRef(mode);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
   const remoteAudioRef = useRef(null);
@@ -148,28 +150,44 @@ export function useCall(socket) {
       }
     };
 
-    if (isInitiator) {
-      pc.onnegotiationneeded = async () => {
-        try {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          if (peerRef.current?.id && socket?.connected) {
-            socket.emit("call:offer", {
-              toUserId: peerRef.current.id,
-              offer: pc.localDescription,
-              callType: callType || "voice",
-            });
-          }
-        } catch { /* ignore */ }
-      };
-    }
+    // Handle renegotiation for both initiator and responder
+    pc.onnegotiationneeded = async () => {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        if (peerRef.current?.id && socket?.connected) {
+          socket.emit("call:offer", {
+            toUserId: peerRef.current.id,
+            offer: pc.localDescription,
+            callType: callType || "voice",
+          });
+        }
+      } catch { /* ignore */ }
+    };
   }, [socket, callType]);
 
   useEffect(() => {
     if (!socket) return;
 
-    const onOffer = ({ fromUser, offer, callType: incomingType } = {}) => {
+    const onOffer = async ({ fromUser, offer, callType: incomingType } = {}) => {
       if (!fromUser?.id || !offer) return;
+      
+      const pc = pcRef.current;
+      const isRenegotiation = pc && modeRef.current === "active" && peerRef.current?.id === fromUser.id;
+      
+      if (isRenegotiation) {
+        // Renegotiation: update remote description and create answer
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit("call:answer", { toUserId: fromUser.id, answer: pc.localDescription });
+          await flushIce(pc);
+        } catch (err) { console.error("[WebRTC] Renegotiation failed:", err); }
+        return;
+      }
+      
+      // New incoming call
       incomingOfferRef.current = offer;
       incomingCallTypeRef.current = incomingType || "voice";
       setPeer(fromUser);
@@ -319,8 +337,14 @@ export function useCall(socket) {
           video: { width: 1280, height: 720, facingMode: "user" },
         });
         const videoTrack = videoStream.getVideoTracks()[0];
-        localStreamRef.current.addTrack(videoTrack);
-        pc.addTrack(videoTrack, localStreamRef.current);
+        // Replace existing video track or add new one
+        const videoSender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (videoSender) {
+          await videoSender.replaceTrack(videoTrack);
+        } else {
+          localStreamRef.current.addTrack(videoTrack);
+          pc.addTrack(videoTrack, localStreamRef.current);
+        }
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = localStreamRef.current;
           localVideoRef.current.play().catch(() => {});
@@ -341,7 +365,9 @@ export function useCall(socket) {
       });
 
       const screenTrack = screenStream.getVideoTracks()[0];
-      screenSenderRef.current = pc.addTrack(screenTrack, screenStream);
+      // Add screen track as a new transceiver (simulcast not needed)
+      const screenSender = pc.addTrack(screenTrack, screenStream);
+      screenSenderRef.current = screenSender;
       screenStreamRef.current = screenStream;
 
       if (screenVideoRef.current) {
