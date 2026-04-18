@@ -22,10 +22,8 @@ function buildSnapshot(io) {
     at: new Date().toISOString(),
     onlineCount: state.presence.size,
     maintenanceMode: state.systemConfig.maintenanceMode,
-    chatFrozen: state.systemConfig.chatFrozen,
     sockets,
     bannedCount: state.bannedUserIds.size,
-    generalMessages: state.generalMessages.length,
     auditTail: state.auditLog.slice(0, 30),
     errorsTail: state.serverErrorLog.slice(0, 20),
   };

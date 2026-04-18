@@ -89,6 +89,14 @@ io.engine.on("connection_error", () => {});
 
 registerSocketHandlers(io);
 
+// Startup check
+console.log("=== Starting Descall Backend ===");
+console.log("PORT:", PORT);
+console.log("SUPABASE_URL exists:", !!process.env.SUPABASE_URL);
+console.log("SUPABASE_SERVICE_ROLE_KEY exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
+
 httpServer.listen(PORT, () => {
   console.log(`Descall backend listening on port ${PORT}`);
+  console.log("Environment check passed - server is ready");
 });
