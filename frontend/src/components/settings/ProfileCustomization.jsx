@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
-  Camera, Palette, Type, Bell, Shield, Globe, 
+  Camera, Palette, Type, Bell, Shield, Lock, Globe, 
   Clock, Moon, Sun, Volume2, Keyboard, UserX, 
   Download, Mail, Smartphone, Eye, EyeOff 
 } from "lucide-react";
