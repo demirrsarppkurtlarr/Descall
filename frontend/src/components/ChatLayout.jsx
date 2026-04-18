@@ -278,7 +278,12 @@ export default function ChatLayout({
   const [uploading, setUploading] = useState(false);
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [myGroups, setMyGroups] = useState([]);
-  const [activeGroup, setActiveGroup] = useState(null);
+  const [activeGroup, setActiveGroup] = useState(() => {
+    try {
+      const saved = localStorage.getItem("descall_active_group");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [newGroupName, setNewGroupName] = useState("");
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [groupMessages, setGroupMessages] = useState([]);
@@ -336,6 +341,7 @@ export default function ChatLayout({
 
   const handleOpenGroup = (group) => {
     setActiveGroup(group);
+    try { localStorage.setItem("descall_active_group", JSON.stringify(group)); } catch {}
     setActiveDmUser(null); // DM'yi kapat
     // TODO: Load group messages from API
     setGroupMessages([]);
@@ -509,7 +515,7 @@ export default function ChatLayout({
                     key={friend.id}
                     type="button"
                     className={`dm-item ${activeDmUser?.id === friend.id ? "active" : ""}`}
-                    onClick={() => { setActiveGroup(null); onOpenDm(friend); }}
+                    onClick={() => { setActiveGroup(null); try { localStorage.removeItem("descall_active_group"); } catch {}; onOpenDm(friend); }}
                     whileHover={{ x: 2 }}
                   >
                     <Avatar name={friend.username} size={34} imageUrl={friend.avatarUrl} />

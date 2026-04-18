@@ -9,6 +9,7 @@ const MAX_GROUP_SIZE = 15;
 router.get("/my", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    console.log("[Groups API] Fetching groups for user:", userId);
     
     const { data: groups, error } = await supabase
       .from("group_members")
@@ -18,7 +19,12 @@ router.get("/my", requireAuth, async (req, res) => {
       `)
       .eq("user_id", userId);
     
-    if (error) return res.status(500).json({ error: "Failed to fetch groups" });
+    if (error) {
+      console.error("[Groups API] Supabase error:", error);
+      return res.status(500).json({ error: "Failed to fetch groups", details: error.message });
+    }
+    
+    console.log("[Groups API] Found groups:", groups?.length || 0);
     
     // Get member counts for each group
     const groupIds = groups.map(g => g.groups.id);
