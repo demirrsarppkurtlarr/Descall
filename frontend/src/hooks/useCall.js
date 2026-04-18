@@ -372,19 +372,42 @@ export function useCall(socket) {
         video: { cursor: "always", width: 1920, height: 1080 },
         audio: false,
       });
+      console.log("[Screen] Got screen stream, tracks:", screenStream.getTracks().length);
 
       const screenTrack = screenStream.getVideoTracks()[0];
-      // Add screen track as a new transceiver (simulcast not needed)
+      console.log("[Screen] Screen track:", screenTrack?.label, "enabled:", screenTrack?.enabled);
+      
+      // Add screen track - this triggers onnegotiationneeded
       const screenSender = pc.addTrack(screenTrack, screenStream);
+      console.log("[Screen] Track added, sender:", !!screenSender);
       screenSenderRef.current = screenSender;
       screenStreamRef.current = screenStream;
 
+      // Manuel renegotiation fallback (eğer onnegotiationneeded çalışmazsa)
+      setTimeout(async () => {
+        if (pc.signalingState === "stable" && peerRef.current?.id && socket?.connected) {
+          console.log("[Screen] Manual renegotiation...");
+          try {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit("call:offer", {
+              toUserId: peerRef.current.id,
+              offer: pc.localDescription,
+              callType: "screen",
+            });
+          } catch (err) {
+            console.error("[Screen] Manual renegotiation failed:", err);
+          }
+        }
+      }, 500);
+
       if (screenVideoRef.current) {
         screenVideoRef.current.srcObject = screenStream;
-        screenVideoRef.current.play().catch(() => {});
+        screenVideoRef.current.play().catch((e) => console.error("[Screen] Local play error:", e));
       }
 
       screenTrack.onended = () => {
+        console.log("[Screen] Track ended by user");
         stopScreenShare();
       };
 
@@ -392,7 +415,9 @@ export function useCall(socket) {
       if (peer?.id && socket?.connected) {
         socket.emit("screen:share-start", { toUserId: peer.id });
       }
-    } catch { /* user denied */ }
+    } catch (err) {
+      console.error("[Screen] Error:", err);
+    }
   }, [screenSharing, peer, socket]);
 
   const stopScreenShare = useCallback(() => {
