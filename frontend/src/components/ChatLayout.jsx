@@ -541,7 +541,10 @@ export default function ChatLayout({
           )}
 
           {sidebarView === "groups" && (
-            <div className="sidebar-section grow">
+            <div className="sidebar-section grow" style={{ display: "flex", flexDirection: "column", minHeight: "300px", border: "2px solid blue" }}>
+              <div style={{ padding: "10px", background: "var(--accent)", color: "white" }}>
+                DEBUG: Groups View Loaded - {myGroups.length} groups
+              </div>
               <div className="sidebar-section-header">
                 <h4>Groups ({myGroups.length})</h4>
                 <button 
