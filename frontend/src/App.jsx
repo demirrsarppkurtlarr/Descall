@@ -5,6 +5,7 @@ import { getMe, login, register } from "./api/auth";
 import { createSocket } from "./socket";
 import { API_BASE_URL } from "./config/api";
 import { useCall } from "./hooks/useCall";
+import { useGroupCall } from "./hooks/useGroupCall";
 import {
   clearToken,
   clearUser,
@@ -51,6 +52,7 @@ export default function App() {
   const transportFallbackStepRef = useRef(0);
   const prevOnlineUsersRef = useRef([]);
   const call = useCall(socketApi);
+  const groupCall = useGroupCall(socketApi);
 
   useEffect(() => {
     myIdRef.current = me?.id ?? null;
@@ -502,6 +504,7 @@ export default function App() {
         onNotificationRead={handleNotificationRead}
         onNotificationReadAll={handleNotificationReadAll}
         peerScreenSharing={peerScreenSharing}
+        groupCall={groupCall}
       />
     </>
   );

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useToast } from "../context/ToastContext";
 import TypingIndicator from "./chat/TypingIndicator";
 import SettingsPanel from "./settings/SettingsPanel";
+import VideoConference from "./VideoConference";
 import UserHoverCard from "./social/UserHoverCard";
 import UserProfilePopover from "./social/UserProfilePopover";
 import RippleButton from "./ui/RippleButton";
@@ -247,6 +248,7 @@ export default function ChatLayout({
   onNotificationRead,
   onNotificationReadAll,
   peerScreenSharing = false,
+  groupCall,
 }) {
   const { toast } = useToast();
   const [composer, setComposer] = useState("");
@@ -784,6 +786,28 @@ export default function ChatLayout({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Group Video Conference Overlay */}
+      <VideoConference
+        isOpen={groupCall?.isInCall || false}
+        onClose={groupCall?.leaveCall || (() => {})}
+        call={groupCall}
+        participants={groupCall?.participants || []}
+        localStream={groupCall?.localStream}
+        screenStream={groupCall?.screenStream}
+        isMuted={groupCall?.isMuted || false}
+        isCameraOn={groupCall?.isCameraOn || false}
+        isScreenSharing={groupCall?.isScreenSharing || false}
+        toggleMute={groupCall?.toggleMute || (() => {})}
+        toggleCamera={groupCall?.toggleCamera || (() => {})}
+        startScreenShare={groupCall?.startScreenShare || (() => {})}
+        stopScreenShare={groupCall?.stopScreenShare || (() => {})}
+        leaveCall={groupCall?.leaveCall || (() => {})}
+        callType={groupCall?.callType}
+        dominantSpeaker={groupCall?.dominantSpeaker}
+        focusedParticipant={groupCall?.focusedParticipant}
+        setFocusedParticipant={groupCall?.setFocusedParticipant || (() => {})}
+      />
     </div>
   );
 }
