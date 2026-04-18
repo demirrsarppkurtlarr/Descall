@@ -1071,9 +1071,10 @@ html[data-reduce-motion="true"] *::after {
 
 .sidebar-inner {
   width: 300px;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .rail-spacer {
@@ -1084,6 +1085,24 @@ html[data-reduce-motion="true"] *::after {
 .rail-btn.subtle {
   opacity: 0.85;
   font-size: 16px;
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar-section.grow {
+  flex: 1;
+  overflow: hidden;
+}
+
+.scroll-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: calc(100vh - 200px);
 }
 
 .sidebar-mini-stats {
