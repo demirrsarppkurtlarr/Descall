@@ -1,12 +1,12 @@
 {
   "name": "descall-backend",
   "version": "1.0.0",
-  "main": "src/server.js",
+  "main": "server.js",
   "type": "commonjs",
 
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
 
   "engines": {
@@ -20,6 +20,7 @@
     "dotenv": "^16.0.0",
     "express": "^4.18.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^1.4.5-lts.1",
     "socket.io": "^4.7.0"
   },
 
