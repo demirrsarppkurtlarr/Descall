@@ -79,6 +79,15 @@ app.use("/admin", adminRoutes);
 app.use("/media", mediaRoutes);
 app.use("/media/files", express.static(path.join(__dirname, "uploads")));
 
+// Serve frontend build in production
+const distPath = path.join(__dirname, "..", "dist");
+if (require("fs").existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
+
 app.use((_req, res) => {
   res.status(404).json({ error: "Route not found." });
 });
