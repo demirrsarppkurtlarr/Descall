@@ -482,6 +482,18 @@ export default function ChatLayout({
 
   useEffect(() => () => flushTyping(), [flushTyping]);
 
+  // Keyboard shortcut for global search (Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setGlobalSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleMessagesScroll = (e) => {
     const el = e.target;
     if (el.scrollTop < 100 && activeDmUser && !loadingOlderDm && dmHasMore) loadOlderDm?.();
@@ -1287,23 +1299,6 @@ export default function ChatLayout({
         </div>
       </Modal>
 
-      {/* Keyboard shortcut: Ctrl+K for global search */}
-      <GlobalSearchShortcut onOpen={() => setGlobalSearchOpen(true)} />
     </div>
   );
-}
-
-// Global search shortcut component
-function GlobalSearchShortcut({ onOpen }) {
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        onOpen();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onOpen]);
-  return null;
 }
