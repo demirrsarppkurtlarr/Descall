@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { User, Volume2, Monitor, Bell, Shield } from "lucide-react";
 import RippleButton from "../ui/RippleButton";
+import ProfileCustomization from "./ProfileCustomization";
 import { getAudioSettings, setGlobalMute, setSoundEnabled, setSoundVolume } from "../../lib/audioManager";
 
 export default function SettingsPanel({
@@ -14,6 +16,7 @@ export default function SettingsPanel({
   me,
   onLogout,
 }) {
+  const [activeTab, setActiveTab] = useState("profile");
   const [soundSettings, setSoundSettings] = useState(() => getAudioSettings());
 
   const updateSetting = (key, value) => {
@@ -26,6 +29,15 @@ export default function SettingsPanel({
     }
     setSoundSettings(getAudioSettings());
   };
+
+  const tabs = [
+    { id: "profile", label: "Profile", icon: User },
+    { id: "appearance", label: "Appearance", icon: Monitor },
+    { id: "sound", label: "Sound", icon: Volume2 },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "privacy", label: "Privacy & Security", icon: Shield },
+  ];
+
   return (
     <motion.div
       className="settings-panel glass"
@@ -39,106 +51,138 @@ export default function SettingsPanel({
           ×
         </button>
       </header>
-      <section className="settings-section">
-        <h4>Account</h4>
-        <p className="settings-muted">
-          <strong>{me?.username}</strong>
-          <br />
-          <span className="settings-id">User ID: {me?.id}</span>
-        </p>
-      </section>
-      <section className="settings-section">
-        <h4>Appearance</h4>
-        <label className="settings-row check">
-          <span>Theme</span>
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value)}
-            className="settings-select"
+      {/* Tabs */}
+      <div className="settings-tabs">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            className={activeTab === tab.id ? "active" : ""}
+            onClick={() => setActiveTab(tab.id)}
           >
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
-        </label>
-        <label className="settings-row">
-          <span>Glass blur</span>
-          <input
-            type="range"
-            min={4}
-            max={24}
-            value={compactBlur}
-            onChange={(e) => setCompactBlur(Number(e.target.value))}
-          />
-        </label>
-        <label className="settings-row check">
-          <input type="checkbox" checked={reduceMotion} onChange={(e) => setReduceMotion(e.target.checked)} />
-          <span>Reduce motion</span>
-        </label>
-      </section>
-      <section className="settings-section">
-        <h4>Sound & Notifications</h4>
-        <label className="settings-row check">
-          <input
-            type="checkbox"
-            checked={!soundSettings.globalMute}
-            onChange={(e) => updateSetting("globalMute", !e.target.checked)}
-          />
-          <span>Enable sounds</span>
-        </label>
-        <label className="settings-row">
-          <span>Master volume</span>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.1}
-            value={soundSettings.volume}
-            onChange={(e) => updateSetting("volume", Number(e.target.value))}
-            disabled={soundSettings.globalMute}
-          />
-        </label>
-        <label className="settings-row check">
-          <input
-            type="checkbox"
-            checked={soundSettings.incomingCall}
-            onChange={(e) => updateSetting("incomingCall", e.target.checked)}
-            disabled={soundSettings.globalMute}
-          />
-          <span>Incoming call ringtone</span>
-        </label>
-        <label className="settings-row check">
-          <input
-            type="checkbox"
-            checked={soundSettings.outgoingCall}
-            onChange={(e) => updateSetting("outgoingCall", e.target.checked)}
-            disabled={soundSettings.globalMute}
-          />
-          <span>Outgoing call tone</span>
-        </label>
-        <label className="settings-row check">
-          <input
-            type="checkbox"
-            checked={soundSettings.message}
-            onChange={(e) => updateSetting("message", e.target.checked)}
-            disabled={soundSettings.globalMute}
-          />
-          <span>Message notifications</span>
-        </label>
-        <label className="settings-row check">
-          <input
-            type="checkbox"
-            checked={soundSettings.notification}
-            onChange={(e) => updateSetting("notification", e.target.checked)}
-            disabled={soundSettings.globalMute}
-          />
-          <span>Friend online notifications</span>
-        </label>
-      </section>
-      <section className="settings-section">
-        <RippleButton type="button" className="btn-secondary full-width danger-outline" onClick={onLogout}>
-          Log out
-        </RippleButton>
-      </section>
+            <tab.icon size={16} />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="settings-content custom-scroll">
+        {activeTab === "profile" && (
+          <ProfileCustomization me={me} onUpdate={(data) => console.log("Profile updated:", data)} />
+        )}
+
+        {activeTab === "appearance" && (
+          <section className="settings-section">
+            <h4>Appearance</h4>
+            <label className="settings-row check">
+              <span>Theme</span>
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                className="settings-select"
+              >
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </label>
+            <label className="settings-row">
+              <span>Glass blur</span>
+              <input
+                type="range"
+                min={4}
+                max={24}
+                value={compactBlur}
+                onChange={(e) => setCompactBlur(Number(e.target.value))}
+              />
+            </label>
+            <label className="settings-row check">
+              <input type="checkbox" checked={reduceMotion} onChange={(e) => setReduceMotion(e.target.checked)} />
+              <span>Reduce motion</span>
+            </label>
+          </section>
+        )}
+
+        {activeTab === "sound" && (
+          <section className="settings-section">
+            <h4>Sound</h4>
+            <label className="settings-row check">
+              <input
+                type="checkbox"
+                checked={!soundSettings.globalMute}
+                onChange={(e) => updateSetting("globalMute", !e.target.checked)}
+              />
+              <span>Enable sounds</span>
+            </label>
+            <label className="settings-row">
+              <span>Master volume</span>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.1}
+                value={soundSettings.volume}
+                onChange={(e) => updateSetting("volume", Number(e.target.value))}
+                disabled={soundSettings.globalMute}
+              />
+            </label>
+            <label className="settings-row check">
+              <input
+                type="checkbox"
+                checked={soundSettings.incomingCall}
+                onChange={(e) => updateSetting("incomingCall", e.target.checked)}
+                disabled={soundSettings.globalMute}
+              />
+              <span>Incoming call ringtone</span>
+            </label>
+            <label className="settings-row check">
+              <input
+                type="checkbox"
+                checked={soundSettings.outgoingCall}
+                onChange={(e) => updateSetting("outgoingCall", e.target.checked)}
+                disabled={soundSettings.globalMute}
+              />
+              <span>Outgoing call tone</span>
+            </label>
+            <label className="settings-row check">
+              <input
+                type="checkbox"
+                checked={soundSettings.message}
+                onChange={(e) => updateSetting("message", e.target.checked)}
+                disabled={soundSettings.globalMute}
+              />
+              <span>Message notifications</span>
+            </label>
+            <label className="settings-row check">
+              <input
+                type="checkbox"
+                checked={soundSettings.notification}
+                onChange={(e) => updateSetting("notification", e.target.checked)}
+                disabled={soundSettings.globalMute}
+              />
+              <span>Friend online notifications</span>
+            </label>
+          </section>
+        )}
+
+        {activeTab === "notifications" && (
+          <section className="settings-section">
+            <h4>Notifications</h4>
+            <p className="settings-muted">Notification settings are now in Profile tab</p>
+          </section>
+        )}
+
+        {activeTab === "privacy" && (
+          <section className="settings-section">
+            <h4>Privacy & Security</h4>
+            <p className="settings-muted">Privacy settings are now in Profile tab</p>
+            <section className="settings-section" style={{ marginTop: 20 }}>
+              <RippleButton type="button" className="btn-secondary full-width danger-outline" onClick={onLogout}>
+                Log out
+              </RippleButton>
+            </section>
+          </section>
+        )}
+      </div>
     </motion.div>
   );
 }

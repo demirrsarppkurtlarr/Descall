@@ -24,6 +24,7 @@ const {
   appendAudit,
 } = require("../runtime/sharedState");
 const { setupAdminSocket, notifyAdminRoom } = require("./adminHandlers");
+const { registerGroupHandlers } = require("./groupHandlers");
 
 function ensureSet(map, key) {
   if (!map.has(key)) map.set(key, new Set());
@@ -513,6 +514,13 @@ function registerSocketHandlers(io) {
       presence.delete(myId);
       broadcastUsers(io);
       notifyAdminRoom(io, { type: "presence", online: presence.size });
+    });
+
+    // Grup DM handlerları
+    registerGroupHandlers(io, socket, {
+      presence,
+      socketToUser,
+      friends,
     });
   });
 }

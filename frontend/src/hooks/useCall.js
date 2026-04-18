@@ -117,6 +117,22 @@ export function useCall(socket) {
       console.log("[WebRTC] ontrack received:", track?.kind, "muted:", track?.muted, "id:", track?.id);
       console.log("[WebRTC] Remote stream tracks:", remoteStream?.getTracks().map(t => `${t.kind}(${t.readyState})`));
       
+      // Handle muted tracks - wait for unmute
+      if (track?.muted) {
+        console.log("[WebRTC] Track is muted, waiting for unmute...");
+        track.onunmute = () => {
+          console.log("[WebRTC] Track unmuted:", track.kind);
+          if (track.kind === "video" && remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.play().catch((err) => console.error("[WebRTC] Video play error:", err));
+          }
+          if (track.kind === "audio" && remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current.play().catch((err) => console.error("[WebRTC] Audio play error:", err));
+          }
+        };
+      }
+      
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream;
         remoteAudioRef.current.play().catch((err) => console.error("[WebRTC] Audio play error:", err));

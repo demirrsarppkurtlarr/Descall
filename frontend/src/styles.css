@@ -2837,6 +2837,349 @@ html[data-theme="light"] body {
 /* Attach button */
 .attach-btn {
   padding: 8px 12px;
+}
+
+/* ========================
+   VIDEO CONFERENCE (Discord/Meet Style)
+   ======================== */
+
+.video-conference-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #0d1117;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.vc-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.vc-header.visible {
+  opacity: 1;
+}
+
+.vc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.vc-view-toggle {
+  display: flex;
+  gap: 8px;
+  background: rgba(255,255,255,0.1);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.vc-view-toggle button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vc-view-toggle button.active {
+  background: rgba(255,255,255,0.2);
+}
+
+.vc-view-toggle button:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* Main Area */
+.vc-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 80px 24px 100px;
+  gap: 16px;
+  overflow: hidden;
+}
+
+/* Grid View */
+.vc-grid {
+  display: grid;
+  gap: 8px;
+  height: 100%;
+  width: 100%;
+}
+
+.vc-video-cell {
+  position: relative;
+  background: #1a1f2e;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 0;
+}
+
+.vc-video-cell:hover {
+  outline: 2px solid var(--accent);
+}
+
+.vc-video-cell.focused {
+  outline: 3px solid var(--accent);
+  box-shadow: 0 0 20px rgba(126, 129, 255, 0.3);
+}
+
+.vc-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vc-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #fff;
+}
+
+.vc-avatar-placeholder img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--panel);
+}
+
+.vc-avatar-placeholder.large img {
+  width: 120px;
+  height: 120px;
+}
+
+.vc-avatar-placeholder span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.vc-video-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  color: #fff;
+  background: rgba(0,0,0,0.5);
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.vc-name {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(0,0,0,0.5);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Focus View */
+.vc-main.focus {
+  flex-direction: column;
+}
+
+.vc-focus-main {
+  flex: 1;
+  position: relative;
+  background: #1a1f2e;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.vc-focus-main .vc-video {
+  object-fit: contain;
+  background: #0d1117;
+}
+
+.vc-screen-indicator {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 197, 94, 0.9);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+/* Thumbnails */
+.vc-thumbnails {
+  display: flex;
+  gap: 8px;
+  height: 100px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  padding: 4px;
+}
+
+.vc-thumb {
+  flex-shrink: 0;
+  width: 140px;
+  height: 100%;
+  background: #1a1f2e;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.vc-thumb:hover {
+  outline: 2px solid var(--accent);
+  transform: scale(1.02);
+}
+
+.vc-thumb-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vc-thumb-avatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+}
+
+.vc-thumb-avatar img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.vc-thumb-name {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(0,0,0,0.5);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Controls */
+.vc-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0,0,0,0.8);
+  padding: 12px 24px;
+  border-radius: 50px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.vc-controls.visible {
+  opacity: 1;
+}
+
+.vc-control-group {
+  display: flex;
+  gap: 12px;
+}
+
+.vc-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.vc-btn:hover {
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.05);
+}
+
+.vc-btn.danger {
+  background: #dc2626;
+}
+
+.vc-btn.danger:hover {
+  background: #b91c1c;
+}
+
+.vc-btn.active {
+  background: #22c55e;
+}
+
+.vc-btn.active:hover {
+  background: #16a34a;
+}
+
+.vc-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vc-end-call {
+  width: auto;
+  padding: 0 24px;
+  gap: 8px;
+  border-radius: 24px;
+}
+
+.vc-end-call span {
+  font-weight: 600;
+}
+
+.attach-btn {
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--panel);
@@ -2851,7 +3194,346 @@ html[data-theme="light"] body {
 
 .attach-btn:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
+}
+
+/* ========================
+   PROFILE CUSTOMIZATION (15+ Features)
+   ======================== */
+
+.profile-customization {
+  display: flex;
+  height: 600px;
+  background: var(--panel);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.pc-sidebar {
+  width: 200px;
+  background: var(--panel-2);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pc-sidebar button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.pc-sidebar button:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.pc-sidebar button.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* Content */
+.pc-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.pc-section {
+  max-width: 500px;
+}
+
+.pc-section h3 {
+  font-size: 20px;
+  margin-bottom: 24px;
+  color: var(--text);
+}
+
+/* Avatar & Banner */
+.pc-avatar-section {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.pc-avatar-preview {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.pc-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--panel-2);
+}
+
+.pc-avatar-preview button {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pc-banner-preview {
+  flex: 1;
+  position: relative;
+  height: 100px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pc-banner-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--panel-2);
+}
+
+.pc-banner-preview button {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.8);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+/* Fields */
+.pc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.pc-field span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.pc-field input[type="text"],
+.pc-field textarea,
+.pc-field select {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.pc-field input[type="text"]:focus,
+.pc-field textarea:focus,
+.pc-field select:focus {
+  border-color: var(--accent);
+}
+
+.pc-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.pc-field small {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* Color Picker */
+.pc-color-picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pc-color-picker button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.pc-color-picker button.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.pc-color-picker input[type="color"] {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+/* Segmented Control */
+.pc-segmented {
+  display: flex;
+  background: var(--panel-2);
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.pc-segmented button {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.pc-segmented button.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* Toggle Row */
+.pc-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-toggle-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pc-toggle-info > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pc-toggle-info span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.pc-toggle-info small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Switch */
+.pc-switch {
+  position: relative;
+  width: 48px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.pc-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.pc-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel-2);
+  border-radius: 24px;
+  transition: 0.3s;
+}
+
+.pc-slider:before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.pc-switch input:checked + .pc-slider {
+  background: var(--accent);
+}
+
+.pc-switch input:checked + .pc-slider:before {
+  transform: translateX(24px);
+}
+
+/* Range Input */
+.pc-field input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--panel-2);
+  border-radius: 2px;
+  outline: none;
+}
+
+.pc-field input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+/* Footer */
+.pc-footer {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.pc-footer button {
+  width: 100%;
+  padding: 14px;
+}
+
+/* Hidden Input */
+.pc-content .hidden {
+  display: none;
 }
 
 /* Header call buttons */
@@ -2859,4 +3541,54 @@ html[data-theme="light"] body {
   display: flex;
   gap: 8px;
   margin-left: 12px;
+}
+
+/* ========================
+   SETTINGS TABS
+   ======================== */
+
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.settings-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.settings-tabs button:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.settings-tabs button.active {
+  background: var(--accent);
+  color: white;
+}
+
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* Settings Panel Layout */
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
 }
