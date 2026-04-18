@@ -339,6 +339,66 @@ export default function ChatLayout({
   }, [me]);
 
   // Group handlers
+  // Leave group handler
+  const handleLeaveGroup = async () => {
+    if (!activeGroup) return;
+    try {
+      await leaveGroup(activeGroup.id);
+      setMyGroups((prev) => prev.filter((g) => g.id !== activeGroup.id));
+      setActiveGroup(null);
+      setLeaveGroupModalOpen(false);
+      toast?.success?.("Left group successfully");
+    } catch (err) {
+      toast?.error?.(err.message || "Failed to leave group");
+    }
+  };
+
+  // Add members handler
+  const handleAddMembers = async () => {
+    if (!activeGroup || membersToAdd.length === 0) return;
+    try {
+      await Promise.all(membersToAdd.map((userId) => inviteToGroup(activeGroup.id, userId)));
+      setAddMemberModalOpen(false);
+      setMembersToAdd([]);
+      toast?.success?.(`Invited ${membersToAdd.length} member(s)`);
+    } catch (err) {
+      toast?.error?.(err.message || "Failed to add members");
+    }
+  };
+
+  // Rename group handler
+  const handleRenameGroup = async () => {
+    if (!activeGroup || !renameValue.trim()) return;
+    try {
+      await renameGroup(activeGroup.id, renameValue.trim());
+      setMyGroups((prev) =>
+        prev.map((g) => (g.id === activeGroup.id ? { ...g, name: renameValue.trim() } : g))
+      );
+      if (activeGroup) setActiveGroup({ ...activeGroup, name: renameValue.trim() });
+      setRenameGroupModalOpen(false);
+      setRenameValue("");
+      toast?.success?.("Group renamed successfully");
+    } catch (err) {
+      toast?.error?.(err.message || "Failed to rename group");
+    }
+  };
+
+  // Global search handler
+  const handleGlobalSearch = (query) => {
+    setGlobalSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults({ users: [], groups: [], messages: [] });
+      return;
+    }
+    const userResults = friends.filter(
+      (f) => f.username?.toLowerCase().includes(query.toLowerCase())
+    );
+    const groupResults = myGroups.filter(
+      (g) => g.name?.toLowerCase().includes(query.toLowerCase())
+    );
+    setSearchResults({ users: userResults, groups: groupResults, messages: [] });
+  };
+
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!newGroupName.trim() || selectedMembers.length === 0) return;
@@ -1235,7 +1295,7 @@ export default function ChatLayout({
 
 // Global search shortcut component
 function GlobalSearchShortcut({ onOpen }) {
-  useEffect(() => {
+  React.useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
