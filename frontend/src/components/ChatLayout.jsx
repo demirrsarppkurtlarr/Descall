@@ -324,22 +324,6 @@ export default function ChatLayout({
       });
   }, [me]);
 
-  // Socket grup bildirimi dinle
-  useEffect(() => {
-    if (!socketApi) return;
-    const onGroupInvited = (data) => {
-      console.log("[Frontend] Group invited:", data);
-      setMyGroups(prev => {
-        // Eger grup zaten varsa ekleme
-        if (prev.find(g => g.id === data.group.id)) return prev;
-        return [data.group, ...prev];
-      });
-      toast?.success?.(`Added to group: ${data.group.name}`);
-    };
-    socketApi.on("group:invited", onGroupInvited);
-    return () => socketApi.off("group:invited", onGroupInvited);
-  }, [socketApi, toast]);
-
   // Group handlers
   const handleCreateGroup = async (e) => {
     e.preventDefault();
