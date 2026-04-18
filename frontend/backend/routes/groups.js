@@ -35,20 +35,26 @@ router.get("/my", requireAuth, async (req, res) => {
     
     console.log("[Groups API] Found groups:", groups?.length || 0);
     
+    // Eger grup yoksa bos dondur
+    if (!groups || groups.length === 0) {
+      return res.json({ groups: [] });
+    }
+    
     // Get member counts for each group
     const groupIds = groups.map(g => g.groups.id);
-    const { data: memberCounts } = await supabase
-      .from("group_members")
-      .select("group_id, count")
-      .in("group_id", groupIds)
-      .group("group_id");
     
-    const countsMap = new Map((memberCounts || []).map(m => [m.group_id, m.count]));
-    
-    const enriched = groups.map(g => ({
-      ...g.groups,
-      joinedAt: g.joined_at,
-      memberCount: countsMap.get(g.groups.id) || 0,
+    // Her grup icin ayri ayri count al (Supabase group destegi sinirli)
+    const enriched = await Promise.all(groups.map(async (g) => {
+      const { count } = await supabase
+        .from("group_members")
+        .select("*", { count: "exact", head: true })
+        .eq("group_id", g.groups.id);
+      
+      return {
+        ...g.groups,
+        joinedAt: g.joined_at,
+        memberCount: count || 0,
+      };
     }));
     
     res.json({ groups: enriched });
