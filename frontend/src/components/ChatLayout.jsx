@@ -156,21 +156,57 @@ function CallBar({ call, peerScreenSharing }) {
 
 function VideoPanel({ call, peerScreenSharing }) {
   if (!call || call.mode !== "active") return null;
-  const showVideo = call.cameraOn || peerScreenSharing;
-  if (!showVideo) return null;
-
+  
+  // Always show panel during active call - video will render when stream available
+  const hasVideo = call.callType === "video" || peerScreenSharing || call.cameraOn;
+  
   return (
-    <div className="video-panel">
-      <div className="video-remote-wrap">
-        <video ref={call.remoteVideoRef} autoPlay playsInline className="video-remote" />
-        {peerScreenSharing && <div className="screen-share-label">🖥 Screen share</div>}
-      </div>
-      <div className="video-pip-wrap">
-        <video ref={call.localVideoRef} autoPlay playsInline muted className="video-pip" />
-      </div>
+    <div className={`video-panel ${hasVideo ? "has-video" : "voice-only"}`}>
+      {hasVideo && (
+        <div className="video-remote-wrap">
+          <video 
+            ref={call.remoteVideoRef} 
+            autoPlay 
+            playsInline 
+            className="video-remote"
+            style={{ objectFit: "cover" }}
+          />
+          {peerScreenSharing && <div className="screen-share-label">🖥 Peer screen sharing</div>}
+        </div>
+      )}
+      
+      {/* Local video PIP - show when camera on or screen sharing */}
+      {(call.cameraOn || call.screenSharing) && (
+        <div className="video-pip-wrap">
+          <video 
+            ref={call.localVideoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className="video-pip"
+          />
+        </div>
+      )}
+      
+      {/* Screen share preview (local) */}
       {call.screenSharing && (
         <div className="video-screen-preview">
-          <video ref={call.screenVideoRef} autoPlay playsInline muted className="video-screen" />
+          <video 
+            ref={call.screenVideoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className="video-screen"
+          />
+          <div className="screen-share-label local">🖥 You are sharing</div>
+        </div>
+      )}
+      
+      {/* Voice-only indicator */}
+      {!hasVideo && (
+        <div className="voice-indicator">
+          <span className="voice-icon">🎤</span>
+          <span>Voice call active</span>
         </div>
       )}
     </div>

@@ -113,13 +113,17 @@ export function useCall(socket) {
 
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
+      const track = e.track;
+      console.log("[WebRTC] ontrack received:", track?.kind, "muted:", track?.muted, "id:", track?.id);
+      console.log("[WebRTC] Remote stream tracks:", remoteStream?.getTracks().map(t => `${t.kind}(${t.readyState})`));
+      
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.play().catch(() => {});
+        remoteAudioRef.current.play().catch((err) => console.error("[WebRTC] Audio play error:", err));
       }
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch(() => {});
+        remoteVideoRef.current.play().catch((err) => console.error("[WebRTC] Video play error:", err));
       }
     };
 
@@ -318,6 +322,7 @@ export function useCall(socket) {
 
   const toggleCamera = useCallback(async () => {
     const pc = pcRef.current;
+    console.log("[Camera] Toggle called, pc exists:", !!pc, "cameraOn:", cameraOn);
     if (!pc) return;
 
     if (cameraOn) {
@@ -339,24 +344,28 @@ export function useCall(socket) {
         const videoTrack = videoStream.getVideoTracks()[0];
         // Replace existing video track or add new one
         const videoSender = pc.getSenders().find(s => s.track?.kind === "video");
+        console.log("[Camera] Found video sender:", !!videoSender, "senders count:", pc.getSenders().length);
         if (videoSender) {
           await videoSender.replaceTrack(videoTrack);
+          console.log("[Camera] Track replaced");
         } else {
           localStreamRef.current.addTrack(videoTrack);
           pc.addTrack(videoTrack, localStreamRef.current);
+          console.log("[Camera] Track added");
         }
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = localStreamRef.current;
-          localVideoRef.current.play().catch(() => {});
+          localVideoRef.current.play().catch((e) => console.error("[Camera] Local play error:", e));
         }
         setCameraOn(true);
         setCallType("video");
-      } catch { /* camera denied */ }
+      } catch (err) { console.error("[Camera] Error:", err); }
     }
   }, [cameraOn]);
 
   const startScreenShare = useCallback(async () => {
     const pc = pcRef.current;
+    console.log("[Screen] Start called, pc exists:", !!pc, "screenSharing:", screenSharing);
     if (!pc || screenSharing) return;
     try {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
