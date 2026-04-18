@@ -80,3 +80,13 @@ export async function leaveGroup(groupId) {
   if (!res.ok) throw new Error("Failed to leave");
   return res.json();
 }
+
+export async function renameGroup(groupId, newName) {
+  const res = await fetch(`${BASE}/${groupId}/rename`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ name: newName }),
+  });
+  if (!res.ok) throw new Error("Failed to rename");
+  return res.json();
+}

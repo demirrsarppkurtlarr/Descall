@@ -366,4 +366,36 @@ router.post("/:groupId/leave", requireAuth, async (req, res) => {
   }
 });
 
+// Rename group
+router.post("/:groupId/rename", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { groupId } = req.params;
+    const { name } = req.body;
+    
+    if (!name?.trim()) return res.status(400).json({ error: "Name required" });
+    
+    // Check if user is creator
+    const { data: group, error: fetchError } = await supabase
+      .from("groups")
+      .select("created_by")
+      .eq("id", groupId)
+      .single();
+    
+    if (fetchError || !group) return res.status(404).json({ error: "Group not found" });
+    if (group.created_by !== userId) return res.status(403).json({ error: "Only creator can rename" });
+    
+    const { error } = await supabase
+      .from("groups")
+      .update({ name: name.trim(), updated_at: new Date() })
+      .eq("id", groupId);
+    
+    if (error) throw error;
+    res.json({ success: true, name: name.trim() });
+  } catch (err) {
+    console.error("[Groups] Rename error:", err);
+    res.status(500).json({ error: "Failed to rename group" });
+  }
+});
+
 module.exports = router;

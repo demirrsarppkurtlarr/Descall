@@ -11,7 +11,7 @@ import Avatar from "./ui/Avatar";
 import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
-import { getMyGroups, createGroup } from "../api/groups";
+import { getMyGroups, createGroup, leaveGroup, inviteToGroup, renameGroup } from "../api/groups";
 import { 
   MessageSquare, Users, UserPlus, Bell, Circle, 
   PanelLeftClose, Settings, Send, Paperclip, 
@@ -288,6 +288,20 @@ export default function ChatLayout({
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [groupMessages, setGroupMessages] = useState([]);
   const [groupComposer, setGroupComposer] = useState("");
+  
+  // Group management modals
+  const [leaveGroupModalOpen, setLeaveGroupModalOpen] = useState(false);
+  const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
+  const [renameGroupModalOpen, setRenameGroupModalOpen] = useState(false);
+  const [groupSettingsOpen, setGroupSettingsOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [membersToAdd, setMembersToAdd] = useState([]);
+  
+  // Global search
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState({ users: [], groups: [], messages: [] });
+  
   const fileInputRef = useRef(null);
 
   const messagesRef = useRef(null);
@@ -717,10 +731,16 @@ export default function ChatLayout({
                 <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} title="Group video call">
                   <Video size={18} />
                 </RippleButton>
+                <RippleButton type="button" className="header-call" onClick={() => setGroupSettingsOpen(true)} title="Group settings">
+                  <Settings size={18} />
+                </RippleButton>
               </div>
             )}
           </div>
           <div className="panel-header-right">
+            <RippleButton type="button" className="header-call" onClick={() => setGlobalSearchOpen(true)} title="Global search (Ctrl+K)">
+              <Search size={18} />
+            </RippleButton>
             <span className={`connection-chip ${isOnline ? "online" : "reconnect"}`}>{connectionLabel}</span>
           </div>
         </header>
@@ -1065,6 +1085,165 @@ export default function ChatLayout({
         focusedParticipant={groupCall?.focusedParticipant}
         setFocusedParticipant={groupCall?.setFocusedParticipant || (() => {})}
       />
+
+      {/* ========== GROUP MANAGEMENT MODALS ========== */}
+      
+      {/* Leave Group Modal */}
+      <Modal open={leaveGroupModalOpen} onClose={() => setLeaveGroupModalOpen(false)}>
+        <div className="modal-content" style={{ padding: 24, textAlign: "center" }}>
+          <h3 style={{ marginBottom: 12 }}>Leave Group?</h3>
+          <p style={{ marginBottom: 24, color: "#888" }}>Are you sure you want to leave <strong>{activeGroup?.name}</strong>?</p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+            <RippleButton type="button" className="btn-secondary" onClick={() => setLeaveGroupModalOpen(false)}>Cancel</RippleButton>
+            <RippleButton type="button" className="btn-danger" onClick={handleLeaveGroup} style={{ background: "#ed4245" }}>Leave Group</RippleButton>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add Member Modal */}
+      <Modal open={addMemberModalOpen} onClose={() => { setAddMemberModalOpen(false); setMembersToAdd([]); }} wide>
+        <div className="modal-content" style={{ padding: 24 }}>
+          <h3 style={{ marginBottom: 16 }}>Add Members to {activeGroup?.name}</h3>
+          <div className="cg-friends-list" style={{ maxHeight: 300, overflow: "auto", marginBottom: 16 }}>
+            {friends.filter(f => !myGroups.find(g => g.id === activeGroup?.id)?.memberIds?.includes(f.id)).map((friend) => (
+              <label key={friend.id} className="cg-friend-item" style={{ display: "flex", alignItems: "center", gap: 12, padding: 8, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={membersToAdd.includes(friend.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) setMembersToAdd([...membersToAdd, friend.id]);
+                    else setMembersToAdd(membersToAdd.filter((id) => id !== friend.id));
+                  }}
+                />
+                <Avatar name={friend.username} size={32} imageUrl={friend.avatarUrl} />
+                <span>{friend.username}</span>
+              </label>
+            ))}
+            {friends.length === 0 && <p className="muted small">No friends to add.</p>}
+          </div>
+          <small style={{ display: "block", marginBottom: 16 }}>{membersToAdd.length} selected</small>
+          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <RippleButton type="button" className="btn-secondary" onClick={() => { setAddMemberModalOpen(false); setMembersToAdd([]); }}>Cancel</RippleButton>
+            <RippleButton type="button" className="btn-primary" onClick={handleAddMembers} disabled={membersToAdd.length === 0}>Add Members</RippleButton>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Rename Group Modal */}
+      <Modal open={renameGroupModalOpen} onClose={() => { setRenameGroupModalOpen(false); setRenameValue(""); }}>
+        <div className="modal-content" style={{ padding: 24 }}>
+          <h3 style={{ marginBottom: 16 }}>Rename Group</h3>
+          <form onSubmit={(e) => { e.preventDefault(); handleRenameGroup(); }}>
+            <input
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="New group name"
+              maxLength={50}
+              style={{ width: "100%", padding: 12, marginBottom: 16, background: "#1a1d21", border: "1px solid #2f3136", borderRadius: 6, color: "#fff" }}
+            />
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <RippleButton type="button" className="btn-secondary" onClick={() => { setRenameGroupModalOpen(false); setRenameValue(""); }}>Cancel</RippleButton>
+              <RippleButton type="submit" className="btn-primary" disabled={!renameValue.trim()}>Rename</RippleButton>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* Group Settings Modal */}
+      <Modal open={groupSettingsOpen} onClose={() => setGroupSettingsOpen(false)} wide>
+        <div className="modal-content" style={{ padding: 24 }}>
+          <h3 style={{ marginBottom: 24 }}>Group Settings: {activeGroup?.name}</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <RippleButton type="button" className="btn-secondary" onClick={() => { setGroupSettingsOpen(false); setRenameValue(activeGroup?.name || ""); setRenameGroupModalOpen(true); }} style={{ justifyContent: "flex-start" }}>
+              ✏️ Rename Group
+            </RippleButton>
+            <RippleButton type="button" className="btn-secondary" onClick={() => { setGroupSettingsOpen(false); setAddMemberModalOpen(true); }} style={{ justifyContent: "flex-start" }}>
+              ➕ Add Members
+            </RippleButton>
+            <RippleButton type="button" className="btn-danger" onClick={() => { setGroupSettingsOpen(false); setLeaveGroupModalOpen(true); }} style={{ justifyContent: "flex-start", background: "rgba(237, 66, 69, 0.1)", color: "#ed4245" }}>
+              🚪 Leave Group
+            </RippleButton>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ========== GLOBAL SEARCH MODAL ========== */}
+      <Modal open={globalSearchOpen} onClose={() => { setGlobalSearchOpen(false); setGlobalSearchQuery(""); setSearchResults({ users: [], groups: [], messages: [] }); }} wide>
+        <div className="modal-content" style={{ padding: 24, minHeight: 400 }}>
+          <h3 style={{ marginBottom: 16 }}>Global Search</h3>
+          <div style={{ position: "relative", marginBottom: 20 }}>
+            <Search size={18} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#72767d" }} />
+            <input
+              type="text"
+              value={globalSearchQuery}
+              onChange={(e) => handleGlobalSearch(e.target.value)}
+              placeholder="Search users, groups, messages..."
+              style={{ width: "100%", padding: "12px 12px 12px 40px", background: "#1a1d21", border: "1px solid #2f3136", borderRadius: 6, color: "#fff", fontSize: 15 }}
+            />
+          </div>
+          
+          <div style={{ display: "flex", gap: 24 }}>
+            {/* Users Results */}
+            <div style={{ flex: 1 }}>
+              <h4 style={{ marginBottom: 12, color: "#72767d", fontSize: 12, textTransform: "uppercase" }}>Users ({searchResults.users.length})</h4>
+              <div style={{ maxHeight: 300, overflow: "auto" }}>
+                {searchResults.users.map((user) => (
+                  <motion.button
+                    key={user.id}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 8, background: "transparent", border: "none", color: "#fff", cursor: "pointer", borderRadius: 4 }}
+                    whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+                    onClick={() => { onOpenDm(user); setGlobalSearchOpen(false); }}
+                  >
+                    <Avatar name={user.username} size={32} imageUrl={user.avatarUrl} />
+                    <span>{user.username}</span>
+                  </motion.button>
+                ))}
+                {globalSearchQuery && searchResults.users.length === 0 && <p className="muted small">No users found.</p>}
+              </div>
+            </div>
+
+            {/* Groups Results */}
+            <div style={{ flex: 1 }}>
+              <h4 style={{ marginBottom: 12, color: "#72767d", fontSize: 12, textTransform: "uppercase" }}>Groups ({searchResults.groups.length})</h4>
+              <div style={{ maxHeight: 300, overflow: "auto" }}>
+                {searchResults.groups.map((group) => (
+                  <motion.button
+                    key={group.id}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 8, background: "transparent", border: "none", color: "#fff", cursor: "pointer", borderRadius: 4 }}
+                    whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+                    onClick={() => { handleOpenGroup(group); setGlobalSearchOpen(false); }}
+                  >
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#5865f2", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>
+                      {group.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span>{group.name}</span>
+                  </motion.button>
+                ))}
+                {globalSearchQuery && searchResults.groups.length === 0 && <p className="muted small">No groups found.</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Keyboard shortcut: Ctrl+K for global search */}
+      <GlobalSearchShortcut onOpen={() => setGlobalSearchOpen(true)} />
     </div>
   );
+}
+
+// Global search shortcut component
+function GlobalSearchShortcut({ onOpen }) {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        onOpen();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onOpen]);
+  return null;
 }
