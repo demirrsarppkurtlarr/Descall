@@ -2,8 +2,9 @@ services:
   - type: web
     name: descall-backend
     runtime: node
-    buildCommand: cd frontend/backend && npm install
-    startCommand: cd frontend/backend && npm start
+    rootDir: frontend/backend
+    buildCommand: npm install
+    startCommand: node server.js
     envVars:
       - key: NODE_VERSION
         value: 18
