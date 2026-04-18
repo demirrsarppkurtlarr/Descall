@@ -538,9 +538,10 @@ export default function ChatLayout({
           )}
 
           {sidebarView === "groups" && (
-            <div className="sidebar-section grow">
+            <div className="sidebar-section grow" style={{ background: "red", minHeight: "200px" }}>
+              <h4 style={{ color: "white", padding: "20px" }}>GROUPS VIEW TEST</h4>
               <div className="sidebar-section-header">
-                <h4>Groups</h4>
+                <h4>Groups ({myGroups.length})</h4>
                 <button 
                   className="btn-icon"
                   onClick={() => setCreateGroupOpen(true)}
