@@ -11,6 +11,7 @@ import Avatar from "./ui/Avatar";
 import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
+import { getMyGroups, createGroup } from "../api/groups";
 
 function StatusBadge({ status = "offline" }) {
   return <span className={`status-dot ${status}`} title={status} />;
@@ -267,6 +268,11 @@ export default function ChatLayout({
   });
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [myGroups, setMyGroups] = useState([]);
+  const [activeGroup, setActiveGroup] = useState(null);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState([]);
   const fileInputRef = useRef(null);
 
   const messagesRef = useRef(null);
@@ -287,6 +293,38 @@ export default function ChatLayout({
   }, [theme]);
 
   useEffect(() => { scrollToBottom(); }, [activeDmUser, scrollToBottom]);
+
+  // Fetch my groups
+  useEffect(() => {
+    if (!me) return;
+    getMyGroups()
+      .then((data) => setMyGroups(data.groups || []))
+      .catch((err) => console.error("Failed to fetch groups:", err));
+  }, [me]);
+
+  // Group handlers
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    if (!newGroupName.trim() || selectedMembers.length === 0) return;
+    try {
+      const result = await createGroup({
+        name: newGroupName.trim(),
+        memberIds: selectedMembers,
+      });
+      setMyGroups((prev) => [result.group, ...prev]);
+      setCreateGroupOpen(false);
+      setNewGroupName("");
+      setSelectedMembers([]);
+      toast?.success?.("Group created!");
+    } catch (err) {
+      toast?.error?.(err.message || "Failed to create group");
+    }
+  };
+
+  const handleOpenGroup = (group) => {
+    setActiveGroup(group);
+    // TODO: Load group messages
+  };
 
   const sortedFriends = useMemo(() => [...friends].sort((a, b) => a.username.localeCompare(b.username)), [friends]);
   const filteredFriends = useMemo(() => {
@@ -396,6 +434,9 @@ export default function ChatLayout({
         <motion.button type="button" className={`rail-btn ${sidebarView === "dms" ? "active" : ""}`} title="Direct messages" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("dms")}>
           💬
         </motion.button>
+        <motion.button type="button" className={`rail-btn ${sidebarView === "groups" ? "active" : ""}`} title="Groups" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("groups")}>
+          🗣️
+        </motion.button>
         <motion.button type="button" className={`rail-btn ${sidebarView === "friends" ? "active" : ""}`} title="Friends" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("friends")}>
           👥
         </motion.button>
@@ -492,6 +533,58 @@ export default function ChatLayout({
                   </div>
                 ))}
                 {filteredFriends.length === 0 && <p className="muted small">No friends match your search.</p>}
+              </div>
+            </div>
+          )}
+
+          {sidebarView === "groups" && (
+            <div className="sidebar-section grow">
+              <div className="sidebar-section-header">
+                <h4>Groups</h4>
+                <button 
+                  className="btn-icon"
+                  onClick={() => setCreateGroupOpen(true)}
+                  title="Create group"
+                >
+                  +
+                </button>
+              </div>
+              <div className="scroll-list custom-scroll">
+                {myGroups.length === 0 ? (
+                  <div className="empty-state">
+                    <p className="muted">No groups yet</p>
+                    <button className="btn-secondary" onClick={() => setCreateGroupOpen(true)}>
+                      Create your first group
+                    </button>
+                  </div>
+                ) : (
+                  myGroups.map((group) => (
+                    <motion.button
+                      key={group.id}
+                      type="button"
+                      className={`dm-item ${activeGroup?.id === group.id ? "active" : ""}`}
+                      onClick={() => handleOpenGroup(group)}
+                      whileHover={{ x: 2 }}
+                    >
+                      <div className="dm-avatar">
+                        {group.avatar_url ? (
+                          <img src={group.avatar_url} alt={group.name} />
+                        ) : (
+                          <div className="avatar-fallback">{group.name.charAt(0).toUpperCase()}</div>
+                        )}
+                      </div>
+                      <div className="dm-meta">
+                        <div className="dm-name-row">
+                          <span className="dm-name">{group.name}</span>
+                          {group.unread > 0 && <span className="dm-badge">{group.unread}</span>}
+                        </div>
+                        <div className="dm-preview">
+                          {group.last_message ? group.last_message.content : "No messages yet"}
+                        </div>
+                      </div>
+                    </motion.button>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -764,6 +857,70 @@ export default function ChatLayout({
           me={me}
           onLogout={() => { setSettingsOpen(false); onLogout(); }}
         />
+      </Modal>
+
+      {/* Create Group Modal */}
+      <Modal open={createGroupOpen} onClose={() => setCreateGroupOpen(false)}>
+        <div className="create-group-modal">
+          <h3>Create Group</h3>
+          <form onSubmit={handleCreateGroup}>
+            <label className="cg-field">
+              <span>Group Name</span>
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="Enter group name"
+                maxLength={50}
+                required
+              />
+              <small>{newGroupName.length}/50</small>
+            </label>
+
+            <div className="cg-members">
+              <span>Select Members (max 15)</span>
+              <div className="cg-friends-list">
+                {friends.map((friend) => (
+                  <label key={friend.id} className="cg-friend-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedMembers.includes(friend.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          if (selectedMembers.length < 14) {
+                            setSelectedMembers([...selectedMembers, friend.id]);
+                          }
+                        } else {
+                          setSelectedMembers(selectedMembers.filter((id) => id !== friend.id));
+                        }
+                      }}
+                      disabled={!selectedMembers.includes(friend.id) && selectedMembers.length >= 14}
+                    />
+                    <Avatar src={friend.avatar_url} alt={friend.username} size={28} />
+                    <span>{friend.username}</span>
+                  </label>
+                ))}
+                {friends.length === 0 && (
+                  <p className="muted small">Add friends first to create a group</p>
+                )}
+              </div>
+              <small className="cg-count">{selectedMembers.length}/14 friends selected</small>
+            </div>
+
+            <div className="cg-actions">
+              <RippleButton type="button" className="btn-secondary" onClick={() => setCreateGroupOpen(false)}>
+                Cancel
+              </RippleButton>
+              <RippleButton 
+                type="submit" 
+                className="btn-primary"
+                disabled={!newGroupName.trim() || selectedMembers.length === 0}
+              >
+                Create Group
+              </RippleButton>
+            </div>
+          </form>
+        </div>
       </Modal>
 
       <UserProfilePopover
