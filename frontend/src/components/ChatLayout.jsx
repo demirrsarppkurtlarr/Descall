@@ -133,12 +133,19 @@ export default function ChatLayout({
   const handleCreateGroup = async (e) => { e.preventDefault(); if (!newGroupName.trim() || selectedMembers.length === 0) return; try { const result = await createGroup({ name: newGroupName.trim(), memberIds: selectedMembers }); setMyGroups((prev) => [result.group, ...prev]); setCreateGroupOpen(false); setNewGroupName(""); setSelectedMembers([]); toast?.success?.("Group created!"); } catch (err) { toast?.error?.(err.message || "Failed"); } };
   const handleSendFriendRequest = (e) => { e.preventDefault(); if (!friendUsername.trim()) return; onSendFriendRequest?.(friendUsername); setFriendUsername(""); setAddFriendOpen(false); };
 
-  // Lists
+  // Lists with safety checks
   const safeFriends = friends || [];
   const safeFriendRequests = friendRequests || [];
-  const dmList = useMemo(() => safeFriends.map((f) => { const messages = dmByUserId[f.id] || []; const last = messages[messages.length - 1]; return { friend: f, unread: dmUnread[f.id] || 0, preview: last?.text || "", status: f.status }; }).sort((a, b) => (b.unread > 0 ? 1 : -1)), [safeFriends, dmByUserId, dmUnread]);
-  const filteredFriends = useMemo(() => { let list = [...safeFriends]; if (friendFilter === "online") list = list.filter(f => f.status === "online"); if (searchQuery) list = list.filter(f => f.username.toLowerCase().includes(searchQuery.toLowerCase())); return list; }, [safeFriends, friendFilter, searchQuery]);
-  const onlineCount = safeFriends.filter(f => f.status === "online").length;
+  const safeNotifications = notifications || [];
+  const safeOnlineUsers = onlineUsers || [];
+  const safeMyGroups = myGroups || [];
+  const safeDmMessages = dmMessages || [];
+  const safeDmByUserId = dmByUserId || {};
+  const safeDmUnread = dmUnread || {};
+  
+  const dmList = useMemo(() => safeFriends.map((f) => { const messages = safeDmByUserId[f.id] || []; const last = messages[messages.length - 1]; return { friend: f, unread: safeDmUnread[f.id] || 0, preview: last?.text || "", status: f.status }; }).sort((a, b) => (b.unread > 0 ? 1 : -1)), [safeFriends, safeDmByUserId, safeDmUnread]);
+  const filteredFriends = useMemo(() => { let list = [...safeFriends]; if (friendFilter === "online") list = list.filter(f => f.status === "online"); if (searchQuery) list = list.filter(f => f.username?.toLowerCase().includes(searchQuery.toLowerCase())); return list; }, [safeFriends, friendFilter, searchQuery]);
+  const onlineCount = safeOnlineUsers.filter(u => u.status === "online").length;
   const pendingCount = safeFriendRequests.length;
   const typingNamesDm = typingDmUser ? [typingDmUser.username] : [];
   const inCall = call?.mode === "active" || call?.mode === "outgoing";
@@ -149,9 +156,9 @@ export default function ChatLayout({
       <motion.nav className="nav-rail" variants={slideInLeft} initial="hidden" animate="visible">
         <ServerIcon active={!activeGroup && sidebarView === "dms"} onClick={() => { setActiveGroup(null); setSidebarView("dms"); onOpenDm?.(null); }} tooltip="Direct Messages"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></ServerIcon>
         <div className="server-divider" />
-        {myGroups.map((group, i) => (<ServerIcon key={group.id} active={activeGroup?.id === group.id} onClick={() => handleOpenGroup(group)} tooltip={group.name} delay={i * 0.05}>{group.name.charAt(0).toUpperCase()}</ServerIcon>))}
+        {safeMyGroups.map((group, i) => (<ServerIcon key={group.id} active={activeGroup?.id === group.id} onClick={() => handleOpenGroup(group)} tooltip={group.name} delay={i * 0.05}>{group.name.charAt(0).toUpperCase()}</ServerIcon>))}
         <ServerIcon onClick={() => setCreateGroupOpen(true)} tooltip="Create Group" color="#36393f"><Plus size={24} /></ServerIcon>
-        {notifications.length > 0 && <div className="notification-pill">{notifications.length}</div>}
+        {safeNotifications.length > 0 && <div className="notification-pill">{safeNotifications.length}</div>}
       </motion.nav>
 
       {/* ============ SIDEBAR ============ */}
@@ -302,7 +309,7 @@ export default function ChatLayout({
       <AnimatePresence>
         {createGroupOpen && (<ModalOverlay onClose={() => setCreateGroupOpen(false)}><motion.div className="modal-content large" variants={scaleIn} initial="hidden" animate="visible" exit={{ scale: 0.9, opacity: 0 }}><h2>Create a Server</h2><p>Choose a name for your new group</p><form onSubmit={handleCreateGroup}><input className="modal-input" placeholder="Server Name" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} maxLength={50} /><div className="member-count">{selectedMembers.length}/14 friends selected</div><div className="friends-list compact">{safeFriends.map((f) => (<motion.label key={f.id} className={`friend-checkbox ${selectedMembers.includes(f.id) ? "selected" : ""}`} whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}><input type="checkbox" checked={selectedMembers.includes(f.id)} onChange={(e) => { if (e.target.checked) { if (selectedMembers.length < 14) setSelectedMembers([...selectedMembers, f.id]); } else { setSelectedMembers(selectedMembers.filter(id => id !== f.id)); } }} /><Avatar name={f.username} size={28} imageUrl={f.avatarUrl} /><span>{f.username}</span></motion.label>))}</div><div className="modal-actions"><motion.button type="button" className="modal-btn secondary" whileHover={{ scale: 1.02 }} onClick={() => setCreateGroupOpen(false)}>Cancel</motion.button><motion.button type="submit" className="modal-btn primary" whileHover={{ scale: 1.02 }} disabled={!newGroupName.trim() || selectedMembers.length === 0}>Create</motion.button></div></form></motion.div></ModalOverlay>)}
         {addFriendOpen && (<ModalOverlay onClose={() => setAddFriendOpen(false)}><motion.div className="modal-content" variants={scaleIn} initial="hidden" animate="visible" exit={{ scale: 0.9, opacity: 0 }}><h2>Add Friend</h2><p>You can add friends by their username</p><form onSubmit={handleSendFriendRequest}><input className="modal-input" placeholder="Enter username" value={friendUsername} onChange={(e) => setFriendUsername(e.target.value)} /><div className="modal-actions"><motion.button type="button" className="modal-btn secondary" whileHover={{ scale: 1.02 }} onClick={() => setAddFriendOpen(false)}>Cancel</motion.button><motion.button type="submit" className="modal-btn primary" whileHover={{ scale: 1.02 }} disabled={!friendUsername.trim()}>Send Friend Request</motion.button></div></form></motion.div></ModalOverlay>)}
-        {notificationsOpen && (<ModalOverlay onClose={() => setNotificationsOpen(false)}><motion.div className="modal-content notifications" variants={scaleIn} initial="hidden" animate="visible" exit={{ scale: 0.9, opacity: 0 }}><h2>Notifications</h2>{notifications.length === 0 ? <p className="empty">No new notifications</p> : notifications.map((n, i) => (<motion.div key={n.id} className="notification-item" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.05 }}><div className="notif-icon"><Bell size={18} /></div><div className="notif-content"><div className="notif-title">{n.title}</div><div className="notif-body">{n.body}</div></div><motion.button className="notif-close" whileHover={{ scale: 1.1 }} onClick={() => {}}><X size={16} /></motion.button></motion.div>))}</motion.div></ModalOverlay>)}
+        {notificationsOpen && (<ModalOverlay onClose={() => setNotificationsOpen(false)}><motion.div className="modal-content notifications" variants={scaleIn} initial="hidden" animate="visible" exit={{ scale: 0.9, opacity: 0 }}><h2>Notifications</h2>{safeNotifications.length === 0 ? <p className="empty">No new notifications</p> : safeNotifications.map((n, i) => (<motion.div key={n.id} className="notification-item" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.05 }}><div className="notif-icon"><Bell size={18} /></div><div className="notif-content"><div className="notif-title">{n.title}</div><div className="notif-body">{n.body}</div></div><motion.button className="notif-close" whileHover={{ scale: 1.1 }} onClick={() => {}}><X size={16} /></motion.button></motion.div>))}</motion.div></ModalOverlay>)}
       </AnimatePresence>
 
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} me={me} onLogout={onLogout} />}
