@@ -312,11 +312,15 @@ export default function ChatLayout({
   // Fetch my groups
   useEffect(() => {
     if (!me) return;
+    console.log("[Frontend] Fetching groups...");
     getMyGroups()
-      .then((data) => setMyGroups(data.groups || []))
+      .then((data) => {
+        console.log("[Frontend] Groups received:", data);
+        setMyGroups(data.groups || []);
+      })
       .catch((err) => {
-        console.error("Failed to fetch groups:", err);
-        setMyGroups([]); // Hata durumunda boş array
+        console.error("[Frontend] Failed to fetch groups:", err);
+        setMyGroups([]);
       });
   }, [me]);
 
@@ -493,10 +497,10 @@ export default function ChatLayout({
       </nav>
 
       <motion.aside
-        className="sidebar-secondary glass-sidebar"
+        className="sidebar-secondary"
         initial={false}
-        animate={{ width: sidebarOpen ? 300 : 0, opacity: sidebarOpen ? 1 : 0, x: sidebarOpen ? 0 : -12 }}
-        transition={{ type: "spring", stiffness: 380, damping: 34 }}
+        animate={{ width: sidebarOpen ? 300 : 0 }}
+        transition={{ type: "tween", duration: 0.2 }}
         style={{ overflow: "hidden" }}
       >
         <div className="sidebar-inner">
