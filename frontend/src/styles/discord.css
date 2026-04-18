@@ -1359,6 +1359,59 @@
   background: var(--accent-primary);
 }
 
+/* ============ SETTINGS PANEL ============ */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-panel {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  width: 700px;
+  height: 500px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.settings-sidebar {
+  width: 200px;
+  background: var(--bg-tertiary);
+  padding: 20px 0;
+}
+
+.settings-tab {
+  padding: 10px 20px;
+  color: var(--interactive-normal);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-tab:hover {
+  background: var(--bg-modifier-hover);
+  color: var(--interactive-hover);
+}
+
+.settings-tab.active {
+  background: var(--bg-modifier-selected);
+  color: white;
+}
+
+.settings-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
 /* ============ ANIMATIONS ============ */
 @keyframes pulse {
   0%, 100% { opacity: 1; }

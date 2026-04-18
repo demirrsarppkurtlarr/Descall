@@ -184,7 +184,7 @@ export default function ChatLayout({
                 {dmList.filter(d => d.friend.status === "online" || d.unread > 0).map(({ friend, unread, preview, status }, i) => (
                   <DMItem key={friend.id} friend={friend} active={activeDmUser?.id === friend.id} unread={unread} preview={preview} onClick={() => { setActiveGroup(null); onOpenDm?.(friend); }} index={i} status={status} />
                 ))}
-                <div className="category-header" style={{ marginTop: 16 }}><ChevronRight size={12} />OFFLINE — {friends.length - onlineCount}</div>
+                <div className="category-header" style={{ marginTop: 16 }}><ChevronRight size={12} />OFFLINE — {safeFriends.length - onlineCount}</div>
                 {dmList.filter(d => d.friend.status !== "online" && d.unread === 0).map(({ friend, unread, preview, status }, i) => (
                   <DMItem key={friend.id} friend={friend} active={activeDmUser?.id === friend.id} unread={unread} preview={preview} onClick={() => { setActiveGroup(null); onOpenDm?.(friend); }} index={i} status={status} />
                 ))}
@@ -193,7 +193,7 @@ export default function ChatLayout({
               <motion.div key="friends" variants={fadeIn}>
                 {/* Friend Tabs */}
                 <div className="friend-tabs">
-                  <button className={friendFilter === "all" ? "active" : ""} onClick={() => setFriendFilter("all")}>All<span>{friends.length}</span></button>
+                  <button className={friendFilter === "all" ? "active" : ""} onClick={() => setFriendFilter("all")}>All<span>{safeFriends.length}</span></button>
                   <button className={friendFilter === "online" ? "active" : ""} onClick={() => setFriendFilter("online")}>Online<span>{onlineCount}</span></button>
                   <button className={friendFilter === "pending" ? "active" : ""} onClick={() => setFriendFilter("pending")}>Pending<span>{pendingCount}</span></button>
                 </div>
