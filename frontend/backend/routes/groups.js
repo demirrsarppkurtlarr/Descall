@@ -83,7 +83,8 @@ router.post("/create", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("[Groups] Create error:", err);
-    res.status(500).json({ error: "Failed to create group" });
+    console.error("[Groups] Stack:", err.stack);
+    res.status(500).json({ error: "Failed to create group", details: err.message });
   }
 });
 
@@ -202,7 +203,8 @@ router.get("/:groupId/members", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("[Groups] Members error:", err);
-    res.status(500).json({ error: "Failed to fetch members" });
+    console.error("[Groups] Stack:", err.stack);
+    res.status(500).json({ error: "Failed to fetch members", details: err.message });
   }
 });
 

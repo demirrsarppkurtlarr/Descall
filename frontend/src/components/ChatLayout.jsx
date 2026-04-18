@@ -299,7 +299,10 @@ export default function ChatLayout({
     if (!me) return;
     getMyGroups()
       .then((data) => setMyGroups(data.groups || []))
-      .catch((err) => console.error("Failed to fetch groups:", err));
+      .catch((err) => {
+        console.error("Failed to fetch groups:", err);
+        setMyGroups([]); // Hata durumunda boş array
+      });
   }, [me]);
 
   // Group handlers
@@ -538,8 +541,7 @@ export default function ChatLayout({
           )}
 
           {sidebarView === "groups" && (
-            <div className="sidebar-section grow" style={{ background: "red", minHeight: "200px" }}>
-              <h4 style={{ color: "white", padding: "20px" }}>GROUPS VIEW TEST</h4>
+            <div className="sidebar-section grow">
               <div className="sidebar-section-header">
                 <h4>Groups ({myGroups.length})</h4>
                 <button 
