@@ -12,6 +12,14 @@ import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
 import { getMyGroups, createGroup } from "../api/groups";
+import { 
+  MessageSquare, Users, UserPlus, Bell, Circle, 
+  PanelLeftClose, Settings, Send, Paperclip, 
+  Phone, Video, X, Plus, Clock, Check, CheckCheck,
+  Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
+  Search, LogOut, Volume2, VolumeX, Maximize2, Grid,
+  ChevronLeft, ChevronRight, MoreVertical, Trash2
+} from "lucide-react";
 
 function StatusBadge({ status = "offline" }) {
   return <span className={`status-dot ${status}`} title={status} />;
@@ -454,27 +462,27 @@ export default function ChatLayout({
     <div className="app-root app-root-enhanced">
       <nav className="nav-rail" aria-label="Main">
         <motion.button type="button" className={`rail-btn ${sidebarView === "dms" ? "active" : ""}`} title="Direct messages" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("dms")}>
-          💬
+          <MessageSquare size={22} />
         </motion.button>
         <motion.button type="button" className={`rail-btn ${sidebarView === "groups" ? "active" : ""}`} title="Groups" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("groups")}>
-          🗣️
+          <Users size={22} />
         </motion.button>
         <motion.button type="button" className={`rail-btn ${sidebarView === "friends" ? "active" : ""}`} title="Friends" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("friends")}>
-          👥
+          <UserPlus size={22} />
         </motion.button>
         <motion.button type="button" className={`rail-btn ${notificationsOpen ? "active" : ""}`} title="Notifications" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setNotificationsOpen((o) => !o)}>
-          🔔
+          <Bell size={22} />
           {globalUnread > 0 && <span className="rail-badge">{globalUnread > 99 ? "99+" : globalUnread}</span>}
         </motion.button>
         <motion.button type="button" className={`rail-btn ${sidebarView === "online" ? "active" : ""}`} title="Online" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("online")}>
-          ●
+          <Circle size={10} fill="currentColor" />
         </motion.button>
         <div className="rail-spacer" />
         <motion.button type="button" className="rail-btn subtle" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarOpen((o) => !o)}>
-          ⏴
+          <PanelLeftClose size={20} />
         </motion.button>
         <motion.button type="button" className="rail-btn subtle" title="Settings" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSettingsOpen(true)}>
-          ⚙
+          <Settings size={20} />
         </motion.button>
       </nav>
 
@@ -527,7 +535,7 @@ export default function ChatLayout({
               <h4>Add friend</h4>
               <form className="mini-form" onSubmit={submitFriendRequest}>
                 <input placeholder="Username" value={friendUsername} onChange={(e) => setFriendUsername(e.target.value)} />
-                <RippleButton type="submit" title="Send request">+</RippleButton>
+                <RippleButton type="submit" title="Send request"><Plus size={18} /></RippleButton>
               </form>
               <input className="filter-input" placeholder="Search friends..." value={friendFilter} onChange={(e) => setFriendFilter(e.target.value)} />
               <h4>Friends ({filteredFriends.length})</h4>
@@ -547,10 +555,10 @@ export default function ChatLayout({
                       <span className="friend-name">{friend.username}</span>
                     </button>
                     <div className="friend-actions">
-                      <button type="button" className="icon-btn" title="Voice call" disabled={inCall} onClick={() => call?.startCall(friend, "voice")}>📞</button>
-                      <button type="button" className="icon-btn" title="Video call" disabled={inCall} onClick={() => call?.startCall(friend, "video")}>📹</button>
-                      <button type="button" className="icon-btn" title="DM" onClick={() => onOpenDm(friend)}>✉</button>
-                      <button type="button" className="icon-btn danger" title="Remove" onClick={() => onRemoveFriend(friend.id)}>✕</button>
+                      <button type="button" className="icon-btn" title="Voice call" disabled={inCall} onClick={() => call?.startCall(friend, "voice")}><Phone size={16} /></button>
+                      <button type="button" className="icon-btn" title="Video call" disabled={inCall} onClick={() => call?.startCall(friend, "video")}><Video size={16} /></button>
+                      <button type="button" className="icon-btn" title="DM" onClick={() => onOpenDm(friend)}><MessageSquare size={16} /></button>
+                      <button type="button" className="icon-btn danger" title="Remove" onClick={() => onRemoveFriend(friend.id)}><X size={16} /></button>
                     </div>
                   </div>
                 ))}
@@ -568,7 +576,7 @@ export default function ChatLayout({
                   onClick={() => setCreateGroupOpen(true)}
                   title="Create group"
                 >
-                  +
+                  <Plus size={20} />
                 </button>
               </div>
               <div className="scroll-list custom-scroll">
@@ -656,7 +664,7 @@ export default function ChatLayout({
                 <option value="invisible">Invisible</option>
               </select>
             </div>
-            <RippleButton type="button" className="logout-mini" onClick={onLogout}>Log out</RippleButton>
+            <RippleButton type="button" className="logout-mini" onClick={onLogout}><LogOut size={16} /></RippleButton>
           </div>
         </div>
       </motion.aside>
@@ -684,20 +692,20 @@ export default function ChatLayout({
             {activeDmUser && (
               <div className="header-call-btns">
                 <RippleButton type="button" className="header-call" disabled={inCall} onClick={() => call?.startCall(activeDmUser, "voice")} title="Voice call">
-                  📞
+                  <Phone size={18} />
                 </RippleButton>
                 <RippleButton type="button" className="header-call" disabled={inCall} onClick={() => call?.startCall(activeDmUser, "video")} title="Video call">
-                  📹
+                  <Video size={18} />
                 </RippleButton>
               </div>
             )}
             {activeGroup && (
               <div className="header-call-btns">
                 <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "voice", [])} title="Group voice call">
-                  📞
+                  <Phone size={18} />
                 </RippleButton>
                 <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} title="Group video call">
-                  📹
+                  <Video size={18} />
                 </RippleButton>
               </div>
             )}
@@ -836,9 +844,9 @@ export default function ChatLayout({
               disabled={uploading}
             />
             <RippleButton type="button" className="attach-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Attach file">
-              {uploading ? "⏳" : "📎"}
+              {uploading ? <Clock size={18} /> : <Paperclip size={18} />}
             </RippleButton>
-            <RippleButton type="submit">Send</RippleButton>
+            <RippleButton type="submit"><Send size={18} /></RippleButton>
           </form>
         )}
 
