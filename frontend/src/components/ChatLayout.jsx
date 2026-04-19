@@ -1170,7 +1170,7 @@ export default function ChatLayout({
       </Modal>
 
       {/* Create Group Modal */}
-      <Modal open={groups.ui.createOpen} onClose={() => setCreateGroupOpen(false)}>
+      <Modal open={groups.ui.createOpen} onClose={() => groupActions.setUI({ createOpen: false })}>
         <div className="create-group-modal">
           <h3>Create Group</h3>
           <form onSubmit={groupActions.create}>
@@ -1198,10 +1198,10 @@ export default function ChatLayout({
                       onChange={(e) => {
                         if (e.target.checked) {
                           if (groups.ui.selectedMembers.length < 14) {
-                            setSelectedMembers([...groups.ui.selectedMembers, friend.id]);
+                            groupActions.setUI({ selectedMembers: [...groups.ui.selectedMembers, friend.id] });
                           }
                         } else {
-                          setSelectedMembers(groups.ui.selectedMembers.filter((id) => id !== friend.id));
+                          groupActions.setUI({ selectedMembers: groups.ui.selectedMembers.filter((id) => id !== friend.id) });
                         }
                       }}
                       disabled={!groups.ui.selectedMembers.includes(friend.id) && groups.ui.selectedMembers.length >= 14}
@@ -1218,7 +1218,7 @@ export default function ChatLayout({
             </div>
 
             <div className="cg-actions">
-              <RippleButton type="button" className="btn-secondary" onClick={() => setCreateGroupOpen(false)}>
+              <RippleButton type="button" className="btn-secondary" onClick={() => groupActions.setUI({ createOpen: false })}>
                 Cancel
               </RippleButton>
               <RippleButton 
@@ -1234,7 +1234,7 @@ export default function ChatLayout({
       </Modal>
 
       {/* Rename Group Modal */}
-      <Modal open={groups.ui.renameOpen} onClose={() => setRenameGroupOpen(false)}>
+      <Modal open={groups.ui.renameOpen} onClose={() => groupActions.setUI({ renameOpen: false })}>
         <div className="create-group-modal">
           <h3>Rename Group</h3>
           <form onSubmit={groupActions.rename}>
@@ -1243,7 +1243,7 @@ export default function ChatLayout({
               <input
                 type="text"
                 value={groups.ui.renameValue}
-                onChange={(e) => setRenameGroupValue(e.target.value)}
+                onChange={(e) => groupActions.setUI({ renameValue: e.target.value })}
                 placeholder="Enter new group name"
                 maxLength={50}
                 required
@@ -1252,7 +1252,7 @@ export default function ChatLayout({
             </label>
 
             <div className="cg-actions">
-              <RippleButton type="button" className="btn-secondary" onClick={() => setRenameGroupOpen(false)}>
+              <RippleButton type="button" className="btn-secondary" onClick={() => groupActions.setUI({ renameOpen: false })}>
                 Cancel
               </RippleButton>
               <RippleButton 
@@ -1268,7 +1268,7 @@ export default function ChatLayout({
       </Modal>
 
       {/* Invite to Group Modal */}
-      <Modal open={groups.ui.inviteOpen} onClose={() => setInviteGroupOpen(false)}>
+      <Modal open={groups.ui.inviteOpen} onClose={() => groupActions.setUI({ inviteOpen: false })}>
         <div className="create-group-modal">
           <h3>Invite Friend to Group</h3>
           <form onSubmit={groupActions.invite}>
@@ -1285,7 +1285,7 @@ export default function ChatLayout({
             </label>
 
             <div className="cg-actions">
-              <RippleButton type="button" className="btn-secondary" onClick={() => setInviteGroupOpen(false)}>
+              <RippleButton type="button" className="btn-secondary" onClick={() => groupActions.setUI({ inviteOpen: false })}>
                 Cancel
               </RippleButton>
               <RippleButton 
@@ -1373,8 +1373,8 @@ export default function ChatLayout({
       <VideoConference
         isOpen={groupCall?.isInCall || false}
         onClose={groupCall?.leaveCall || (() => {})}
-        minimized={groupCallMinimized}
-        onMinimize={() => setGroupCallMinimized((v) => !v)}
+        minimized={groups.call.minimized}
+        onMinimize={() => setGroups(g => ({ ...g, call: { ...g.call, minimized: !g.call.minimized } }))}
         call={groupCall}
         participants={groupCall?.participants || []}
         localStream={groupCall?.localStream}
