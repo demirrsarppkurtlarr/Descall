@@ -691,7 +691,7 @@ export default function ChatLayout({
           {sidebarView === "groups" && (
             <div className="sidebar-section grow">
               <div className="sidebar-section-header">
-                <h4>Groups ({myGroups.length})</h4>
+                <h4>Groups ({safeMyGroups.length})</h4>
                 <button 
                   className="btn-icon"
                   onClick={() => setCreateGroupOpen(true)}
@@ -701,7 +701,7 @@ export default function ChatLayout({
                 </button>
               </div>
               <div className="scroll-list custom-scroll">
-                {myGroups.length === 0 ? (
+                {safeMyGroups.length === 0 ? (
                   <div className="empty-state">
                     <p className="muted">No groups yet</p>
                     <button className="btn-secondary" onClick={() => setCreateGroupOpen(true)}>
@@ -1205,7 +1205,7 @@ export default function ChatLayout({
         <div className="modal-content" style={{ padding: 24 }}>
           <h3 style={{ marginBottom: 16 }}>Add Members to {activeGroup?.name}</h3>
           <div className="cg-friends-list" style={{ maxHeight: 300, overflow: "auto", marginBottom: 16 }}>
-            {friends.filter(f => !myGroups.find(g => g.id === activeGroup?.id)?.memberIds?.includes(f.id)).map((friend) => (
+            {friends.filter(f => !safeMyGroups.find(g => g.id === activeGroup?.id)?.memberIds?.includes(f.id)).map((friend) => (
               <label key={friend.id} className="cg-friend-item" style={{ display: "flex", alignItems: "center", gap: 12, padding: 8, cursor: "pointer" }}>
                 <input
                   type="checkbox"
