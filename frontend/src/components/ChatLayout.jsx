@@ -267,6 +267,7 @@ export default function ChatLayout({
   typingDmUser,
   onOpenDm,
   onSendDm,
+  socket,
   onSendDmMedia,
   onSendFriendRequest,
   onAcceptFriend,
@@ -353,6 +354,51 @@ export default function ChatLayout({
       .then((data) => setGroups(g => ({ ...g, list: data.groups || [] })))
       .catch(() => setGroups(g => ({ ...g, list: [] })));
   }, [me]);
+
+  // Socket event listeners for groups
+  useEffect(() => {
+    if (!socket) return;
+
+    // Real-time group messages
+    const onGroupMessage = ({ groupId, message }) => {
+      if (groupId === groups.active?.id) {
+        setGroups(g => ({
+          ...g,
+          messages: [...g.messages.filter(m => m.id !== message.id), message]
+        }));
+      }
+    };
+
+    // Incoming group call
+    const onIncomingCall = ({ groupId, fromUser, callType }) => {
+      if (groupCall?.isInCall) {
+        socket.emit("group:call:busy", { groupId, toUserId: fromUser.id });
+        return;
+      }
+      const group = groups.list.find(g => g.id === groupId);
+      setGroups(g => ({
+        ...g,
+        call: { ...g.call, incoming: { groupId, fromUser, callType, groupName: group?.name } }
+      }));
+    };
+
+    // Call ended
+    const onCallEnded = () => {
+      setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
+    };
+
+    socket.on("group:message", onGroupMessage);
+    socket.on("group:call:incoming", onIncomingCall);
+    socket.on("group:call:left", onCallEnded);
+    socket.on("group:call:ended", onCallEnded);
+
+    return () => {
+      socket.off("group:message", onGroupMessage);
+      socket.off("group:call:incoming", onIncomingCall);
+      socket.off("group:call:left", onCallEnded);
+      socket.off("group:call:ended", onCallEnded);
+    };
+  }, [socket, groups.active?.id, groupCall?.isInCall, groups.list]);
 
   // Group actions
   const groupActions = {

@@ -535,6 +535,7 @@ export default function App() {
         onNotificationReadAll={handleNotificationReadAll}
         peerScreenSharing={peerScreenSharing}
         groupCall={groupCall}
+        socket={socketApi}
       />
     </>
   );
