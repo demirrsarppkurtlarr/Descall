@@ -1322,44 +1322,44 @@ export default function ChatLayout({
       </AnimatePresence>
 
       {/* Incoming Group Call Modal - DM Style */}
-      {incomingGroupCall && !groupCall?.isInCall && (
+      {groups.call.incoming && !groupCall?.isInCall && (
         <div className="voice-modal-overlay group-call-overlay">
-          <motion.div 
-            className="voice-modal group-call-modal" 
-            initial={{ scale: 0.9, opacity: 0 }} 
+          <motion.div
+            className="voice-modal group-call-modal"
+            initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
           >
             <div className="group-call-avatar">
-              {incomingGroupCall.fromUser.username?.charAt(0).toUpperCase()}
+              {groups.call.incoming.fromUser.username?.charAt(0).toUpperCase()}
             </div>
-            <h3>{incomingGroupCall.fromUser.username}</h3>
-            <p className="group-name">in {incomingGroupCall.groupName}</p>
-            <p className="call-type">Incoming {incomingGroupCall.callType} call</p>
-            
+            <h3>{groups.call.incoming.fromUser.username}</h3>
+            <p className="group-name">in {groups.call.incoming.groupName}</p>
+            <p className="call-type">Incoming {groups.call.incoming.callType} call</p>
+
             <div className="voice-modal-actions">
-              <RippleButton 
-                type="button" 
-                className="btn-decline" 
+              <RippleButton
+                type="button"
+                className="btn-decline"
                 onClick={() => {
-                  groupCall?.declineCall?.(incomingGroupCall.groupId, incomingGroupCall.fromUser.id);
+                  groupCall?.declineCall?.(groups.call.incoming.groupId, groups.call.incoming.fromUser.id);
                   setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
                 }}
               >
                 Decline
               </RippleButton>
-              <RippleButton 
-                type="button" 
+              <RippleButton
+                type="button"
                 className="btn-accept"
                 onClick={() => {
                   groupCall?.acceptGroupCall?.(
-                    incomingGroupCall.groupId, 
-                    incomingGroupCall.callType, 
-                    incomingGroupCall.fromUser
+                    groups.call.incoming.groupId,
+                    groups.call.incoming.callType,
+                    groups.call.incoming.fromUser
                   );
                   setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
                   // Open the group
-                  const group = myGroups.find(g => g.id === incomingGroupCall.groupId);
-                  if (group) handleOpenGroup(group);
+                  const group = groups.list.find(g => g.id === groups.call.incoming.groupId);
+                  if (group) groupActions.open(group);
                 }}
               >
                 Accept
