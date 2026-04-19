@@ -7,7 +7,7 @@ import VideoConference from "./VideoConference";
 import UserHoverCard from "./social/UserHoverCard";
 import UserProfilePopover from "./social/UserProfilePopover";
 import RippleButton from "./ui/RippleButton";
-import Avatar from "./ui/Avatar";
+import { Avatar } from "./ui/Avatar";
 import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
