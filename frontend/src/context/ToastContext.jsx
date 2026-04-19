@@ -12,7 +12,7 @@ export function ToastProvider({ children }) {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setToasts((prev) => [...prev, { id, message, type: t }]);
     setTimeout(() => {
-      setToasts((prev) => prev.filter((x) => x.id !== id));
+      setToasts((prev) => (prev || []).filter((x) => x.id !== id));
     }, 4000);
   }, []);
 

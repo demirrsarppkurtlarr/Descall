@@ -368,7 +368,7 @@ export default function ChatLayout({
       if (groupId === groups.active?.id) {
         setGroups(g => ({
           ...g,
-          messages: [...g.messages.filter(m => m.id !== message.id), message]
+          messages: [...(g.messages || []).filter(m => m.id !== message.id), message]
         }));
       }
     };
@@ -468,7 +468,7 @@ export default function ChatLayout({
         await leaveGroup(groupId);
         setGroups(g => ({
           ...g,
-          list: g.list.filter(grp => grp.id !== groupId),
+          list: (g.list || []).filter(grp => grp.id !== groupId),
           active: g.active?.id === groupId ? null : g.active
         }));
         toast?.success?.("Left group");
@@ -524,7 +524,7 @@ export default function ChatLayout({
   const filteredFriends = useMemo(() => {
     const q = friendFilter.trim().toLowerCase();
     if (!q) return sortedFriends;
-    return sortedFriends.filter((f) => f.username.toLowerCase().includes(q));
+    return (sortedFriends || []).filter((f) => f.username.toLowerCase().includes(q));
   }, [sortedFriends, friendFilter]);
 
   const dmList = useMemo(() => {
@@ -548,7 +548,7 @@ export default function ChatLayout({
 
   const dmGrouped = useMemo(() => groupDmRows(dmMessages), [dmMessages]);
 
-  const notificationUnread = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+  const notificationUnread = useMemo(() => (notifications || []).filter((n) => !n.read).length, [notifications]);
   const totalDmUnread = useMemo(() => Object.values(dmUnread).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0), [dmUnread]);
   const globalUnread = totalDmUnread + notificationUnread;
 
@@ -1222,7 +1222,7 @@ export default function ChatLayout({
                             groupActions.setUI({ selectedMembers: [...groups.ui.selectedMembers, friend.id] });
                           }
                         } else {
-                          groupActions.setUI({ selectedMembers: groups.ui.selectedMembers.filter((id) => id !== friend.id) });
+                          groupActions.setUI({ selectedMembers: (groups.ui.selectedMembers || []).filter((id) => id !== friend.id) });
                         }
                       }}
                       disabled={!groups.ui.selectedMembers.includes(friend.id) && groups.ui.selectedMembers.length >= 14}

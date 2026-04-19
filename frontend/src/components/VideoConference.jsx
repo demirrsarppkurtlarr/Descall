@@ -161,7 +161,7 @@ export default function VideoConference({
   }
 
   // Filter active participants (with streams)
-  const activeParticipants = participants.filter(p => 
+  const activeParticipants = (participants || []).filter(p =>
     call.remoteStreams.current.has(p.id)
   );
 
@@ -189,8 +189,8 @@ export default function VideoConference({
   const focusStream = focusTarget ? call.remoteStreams.current.get(focusTarget) : null;
 
   // Thumbnail participants (focus view)
-  const thumbnailParticipants = viewMode === "focus" 
-    ? activeParticipants.filter(p => p.id !== focusTarget)
+  const thumbnailParticipants = viewMode === "focus"
+    ? (activeParticipants || []).filter(p => p.id !== focusTarget)
     : [];
 
   return (

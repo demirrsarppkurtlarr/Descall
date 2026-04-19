@@ -20,7 +20,7 @@ import AdminPanel from "./components/admin/AdminPanel";
 
 function mergeById(existing, incoming) {
   const ids = new Set(existing.map((m) => m.id));
-  const out = [...incoming.filter((m) => m && !ids.has(m.id)), ...existing];
+  const out = [...(incoming || []).filter((m) => m && !ids.has(m.id)), ...existing];
   return out.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 }
 
@@ -219,9 +219,9 @@ export default function App() {
       const newUsers = users ?? [];
       const prevIds = new Set(prevOnlineUsersRef.current.map((u) => u.id));
       const friendsSet = new Set(friends.map((f) => f.id));
-      
+
       // Check if any friends just came online
-      const newOnlineFriends = newUsers.filter(
+      const newOnlineFriends = (newUsers || []).filter(
         (u) => !prevIds.has(u.id) && friendsSet.has(u.id) && u.id !== myIdRef.current
       );
       
