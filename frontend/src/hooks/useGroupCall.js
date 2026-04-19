@@ -156,7 +156,7 @@ export function useGroupCall(socket) {
       callTypeRef.current = type;
       
       // Notify all members
-      socket?.emit("group:call:start", {
+      socketRef.current?.emit("group:call:start", {
         groupId,
         callType: type,
         memberIds: Array.isArray(memberIds) ? memberIds : [],
@@ -173,7 +173,7 @@ export function useGroupCall(socket) {
       console.error("[GroupCall] Start failed:", err);
       cleanup();
     }
-  }, [socket, getLocalMedia, cleanup]);
+  }, [getLocalMedia]);
 
   // Accept incoming group call
   const acceptGroupCall = useCallback(async (groupId, type, fromUser) => {
@@ -196,7 +196,7 @@ export function useGroupCall(socket) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       
-      socket?.emit("group:call:accept", {
+      socketRef.current?.emit("group:call:accept", {
         groupId,
         toUserId: fromUser.id,
         offer,
@@ -214,25 +214,25 @@ export function useGroupCall(socket) {
       console.error("[GroupCall] Accept failed:", err);
       cleanup();
     }
-  }, [socket, getLocalMedia, createPeerConnection, cleanup]);
+  }, [getLocalMedia, createPeerConnection]);
 
   // Decline call
   const declineCall = useCallback((groupId, fromUserId) => {
-    socket?.emit("group:call:decline", { groupId, toUserId: fromUserId });
+    socketRef.current?.emit("group:call:decline", { groupId, toUserId: fromUserId });
     setIncomingCall(null);
     audioManager.stop("incomingCall");
-  }, [socket]);
+  }, []);
 
   // Leave call
   const leaveCall = useCallback(() => {
     if (activeGroupIdRef.current) {
-      socket?.emit("group:call:leave", { groupId: activeGroupIdRef.current });
+      socketRef.current?.emit("group:call:leave", { groupId: activeGroupIdRef.current });
       if (isInitiatorRef.current) {
-        socket?.emit("group:call:end", { groupId: activeGroupIdRef.current });
+        socketRef.current?.emit("group:call:end", { groupId: activeGroupIdRef.current });
       }
     }
     cleanup({ notify: false });
-  }, [socket]);
+  }, []);
 
   // Toggle mute
   const toggleMute = useCallback(() => {
@@ -525,7 +525,7 @@ export function useGroupCall(socket) {
       socket.off("group:call:ended", handleEnded);
       socket.off("group:call:declined", handleDeclined);
     };
-  }, [socket, createPeerConnection, cleanup]);
+  }, [socket]);
 
   // Cleanup on unmount
   useEffect(() => {
