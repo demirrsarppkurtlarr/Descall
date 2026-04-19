@@ -403,6 +403,11 @@ export default function ChatLayout({
   const groupActions = {
     // Open group
     open: async (group) => {
+      // Leave previous group room
+      if (groups.active?.id) {
+        socket?.emit("group:leave", groups.active.id);
+      }
+      
       setActiveDmUser(null);
       setGroups(g => ({ ...g, active: group }));
       try {

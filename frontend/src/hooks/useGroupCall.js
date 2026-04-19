@@ -241,16 +241,16 @@ export function useGroupCall(socket) {
     } else {
       // Turn on
       try {
-        // Stop previous video track if exists
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const videoTrack = newStream.getVideoTracks()[0];
+        
+        // Stop previous video track after successfully getting new one
         const prevVideoTrack = localStreamRef.current?.getVideoTracks()[0];
         if (prevVideoTrack) {
           prevVideoTrack.stop();
           localStreamRef.current.removeTrack(prevVideoTrack);
         }
 
-        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const videoTrack = newStream.getVideoTracks()[0];
-        
         // Add to local stream
         if (localStreamRef.current) {
           localStreamRef.current.addTrack(videoTrack);
@@ -287,6 +287,12 @@ export function useGroupCall(socket) {
 
       // Replace video track in all peer connections
       const screenTrack = stream.getVideoTracks()[0];
+      
+      // Add screen track to local stream
+      if (localStreamRef.current) {
+        localStreamRef.current.addTrack(screenTrack);
+      }
+      
       peerConnections.current.forEach((pc) => {
         if (pc.connectionState === 'closed') return;
         const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
@@ -328,6 +334,14 @@ export function useGroupCall(socket) {
 
   // Cleanup function
   const cleanup = useCallback(() => {
+    // Notify others we're leaving
+    if (socket && activeGroupIdRef.current) {
+      if (isInitiatorRef.current) {
+        socket.emit("group:call:end", { groupId: activeGroupIdRef.current });
+      }
+      socket.emit("group:call:leave", { groupId: activeGroupIdRef.current });
+    }
+
     // Stop timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -363,13 +377,13 @@ export function useGroupCall(socket) {
     setIncomingCall(null);
 
     audioManager.stop("incomingCall");
-  }, []);
+  }, [socket]);
 
   // Refs to avoid stale closures
-  const isInCallRef = useRef(false);
-  const isInitiatorRef = useRef(false);
-  const activeGroupIdRef = useRef(null);
-  const callTypeRef = useRef(null);
+  const isInCallRef = useRef(isInCall);
+  const isInitiatorRef = useRef(isInitiator);
+  const activeGroupIdRef = useRef(activeGroupId);
+  const callTypeRef = useRef(callType);
 
   // Update refs when state changes
   useEffect(() => { isInCallRef.current = isInCall; }, [isInCall]);
