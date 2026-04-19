@@ -319,6 +319,7 @@ export default function ChatLayout({
   const [inviteGroupOpen, setInviteGroupOpen] = useState(false);
   const [inviteFriendUsername, setInviteFriendUsername] = useState("");
   const [groupCallMinimized, setGroupCallMinimized] = useState(false);
+  const [incomingGroupCall, setIncomingGroupCall] = useState(null); // { groupId, fromUser, callType }
   const fileInputRef = useRef(null);
 
   const messagesRef = useRef(null);
@@ -375,6 +376,47 @@ export default function ChatLayout({
       socket.off("group:message", handleGroupMessage);
     };
   }, [groupCall?.socket, activeGroup?.id]);
+
+  // Listen for incoming group calls
+  useEffect(() => {
+    const socket = groupCall?.socket;
+    if (!socket) return;
+
+    const handleIncomingCall = ({ groupId, fromUser, callType }) => {
+      console.log("[ChatLayout] Incoming group call:", { groupId, fromUser, callType });
+      
+      // Don't show if we're already in a group call
+      if (groupCall?.isInCall) {
+        console.log("[ChatLayout] Already in call, sending busy");
+        socket.emit("group:call:busy", { groupId, toUserId: fromUser.id });
+        return;
+      }
+      
+      // Find group info
+      const group = myGroups.find(g => g.id === groupId);
+      
+      setIncomingGroupCall({
+        groupId,
+        groupName: group?.name || "Unknown Group",
+        fromUser,
+        callType,
+      });
+    };
+
+    const handleCallEnded = () => {
+      setIncomingGroupCall(null);
+    };
+
+    socket.on("group:call:incoming", handleIncomingCall);
+    socket.on("group:call:left", handleCallEnded);
+    socket.on("group:call:ended", handleCallEnded);
+
+    return () => {
+      socket.off("group:call:incoming", handleIncomingCall);
+      socket.off("group:call:left", handleCallEnded);
+      socket.off("group:call:ended", handleCallEnded);
+    };
+  }, [groupCall?.socket, groupCall?.isInCall, myGroups]);
 
   // Group handlers
   const handleCreateGroup = async (e) => {
@@ -1314,6 +1356,54 @@ export default function ChatLayout({
         )}
       </AnimatePresence>
 
+      {/* Incoming Group Call Modal - DM Style */}
+      {incomingGroupCall && !groupCall?.isInCall && (
+        <div className="voice-modal-overlay group-call-overlay">
+          <motion.div 
+            className="voice-modal group-call-modal" 
+            initial={{ scale: 0.9, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 1 }}
+          >
+            <div className="group-call-avatar">
+              {incomingGroupCall.fromUser.username?.charAt(0).toUpperCase()}
+            </div>
+            <h3>{incomingGroupCall.fromUser.username}</h3>
+            <p className="group-name">in {incomingGroupCall.groupName}</p>
+            <p className="call-type">Incoming {incomingGroupCall.callType} call</p>
+            
+            <div className="voice-modal-actions">
+              <RippleButton 
+                type="button" 
+                className="btn-decline" 
+                onClick={() => {
+                  groupCall?.declineCall?.(incomingGroupCall.groupId, incomingGroupCall.fromUser.id);
+                  setIncomingGroupCall(null);
+                }}
+              >
+                Decline
+              </RippleButton>
+              <RippleButton 
+                type="button" 
+                className="btn-accept"
+                onClick={() => {
+                  groupCall?.acceptGroupCall?.(
+                    incomingGroupCall.groupId, 
+                    incomingGroupCall.callType, 
+                    incomingGroupCall.fromUser
+                  );
+                  setIncomingGroupCall(null);
+                  // Open the group
+                  const group = myGroups.find(g => g.id === incomingGroupCall.groupId);
+                  if (group) handleOpenGroup(group);
+                }}
+              >
+                Accept
+              </RippleButton>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Group Video Conference Overlay */}
       <VideoConference
         isOpen={groupCall?.isInCall || false}
@@ -1336,6 +1426,7 @@ export default function ChatLayout({
         dominantSpeaker={groupCall?.dominantSpeaker}
         focusedParticipant={groupCall?.focusedParticipant}
         setFocusedParticipant={groupCall?.setFocusedParticipant || (() => {})}
+        duration={groupCall?.duration || 0}
       />
     </div>
   );

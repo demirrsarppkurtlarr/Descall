@@ -136,6 +136,26 @@ function registerGroupHandlers(io, socket, state) {
       userId: myId,
     });
   });
+
+  // Meşgul sinyali
+  socket.on("group:call:busy", ({ groupId, toUserId } = {}) => {
+    if (!groupId || !toUserId) return;
+    
+    io.to(`user:${toUserId}`).emit("group:call:busy", {
+      groupId,
+      fromUserId: myId,
+    });
+  });
+
+  // Çağrıyı sonlandır (herkes için)
+  socket.on("group:call:end", ({ groupId } = {}) => {
+    if (!groupId) return;
+    
+    socket.to(`group:${groupId}`).emit("group:call:ended", {
+      groupId,
+      endedBy: myId,
+    });
+  });
 }
 
 module.exports = { registerGroupHandlers };

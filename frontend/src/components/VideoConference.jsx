@@ -31,6 +31,7 @@ export default function VideoConference({
   dominantSpeaker,
   focusedParticipant,
   setFocusedParticipant,
+  duration = 0,
 }) {
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "focus"
   const [showControls, setShowControls] = useState(true);

@@ -285,10 +285,11 @@ export function useGroupCall(socket) {
     audioManager.stop("incomingCall");
   }, [socket]);
 
-  // Leave call
+  // Leave call (ends call for everyone if initiator, or just leaves)
   const leaveCall = useCallback(() => {
     if (activeGroupId) {
-      socket?.emit("group:call:left", { groupId: activeGroupId });
+      // End the call for everyone
+      socket?.emit("group:call:end", { groupId: activeGroupId });
     }
     cleanup();
   }, [socket, activeGroupId, cleanup]);
