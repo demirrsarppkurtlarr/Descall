@@ -543,6 +543,13 @@ export function useGroupCall(socket) {
       if (!isInitiatorRef.current || groupId !== activeGroupIdRef.current) return;
 
       try {
+        // Ensure we have local media before creating peer connection
+        if (!localStreamRef.current) {
+          console.log("[GroupCall] Local stream not ready, getting media...");
+          await getLocalMedia(callTypeRef.current || "voice");
+        }
+        
+        console.log(`[GroupCall] Creating peer connection for accepted call from ${fromUserId}`);
         const pc = createPeerConnection(fromUserId, groupId);
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         
@@ -646,7 +653,7 @@ export function useGroupCall(socket) {
       socket.off("group:call:ended", handleEnded);
       socket.off("group:call:declined", handleDeclined);
     };
-  }, [socket]);
+  }, [socket, getLocalMedia, createPeerConnection]);
 
   // Cleanup on unmount
   useEffect(() => {
