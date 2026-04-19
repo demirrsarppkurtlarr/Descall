@@ -644,40 +644,43 @@ export default function ChatLayout({
   const typingNamesDm = typingDmUser ? [typingDmUser.username] : [];
 
   return (
-    <div className="app-root app-root-enhanced">
-      <nav className="nav-rail" aria-label="Main">
-        <motion.button type="button" className={`rail-btn ${sidebarView === "dms" ? "active" : ""}`} title="Direct messages" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("dms")}>
-          <MessageSquare size={22} />
-        </motion.button>
-        <motion.button type="button" className={`rail-btn ${sidebarView === "groups" ? "active" : ""}`} title="Groups" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("groups")}>
-          <Users size={22} />
-        </motion.button>
-        <motion.button type="button" className={`rail-btn ${sidebarView === "friends" ? "active" : ""}`} title="Friends" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("friends")}>
-          <UserPlus size={22} />
-        </motion.button>
-        <motion.button type="button" className={`rail-btn ${notificationsOpen ? "active" : ""}`} title="Notifications" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setNotificationsOpen((o) => !o)}>
-          <Bell size={22} />
-          {globalUnread > 0 && <span className="rail-badge">{globalUnread > 99 ? "99+" : globalUnread}</span>}
-        </motion.button>
-        <motion.button type="button" className={`rail-btn ${sidebarView === "online" ? "active" : ""}`} title="Online" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("online")}>
-          <Circle size={10} fill="currentColor" />
-        </motion.button>
-        <div className="rail-spacer" />
-        <motion.button type="button" className="rail-btn subtle" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarOpen((o) => !o)}>
-          <PanelLeftClose size={20} />
-        </motion.button>
-        <motion.button type="button" className="rail-btn subtle" title="Settings" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSettingsOpen(true)}>
-          <Settings size={20} />
-        </motion.button>
-      </nav>
+    <div className={`app-root app-root-enhanced ${isMobile ? "mobile-view" : ""}`}>
+      {/* Desktop Sidebar - Hidden on Mobile */}
+      {!isMobile && (
+        <>
+          <nav className="nav-rail" aria-label="Main">
+            <motion.button type="button" className={`rail-btn ${sidebarView === "dms" ? "active" : ""}`} title="Direct messages" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("dms")}>
+              <MessageSquare size={22} />
+            </motion.button>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "groups" ? "active" : ""}`} title="Groups" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("groups")}>
+              <Users size={22} />
+            </motion.button>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "friends" ? "active" : ""}`} title="Friends" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("friends")}>
+              <UserPlus size={22} />
+            </motion.button>
+            <motion.button type="button" className={`rail-btn ${notificationsOpen ? "active" : ""}`} title="Notifications" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setNotificationsOpen((o) => !o)}>
+              <Bell size={22} />
+              {globalUnread > 0 && <span className="rail-badge">{globalUnread > 99 ? "99+" : globalUnread}</span>}
+            </motion.button>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "online" ? "active" : ""}`} title="Online" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("online")}>
+              <Circle size={10} fill="currentColor" />
+            </motion.button>
+            <div className="rail-spacer" />
+            <motion.button type="button" className="rail-btn subtle" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarOpen((o) => !o)}>
+              <PanelLeftClose size={20} />
+            </motion.button>
+            <motion.button type="button" className="rail-btn subtle" title="Settings" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSettingsOpen(true)}>
+              <Settings size={20} />
+            </motion.button>
+          </nav>
 
-      <motion.aside
-        className="sidebar-secondary"
-        initial={false}
-        animate={{ width: sidebarOpen ? 300 : 0 }}
-        transition={{ type: "tween", duration: 0.2 }}
-        style={{ overflow: "hidden" }}
-      >
+          <motion.aside
+            className="sidebar-secondary"
+            initial={false}
+            animate={{ width: sidebarOpen ? 300 : 0 }}
+            transition={{ type: "tween", duration: 0.2 }}
+            style={{ overflow: "hidden" }}
+          >
         <div className="sidebar-inner">
           <div className="sidebar-brand">
             <span className="brand-mark">Descall</span>
@@ -853,6 +856,8 @@ export default function ChatLayout({
           </div>
         </div>
       </motion.aside>
+        </>
+      )}
 
       <section className="panel main-panel">
         <header className="panel-header glass-header">
@@ -1119,26 +1124,29 @@ export default function ChatLayout({
         )}
       </section>
 
-      <aside className="right-rail custom-scroll">
-        <VideoPanel call={call} peerScreenSharing={peerScreenSharing} />
-        <div className="voice-activity glass">
-          <h4>Call</h4>
-          {call?.mode === "incoming" && call.peer && <p className="voice-hint">Incoming {call.callType} call from {call.peer.username}</p>}
-          {(call?.mode === "active" || call?.mode === "outgoing") && call.peer && (
-            <p className="voice-hint">{call.mode === "outgoing" ? "Calling" : "In call with"} {call.peer.username} ({call.callType})</p>
-          )}
-          {(!call || call.mode === null) && <p className="voice-hint muted">No active call. Use Call in a DM to start WebRTC.</p>}
-        </div>
-        <div className="tips-card glass">
-          <h4>Shortcuts</h4>
-          <ul>
-            <li><kbd>Enter</kbd> send</li>
-            <li>Scroll up to load older messages</li>
-            <li>📎 button to share images/videos</li>
-            <li>📹 for video call, 📞 for voice</li>
-          </ul>
-        </div>
-      </aside>
+      {/* Right Rail - Desktop Only */}
+      {!isMobile && (
+        <aside className="right-rail custom-scroll">
+          <VideoPanel call={call} peerScreenSharing={peerScreenSharing} />
+          <div className="voice-activity glass">
+            <h4>Call</h4>
+            {call?.mode === "incoming" && call.peer && <p className="voice-hint">Incoming {call.callType} call from {call.peer.username}</p>}
+            {(call?.mode === "active" || call?.mode === "outgoing") && call.peer && (
+              <p className="voice-hint">{call.mode === "outgoing" ? "Calling" : "In call with"} {call.peer.username} ({call.callType})</p>
+            )}
+            {(!call || call.mode === null) && <p className="voice-hint muted">No active call. Use Call in a DM to start WebRTC.</p>}
+          </div>
+          <div className="tips-card glass">
+            <h4>Shortcuts</h4>
+            <ul>
+              <li><kbd>Enter</kbd> send</li>
+              <li>Scroll up to load older messages</li>
+              <li>📎 button to share images/videos</li>
+              <li>📹 for video call, 📞 for voice</li>
+            </ul>
+          </div>
+        </aside>
+      )}
 
       <AnimatePresence>
         {notificationsOpen && (
