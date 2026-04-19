@@ -4001,3 +4001,337 @@ button, a, input, select, .clickable {
     radial-gradient(circle at 80% 70%, rgba(138, 155, 255, 0.1) 0%, transparent 50%);
   pointer-events: none;
 }
+
+/* ========== DM CALL OVERLAY - VideoConference tarzı ========== */
+.call-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+
+.incoming-call-overlay {
+  background: linear-gradient(135deg, rgba(102, 120, 255, 0.2) 0%, rgba(0, 0, 0, 0.95) 100%);
+}
+
+.incoming-call-container {
+  background: linear-gradient(135deg, rgba(30, 30, 45, 0.98) 0%, rgba(20, 20, 35, 0.99) 100%);
+  border-radius: 24px;
+  padding: 48px 64px;
+  text-align: center;
+  border: 1px solid rgba(102, 120, 255, 0.3);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.6),
+    0 0 100px rgba(102, 120, 255, 0.15);
+  max-width: 420px;
+  width: 90%;
+}
+
+.incoming-call-header {
+  margin-bottom: 40px;
+}
+
+.call-pulse-ring {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 24px;
+}
+
+.call-pulse-ring::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 50%;
+  background: rgba(102, 120, 255, 0.4);
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.call-pulse-ring::after {
+  content: '';
+  position: absolute;
+  top: -16px;
+  left: -16px;
+  right: -16px;
+  bottom: -16px;
+  border-radius: 50%;
+  background: rgba(102, 120, 255, 0.2);
+  animation: pulse-ring 2s ease-out infinite 0.5s;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+.incoming-call-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px 0;
+}
+
+.incoming-call-status {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.incoming-call-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.call-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 32px;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.call-action-btn.decline {
+  background: linear-gradient(135deg, #ff4757 0%, #c0392b 100%);
+  color: white;
+}
+
+.call-action-btn.decline:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(255, 71, 87, 0.4);
+}
+
+.call-action-btn.accept {
+  background: linear-gradient(135deg, #2ed573 0%, #27ae60 100%);
+  color: white;
+}
+
+.call-action-btn.accept:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(46, 213, 115, 0.4);
+}
+
+.action-icon {
+  font-size: 24px;
+}
+
+.action-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* DM Call Overlay */
+.dm-call-overlay {
+  background: #0a0a0f;
+}
+
+.dm-call-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.dm-call-video-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dm-video-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  width: 100%;
+  height: 100%;
+  max-width: 1200px;
+  gap: 16px;
+  position: relative;
+}
+
+.dm-video-item {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1a1a2e;
+}
+
+.dm-video-remote {
+  grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.dm-video-local {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 240px;
+  height: 180px;
+  z-index: 10;
+  border: 2px solid rgba(102, 120, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.dm-video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dm-video-label {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  backdrop-filter: blur(8px);
+}
+
+/* Voice Call View */
+.dm-voice-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.dm-voice-avatar {
+  position: relative;
+}
+
+.dm-voice-timer {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #6678ff 0%, #8a9bff 100%);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 120, 255, 0.4);
+}
+
+.dm-voice-name {
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+}
+
+.dm-voice-status {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* Call Controls */
+.dm-call-controls {
+  padding: 24px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+}
+
+.dm-controls-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.dm-control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 16px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 72px;
+}
+
+.dm-control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.dm-control-btn.active {
+  background: rgba(102, 120, 255, 0.3);
+  color: #6678ff;
+}
+
+.dm-control-btn.hangup {
+  background: linear-gradient(135deg, #ff4757 0%, #c0392b 100%);
+}
+
+.dm-control-btn.hangup:hover {
+  background: linear-gradient(135deg, #ff5f6d 0%, #e74c3c 100%);
+  transform: scale(1.05);
+}
+
+.dm-control-btn span {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dm-call-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.dm-call-timer {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+
+.dm-screen-badge,
+.dm-quality-badge {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.dm-screen-badge {
+  background: rgba(46, 213, 115, 0.2);
+  color: #2ed573;
+}
+
+.dm-quality-badge {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}

@@ -15,8 +15,8 @@ import { getMyGroups, createGroup, leaveGroup, inviteToGroup, renameGroup, sendG
 import { 
   MessageSquare, Users, UserPlus, Bell, Circle, 
   PanelLeftClose, Settings, Send, Paperclip, 
-  Phone, Video, X, Plus, Clock, Check, CheckCheck,
-  Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
+  Phone, Video, VideoOff, X, Plus, Clock, Check, CheckCheck,
+  Mic, MicOff, Camera, CameraOff, Monitor, MonitorX, PhoneOff,
   Search, LogOut, Volume2, VolumeX, Maximize2, Grid,
   ChevronLeft, ChevronRight, MoreVertical, Trash2
 } from "lucide-react";
@@ -111,106 +111,190 @@ function Lightbox({ url, onClose }) {
 function IncomingCallModal({ call }) {
   if (!call || call.mode !== "incoming" || !call.peer) return null;
   
+  const isVideo = call.callType === "video";
+  
   return (
-    <div className="voice-modal-overlay" style={{ zIndex: 9999 }}>
+    <div className="call-overlay incoming-call-overlay" style={{ zIndex: 9999 }}>
       <motion.div 
-        className="voice-modal" 
-        initial={{ scale: 0.9, opacity: 0 }} 
-        animate={{ scale: 1, opacity: 1 }}
-        style={{ zIndex: 10000 }}
+        className="incoming-call-container"
+        initial={{ scale: 0.8, opacity: 0, y: 50 }} 
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.8, opacity: 0, y: 50 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
       >
-        <div className="voice-avatar">{call.peer.username?.charAt(0).toUpperCase()}</div>
-        <h3>{call.peer.username}</h3>
-        <p>Incoming {call.callType === "video" ? "video" : "voice"} call</p>
-        <div className="voice-modal-actions">
-          <RippleButton type="button" className="btn-decline" onClick={call.declineIncoming}>Decline</RippleButton>
-          <RippleButton type="button" className="btn-accept" onClick={call.acceptIncoming}>Accept</RippleButton>
+        <div className="incoming-call-header">
+          <div className="call-pulse-ring">
+            <Avatar name={call.peer.username} size={100} imageUrl={call.peer.avatarUrl} />
+          </div>
+          <h2 className="incoming-call-name">{call.peer.username}</h2>
+          <p className="incoming-call-status">
+            {isVideo ? "📹 Incoming video call..." : "📞 Incoming voice call..."}
+          </p>
+        </div>
+        
+        <div className="incoming-call-actions">
+          <motion.button 
+            type="button" 
+            className="call-action-btn decline"
+            onClick={call.declineIncoming}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="action-icon">✕</span>
+            <span className="action-label">Decline</span>
+          </motion.button>
+          
+          <motion.button 
+            type="button" 
+            className="call-action-btn accept"
+            onClick={call.acceptIncoming}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="action-icon">{isVideo ? "📹" : "📞"}</span>
+            <span className="action-label">Accept</span>
+          </motion.button>
         </div>
       </motion.div>
     </div>
   );
 }
 
-function CallBar({ call, peerScreenSharing }) {
+// DM Call Overlay - VideoConference tarzı modern arayüz
+function DMCallOverlay({ call, peerScreenSharing }) {
   if (!call || call.mode === null) return null;
-
-  if ((call.mode === "active" || call.mode === "outgoing") && call.peer) {
-    return (
-      <motion.div className={`call-bar ${call.mode === "outgoing" ? "calling" : ""}`} initial={{ y: 80 }} animate={{ y: 0 }}>
-        <div className="call-bar-left">
-          <Avatar name={call.peer.username} size={32} imageUrl={call.peer.avatarUrl} />
-          <div className="call-bar-text">
-            <strong>{call.peer.username}</strong>
-            <span>
-              {call.mode === "active"
-                ? call.formatDuration(call.duration)
-                : "Ringing…"}
-            </span>
-            {peerScreenSharing && <span className="screen-indicator">🖥 Sharing screen</span>}
-            {call.connectionQuality === "poor" && <span className="quality-warn">⚠ Weak</span>}
-          </div>
+  
+  const isActive = call.mode === "active";
+  const isOutgoing = call.mode === "outgoing";
+  const hasVideo = isActive && (call.callType === "video" || peerScreenSharing || call.cameraOn);
+  
+  if (!isActive && !isOutgoing) return null;
+  if (!call.peer) return null;
+  
+  return (
+    <div className="call-overlay dm-call-overlay" style={{ zIndex: 9998 }}>
+      <motion.div 
+        className="dm-call-container"
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        {/* Video Area */}
+        <div className="dm-call-video-area">
+          {hasVideo ? (
+            <div className="dm-video-grid">
+              {/* Remote video - büyük */}
+              <div className="dm-video-item dm-video-remote">
+                <video
+                  ref={call.remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="dm-video-element"
+                />
+                <span className="dm-video-label">{call.peer?.username}</span>
+              </div>
+              
+              {/* Local video - küçük PIP */}
+              {(call.cameraOn || call.screenSharing) && (
+                <div className="dm-video-item dm-video-local">
+                  <video
+                    ref={call.localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="dm-video-element"
+                  />
+                  <span className="dm-video-label">You</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Voice Call Avatar View */
+            <div className="dm-voice-view">
+              <div className="dm-voice-avatar">
+                <Avatar name={call.peer?.username} size={120} imageUrl={call.peer?.avatarUrl} />
+                {isActive && call.duration > 0 && (
+                  <div className="dm-voice-timer">{call.formatDuration(call.duration)}</div>
+                )}
+              </div>
+              <h2 className="dm-voice-name">{call.peer?.username}</h2>
+              <p className="dm-voice-status">
+                {isOutgoing ? "Ringing..." : "Voice call in progress"}
+              </p>
+            </div>
+          )}
         </div>
-        <div className="call-bar-actions">
-          <RippleButton type="button" className={`call-btn ${call.muted ? "active" : ""}`} onClick={call.toggleMute} title={call.muted ? "Unmute" : "Mute"}>
-            {call.muted ? "🔇" : "🎙"}
-          </RippleButton>
-          <RippleButton type="button" className={`call-btn ${call.cameraOn ? "active" : ""}`} onClick={call.toggleCamera} title={call.cameraOn ? "Turn off camera" : "Turn on camera"}>
-            {call.cameraOn ? "📹" : "📷"}
-          </RippleButton>
-          <RippleButton type="button" className={`call-btn ${call.screenSharing ? "active" : ""}`} onClick={call.screenSharing ? call.stopScreenShare : call.startScreenShare} title={call.screenSharing ? "Stop sharing" : "Share screen"}>
-            🖥
-          </RippleButton>
-          <RippleButton type="button" className="call-btn hangup" onClick={() => call.endCall(call.peer.id)} title="End call">
-            📞
-          </RippleButton>
+        
+        {/* Call Controls */}
+        <div className="dm-call-controls">
+          <div className="dm-controls-row">
+            <motion.button
+              type="button"
+              className={`dm-control-btn ${call.muted ? "active" : ""}`}
+              onClick={call.toggleMute}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {call.muted ? <MicOff size={24} /> : <Mic size={24} />}
+              <span>{call.muted ? "Unmute" : "Mute"}</span>
+            </motion.button>
+            
+            {hasVideo && (
+              <motion.button
+                type="button"
+                className={`dm-control-btn ${call.cameraOn ? "" : "active"}`}
+                onClick={call.toggleCamera}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {call.cameraOn ? <Video size={24} /> : <VideoOff size={24} />}
+                <span>{call.cameraOn ? "Camera off" : "Camera on"}</span>
+              </motion.button>
+            )}
+            
+            <motion.button
+              type="button"
+              className={`dm-control-btn ${call.screenSharing ? "active" : ""}`}
+              onClick={call.screenSharing ? call.stopScreenShare : call.startScreenShare}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {call.screenSharing ? <MonitorX size={24} /> : <Monitor size={24} />}
+              <span>{call.screenSharing ? "Stop" : "Share"}</span>
+            </motion.button>
+            
+            <motion.button
+              type="button"
+              className="dm-control-btn hangup"
+              onClick={() => call.endCall(call.peer?.id)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <PhoneOff size={24} />
+              <span>End</span>
+            </motion.button>
+          </div>
+          
+          {isActive && (
+            <div className="dm-call-info">
+              <span className="dm-call-timer">{call.formatDuration(call.duration)}</span>
+              {peerScreenSharing && <span className="dm-screen-badge">🖥 Screen sharing</span>}
+              {call.connectionQuality === "poor" && <span className="dm-quality-badge">⚠ Weak connection</span>}
+            </div>
+          )}
         </div>
       </motion.div>
-    );
-  }
+    </div>
+  );
+}
 
-  return null;
+// Geriye uyumluluk için CallBar ve VideoPanel - artık DMCallOverlay kullanıyor
+function CallBar({ call, peerScreenSharing }) {
+  return null; // DMCallOverlay kullanılıyor
 }
 
 function VideoPanel({ call, peerScreenSharing }) {
-  if (!call || call.mode !== "active") return null;
-  
-  // Always show panel during active call - video will render when stream available
-  const hasVideo = call.callType === "video" || peerScreenSharing || call.cameraOn;
-  
-  return (
-    <div className={`video-panel ${hasVideo ? "has-video" : "voice-only"}`}>
-      {hasVideo && (
-        <div className="video-remote-wrap">
-          <video 
-            ref={call.remoteVideoRef} 
-            autoPlay 
-            playsInline 
-            className="video-remote"
-            style={{ objectFit: "cover" }}
-          />
-          {peerScreenSharing && <div className="screen-share-label">🖥 Peer screen sharing</div>}
-        </div>
-      )}
-      
-      {/* Local video PIP - show when camera on or screen sharing */}
-      {(call.cameraOn || call.screenSharing) && (
-        <div className="video-pip-wrap">
-          <video 
-            ref={call.localVideoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            className="video-pip"
-          />
-        </div>
-      )}
-      
-      {/* Screen share preview (local) */}
-      {call.screenSharing && (
-        <div className="video-screen-preview">
-          <video 
-            ref={call.screenVideoRef} 
-            autoPlay 
+  return null; // DMCallOverlay kullanılıyor
             playsInline 
             muted 
             className="video-screen"
@@ -1029,7 +1113,6 @@ export default function ChatLayout({
       </section>
 
       <aside className="right-rail custom-scroll">
-        <VideoPanel call={call} peerScreenSharing={peerScreenSharing} />
         <div className="voice-activity glass">
           <h4>Call</h4>
           {call?.mode === "incoming" && call.peer && <p className="voice-hint">Incoming {call.callType} call from {call.peer.username}</p>}
@@ -1094,7 +1177,8 @@ export default function ChatLayout({
       {/* Incoming Call Modal */}
       <IncomingCallModal call={call} />
 
-      <CallBar call={call} peerScreenSharing={peerScreenSharing} />
+      {/* DM Call Overlay - VideoConference tarzı modern arayüz */}
+      <DMCallOverlay call={call} peerScreenSharing={peerScreenSharing} />
 
       <AnimatePresence>
         {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
