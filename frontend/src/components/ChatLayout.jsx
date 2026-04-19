@@ -418,13 +418,17 @@ export default function ChatLayout({
   };
 
   const handleOpenGroup = async (group) => {
+    if (!group || !group.id) {
+      console.error("[Groups] Invalid group:", group);
+      return;
+    }
     setActiveGroup(group);
     try { localStorage.setItem("descall_active_group", JSON.stringify(group)); } catch {}
-    onOpenDm(null); // DM'yi kapat
+    if (onOpenDm) onOpenDm(null); // DM'yi kapat
     // Load group messages from API
     try {
       const data = await getGroupMessages(group.id);
-      setGroupMessages(data.messages || []);
+      setGroupMessages(data?.messages || []);
     } catch (err) {
       console.error("[Groups] Failed to load messages:", err);
       setGroupMessages([]);
