@@ -349,9 +349,61 @@ export default function ChatLayout({
   }, [me]);
 
   // Group handlers
-  // Leave group handler
+  // ========== GROUP HANDLERS - SAGLAM ALTYAPI ==========
+  
+  // Safe groups listesi
+  const safeGroups = useMemo(() => {
+    return (myGroups || []).filter(g => g && typeof g === 'object' && g.id);
+  }, [myGroups]);
+
+  // Grup acma - TAMAMEN YENIDEN YAZILDI
+  const handleOpenGroup = useCallback(async (group) => {
+    if (!group || !group.id) {
+      console.error("[Groups] Invalid group:", group);
+      return;
+    }
+    
+    try {
+      console.log("[Groups] Opening group:", group.id);
+      
+      // Aktif grubu ayarla
+      setActiveGroup(group);
+      
+      // LocalStorage'a kaydet
+      try {
+        localStorage.setItem("descall_active_group", JSON.stringify(group));
+      } catch (e) {
+        console.warn("[Groups] localStorage error:", e);
+      }
+      
+      // DM'yi kapat
+      if (onOpenDm) {
+        onOpenDm(null);
+      }
+      
+      // Grup mesajlarini yukle
+      setGroupMessages([]); // Once temizle
+      try {
+        const data = await getGroupMessages(group.id);
+        if (data && Array.isArray(data.messages)) {
+          setGroupMessages(data.messages);
+        } else {
+          setGroupMessages([]);
+        }
+      } catch (err) {
+        console.error("[Groups] Failed to load messages:", err);
+        setGroupMessages([]);
+      }
+      
+    } catch (err) {
+      console.error("[Groups] Error opening group:", err);
+      toast?.error?.("Failed to open group");
+    }
+  }, [onOpenDm, toast]);
+
+  // Gruptan cikma
   const handleLeaveGroup = async () => {
-    if (!activeGroup) return;
+    if (!activeGroup || !activeGroup.id) return;
     try {
       await leaveGroup(activeGroup.id);
       setMyGroups((prev) => prev.filter((g) => g.id !== activeGroup.id));
@@ -363,9 +415,9 @@ export default function ChatLayout({
     }
   };
 
-  // Add members handler
+  // Uye ekleme
   const handleAddMembers = async () => {
-    if (!activeGroup || membersToAdd.length === 0) return;
+    if (!activeGroup || !activeGroup.id || membersToAdd.length === 0) return;
     try {
       await Promise.all(membersToAdd.map((userId) => inviteToGroup(activeGroup.id, userId)));
       setAddMemberModalOpen(false);
@@ -376,15 +428,15 @@ export default function ChatLayout({
     }
   };
 
-  // Rename group handler
+  // Isim degistirme
   const handleRenameGroup = async () => {
-    if (!activeGroup || !renameValue.trim()) return;
+    if (!activeGroup || !activeGroup.id || !renameValue.trim()) return;
     try {
       await renameGroup(activeGroup.id, renameValue.trim());
       setMyGroups((prev) =>
         prev.map((g) => (g.id === activeGroup.id ? { ...g, name: renameValue.trim() } : g))
       );
-      if (activeGroup) setActiveGroup({ ...activeGroup, name: renameValue.trim() });
+      setActiveGroup({ ...activeGroup, name: renameValue.trim() });
       setRenameGroupModalOpen(false);
       setRenameValue("");
       toast?.success?.("Group renamed successfully");
@@ -393,7 +445,7 @@ export default function ChatLayout({
     }
   };
 
-  // Global search handler
+  // Global arama
   const handleGlobalSearch = (query) => {
     setGlobalSearchQuery(query);
     if (!query.trim()) {
@@ -403,10 +455,31 @@ export default function ChatLayout({
     const userResults = friends.filter(
       (f) => f.username?.toLowerCase().includes(query.toLowerCase())
     );
-    const groupResults = myGroups.filter(
+    const groupResults = safeGroups.filter(
       (g) => g.name?.toLowerCase().includes(query.toLowerCase())
     );
     setSearchResults({ users: userResults, groups: groupResults, messages: [] });
+  };
+
+  // Grup mesaji gonderme
+  const handleSendGroupMessage = async (e) => {
+    e?.preventDefault();
+    const text = groupComposer.trim();
+    if (!text || !activeGroup || !activeGroup.id) return;
+    
+    try {
+      const result = await sendGroupMessage(activeGroup.id, text);
+      const newMsg = {
+        id: result?.message?.id || Date.now().toString(),
+        content: text,
+        sender: { id: me?.id, username: me?.username },
+        created_at: new Date().toISOString(),
+      };
+      setGroupMessages((prev) => [...prev, newMsg]);
+      setGroupComposer("");
+    } catch (err) {
+      toast?.error?.(err.message || "Failed to send message");
+    }
   };
 
   const handleCreateGroup = async (e) => {

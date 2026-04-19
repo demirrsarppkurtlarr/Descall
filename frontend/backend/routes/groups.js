@@ -14,63 +14,71 @@ function getUserSocketId(userId) {
   return null;
 }
 
+// Helper: User'in member oldugu gruplari getir
+async function getUserGroups(userId) {
+  // once group_members tablosundan group_id'leri al
+  const { data: memberships, error: membershipError } = await supabase
+    .from("group_members")
+    .select("group_id, joined_at")
+    .eq("user_id", userId);
+  
+  if (membershipError) {
+    console.error("[Groups] Membership error:", membershipError);
+    return [];
+  }
+  
+  if (!memberships || memberships.length === 0) {
+    return [];
+  }
+  
+  // group_id'leri al
+  const groupIds = memberships.map(m => m.group_id);
+  
+  // groups tablosundan detaylari al
+  const { data: groups, error: groupsError } = await supabase
+    .from("groups")
+    .select("id, name, avatar_url, created_by, created_at")
+    .in("id", groupIds);
+  
+  if (groupsError) {
+    console.error("[Groups] Groups fetch error:", groupsError);
+    return [];
+  }
+  
+  // Her grup icin member count al
+  const groupsWithCount = await Promise.all(
+    (groups || []).map(async (group) => {
+      const { count } = await supabase
+        .from("group_members")
+        .select("*", { count: "exact", head: true })
+        .eq("group_id", group.id);
+      
+      const membership = memberships.find(m => m.group_id === group.id);
+      
+      return {
+        ...group,
+        memberCount: count || 0,
+        joinedAt: membership?.joined_at,
+      };
+    })
+  );
+  
+  return groupsWithCount;
+}
+
 // Get all groups where user is member
 router.get("/my", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     console.log("[Groups API] Fetching groups for user:", userId);
     
-    const { data: groups, error } = await supabase
-      .from("group_members")
-      .select(`
-        groups:group_id (id, name, avatar_url, created_by, created_at),
-        joined_at
-      `)
-      .eq("user_id", userId);
+    const groups = await getUserGroups(userId);
     
-    if (error) {
-      console.error("[Groups API] Supabase error:", error);
-      return res.status(500).json({ error: "Failed to fetch groups", details: error.message });
-    }
-    
-    console.log("[Groups API] Found groups:", groups?.length || 0);
-    
-    // Eger grup yoksa bos dondur
-    if (!groups || groups.length === 0) {
-      return res.json({ groups: [] });
-    }
-    
-    // Get member counts for each group
-    // Her grup icin ayri ayri count al (Supabase group destegi sinirli)
-    const enriched = await Promise.all(groups.map(async (g) => {
-      // Guvenli erisim - g.groups null olabilir
-      const groupData = g?.groups || g;
-      const groupId = groupData?.id;
-      
-      if (!groupId) {
-        console.error("[Groups API] Missing group id:", g);
-        return null;
-      }
-      
-      const { count } = await supabase
-        .from("group_members")
-        .select("*", { count: "exact", head: true })
-        .eq("group_id", groupId);
-      
-      return {
-        ...groupData,
-        joinedAt: g?.joined_at,
-        memberCount: count || 0,
-      };
-    }));
-    
-    // Null elemanlari filtrele
-    const validGroups = enriched.filter(g => g && g.id);
-    
-    res.json({ groups: validGroups });
+    console.log("[Groups API] Found groups:", groups.length);
+    res.json({ groups });
   } catch (err) {
-    console.error("[Groups] List error:", err);
-    res.status(500).json({ error: "Internal error" });
+    console.error("[Groups API] Error:", err);
+    res.status(500).json({ error: "Failed to fetch groups" });
   }
 });
 
