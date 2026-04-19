@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import Avatar from "../ui/Avatar";
+import { Avatar } from "../ui/Avatar";
 
 const STATUS = {
   online: { label: "Online", className: "st-online" },
