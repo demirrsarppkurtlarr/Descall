@@ -9,10 +9,10 @@ import {
   ChevronLeft, ChevronRight, MoreVertical, Trash2
 } from "lucide-react";
 import { useToast } from "../context/ToastContext";
-import { Avatar } from "./Avatar";
+import { Avatar } from "./ui/Avatar";
 import { formatTime } from "../utils/time";
-import { RippleButton } from "./RippleButton";
-import { Icon } from "./Icon";
+import { RippleButton } from "./ui/RippleButton";
+import { Icon } from "./ui/Icon";
 import { sendGroupMessage, getGroupMessages, getGroupById, createGroup } from "../api/groups";
 
 // Hidden audio for remote stream
