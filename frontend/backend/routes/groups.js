@@ -41,23 +41,33 @@ router.get("/my", requireAuth, async (req, res) => {
     }
     
     // Get member counts for each group
-    const groupIds = groups.map(g => g.groups.id);
-    
     // Her grup icin ayri ayri count al (Supabase group destegi sinirli)
     const enriched = await Promise.all(groups.map(async (g) => {
+      // Guvenli erisim - g.groups null olabilir
+      const groupData = g?.groups || g;
+      const groupId = groupData?.id;
+      
+      if (!groupId) {
+        console.error("[Groups API] Missing group id:", g);
+        return null;
+      }
+      
       const { count } = await supabase
         .from("group_members")
         .select("*", { count: "exact", head: true })
-        .eq("group_id", g.groups.id);
+        .eq("group_id", groupId);
       
       return {
-        ...g.groups,
-        joinedAt: g.joined_at,
+        ...groupData,
+        joinedAt: g?.joined_at,
         memberCount: count || 0,
       };
     }));
     
-    res.json({ groups: enriched });
+    // Null elemanlari filtrele
+    const validGroups = enriched.filter(g => g && g.id);
+    
+    res.json({ groups: validGroups });
   } catch (err) {
     console.error("[Groups] List error:", err);
     res.status(500).json({ error: "Internal error" });
