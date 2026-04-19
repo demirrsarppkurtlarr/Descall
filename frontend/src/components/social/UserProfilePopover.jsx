@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import Modal from "../ui/Modal";
-import Avatar from "../ui/Avatar";
+import { Avatar } from "../ui/Avatar";
 
 const STATUS_LABEL = {
   online: "Online",
