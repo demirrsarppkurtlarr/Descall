@@ -661,7 +661,7 @@ export default function ChatLayout({
                     key={friend.id}
                     type="button"
                     className={`dm-item ${activeDmUser?.id === friend.id ? "active" : ""}`}
-                    onClick={() => { setActiveGroup(null); try { localStorage.removeItem("descall_active_group"); } catch {}; onOpenDm(friend); }}
+                    onClick={() => { setGroups(g => ({ ...g, active: null })); try { localStorage.removeItem("descall_active_group"); } catch {}; onOpenDm(friend); }}
                     whileHover={{ x: 2 }}
                   >
                     <Avatar name={friend.username} size={34} imageUrl={friend.avatarUrl} />
@@ -851,7 +851,7 @@ export default function ChatLayout({
                 </RippleButton>
               </div>
             )}
-            {activeGroup && (
+            {groups.active && (
               <>
                 {/* Call Buttons */}
                 <div className="header-call-btns">
@@ -947,7 +947,7 @@ export default function ChatLayout({
             <div className="messages custom-scroll" ref={messagesRef} onScroll={handleMessagesScroll}>
               {loadingOlderDm && activeDmUser && <div className="load-older-banner">Loading older messages…</div>}
 
-              {!activeDmUser && !activeGroup && (
+              {!activeDmUser && !groups.active && (
                 <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Welcome to Descall</h4>
                   <p>Select a friend or start a new conversation to begin messaging.</p>
@@ -1010,7 +1010,7 @@ export default function ChatLayout({
               {/* Group Messages */}
               {groups.active && groups.messages.length === 0 && (
                 <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
-                  <h4>Group: {activeGroup.name}</h4>
+                  <h4>Group: {groups.active.name}</h4>
                   <p>No messages yet. Start the conversation!</p>
                 </motion.div>
               )}
@@ -1071,13 +1071,13 @@ export default function ChatLayout({
         )}
 
         {/* Group Composer */}
-        {activeGroup && (
+        {groups.active && (
           <form
             className={`composer glass-composer ${inCall ? "composer-dimmed" : ""}`}
             onSubmit={(e) => { e.preventDefault(); groupActions.sendMessage(groups.ui.groupComposer); groupActions.setUI({ groupComposer: "" }); }}
           >
             <input
-              placeholder={`Message #${activeGroup.name}`}
+              placeholder={`Message #${groups.active.name}`}
               value={groups.ui.groupComposer || ""}
               onChange={(e) => groupActions.setUI({ groupComposer: e.target.value })}
             />
@@ -1258,7 +1258,7 @@ export default function ChatLayout({
               <RippleButton 
                 type="submit" 
                 className="btn-primary"
-                disabled={!groups.ui.renameValue.trim() || groups.ui.renameValue === activeGroup?.name}
+                disabled={!groups.ui.renameValue.trim() || groups.ui.renameValue === groups.active?.name}
               >
                 Rename
               </RippleButton>
