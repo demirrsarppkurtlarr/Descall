@@ -449,84 +449,80 @@ router.post("/:groupId/rename", requireAuth, async (req, res) => {
   }
 });
 
-// Get group messages
-router.get("/:groupId/messages", requireAuth, async (req, res) => {
+// Delete group (creator only)
+router.delete("/:groupId", requireAuth, async (req, res) => {
   try {
-    const { groupId } = req.params;
     const userId = req.user.id;
+    const { groupId } = req.params;
     
-    // Check if user is member
-    const { data: member, error: memberError } = await supabase
-      .from("group_members")
-      .select("id")
-      .eq("group_id", groupId)
-      .eq("user_id", userId)
+    // Check if user is creator
+    const { data: group, error: fetchError } = await supabase
+      .from("groups")
+      .select("created_by")
+      .eq("id", groupId)
       .single();
     
-    if (memberError || !member) {
-      return res.status(403).json({ error: "Not a member of this group" });
+    if (fetchError || !group) return res.status(404).json({ error: "Group not found" });
+    if (group.created_by !== userId) return res.status(403).json({ error: "Only creator can delete group" });
+    
+    // Delete group members
+    await supabase.from("group_members").delete().eq("group_id", groupId);
+    
+    // Delete group messages
+    await supabase.from("group_messages").delete().eq("group_id", groupId);
+    
+    // Delete group
+    await supabase.from("groups").delete().eq("id", groupId);
+    
+    // Notify members via socket
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`group:${groupId}`).emit("group:deleted", { groupId });
     }
     
-    const { data: messages, error } = await supabase
-      .from("group_messages")
-      .select("*, sender:sender_id(id, username, avatar_url)")
-      .eq("group_id", groupId)
-      .order("created_at", { ascending: true })
-      .limit(100);
-    
-    if (error) throw error;
-    res.json({ messages: messages || [] });
+    res.json({ success: true, message: "Group deleted" });
   } catch (err) {
-    console.error("[Groups] Get messages error:", err);
-    res.status(500).json({ error: "Failed to get messages" });
+    console.error("[Groups] Delete error:", err);
+    res.status(500).json({ error: "Failed to delete group" });
   }
 });
 
-// Send group message
-router.post("/:groupId/messages", requireAuth, async (req, res) => {
+// Update group avatar
+router.post("/:groupId/avatar", requireAuth, async (req, res) => {
   try {
-    const { groupId } = req.params;
     const userId = req.user.id;
-    const { content } = req.body;
+    const { groupId } = req.params;
+    const { avatarUrl } = req.body;
     
-    if (!content?.trim()) {
-      return res.status(400).json({ error: "Content required" });
-    }
+    if (!avatarUrl) return res.status(400).json({ error: "Avatar URL required" });
     
-    // Check if user is member
-    const { data: member, error: memberError } = await supabase
-      .from("group_members")
-      .select("id")
-      .eq("group_id", groupId)
-      .eq("user_id", userId)
+    // Check if user is creator
+    const { data: group, error: fetchError } = await supabase
+      .from("groups")
+      .select("created_by")
+      .eq("id", groupId)
       .single();
     
-    if (memberError || !member) {
-      return res.status(403).json({ error: "Not a member of this group" });
-    }
+    if (fetchError || !group) return res.status(404).json({ error: "Group not found" });
+    if (group.created_by !== userId) return res.status(403).json({ error: "Only creator can update avatar" });
     
-    const { data: message, error } = await supabase
-      .from("group_messages")
-      .insert({
-        group_id: groupId,
-        sender_id: userId,
-        content: content.trim(),
-      })
-      .select("*, sender:sender_id(id, username, avatar_url)")
-      .single();
+    const { error } = await supabase
+      .from("groups")
+      .update({ avatar_url: avatarUrl })
+      .eq("id", groupId);
     
     if (error) throw error;
     
-    // Notify other members via socket
+    // Notify members via socket
     const io = req.app.get("io");
     if (io) {
-      io.to(`group:${groupId}`).emit("group:message", { message });
+      io.to(`group:${groupId}`).emit("group:avatar:updated", { groupId, avatarUrl });
     }
     
-    res.json({ message });
+    res.json({ success: true, avatarUrl });
   } catch (err) {
-    console.error("[Groups] Send message error:", err);
-    res.status(500).json({ error: "Failed to send message" });
+    console.error("[Groups] Avatar update error:", err);
+    res.status(500).json({ error: "Failed to update avatar" });
   }
 });
 
