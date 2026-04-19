@@ -1,94 +1,85 @@
-// Grup DM Socket Handlerları
-// 15 kişi max, mesh architecture (herkes eşit)
+/**
+ * Modern Group Socket Handlers
+ * Simple, reliable, works with 2-15 people
+ */
 
 function registerGroupHandlers(io, socket, state) {
   const myId = socket.user?.id;
   if (!myId) return;
 
-  // Grup mesajı gönder
-  socket.on("group:message", ({ groupId, content, mediaUrl, mediaType } = {}) => {
-    if (!groupId || (!content?.trim() && !mediaUrl)) return;
-    
-    // Grup üyelerine broadcast (kendisi hariç)
-    socket.to(`group:${groupId}`).emit("group:message", {
-      groupId,
-      message: {
-        id: Date.now().toString(), // temp id
-        sender_id: myId,
-        content: content?.trim(),
-        media_url: mediaUrl,
-        media_type: mediaType,
-        created_at: new Date().toISOString(),
-        sender: {
-          id: myId,
-          username: socket.user.username,
-          avatar_url: socket.user.avatar_url,
-        }
-      }
-    });
-  });
-
-  // Gruba katıl (room)
+  // Join group room
   socket.on("group:join", (groupId) => {
     if (!groupId) return;
     socket.join(`group:${groupId}`);
-    console.log(`[Socket] ${myId} joined group room: ${groupId}`);
+    console.log(`[Socket] ${myId} joined group: ${groupId}`);
   });
 
-  // Gruptan ayrıl
+  // Leave group room
   socket.on("group:leave", (groupId) => {
     if (!groupId) return;
     socket.leave(`group:${groupId}`);
-    console.log(`[Socket] ${myId} left group room: ${groupId}`);
+    console.log(`[Socket] ${myId} left group: ${groupId}`);
   });
 
-  // Grup çağrısı başlat (voice/video)
-  socket.on("group:call:start", ({ groupId, callType } = {}) => {
+  // Group message
+  socket.on("group:message", ({ groupId, content, mediaUrl, mediaType }) => {
+    if (!groupId || (!content?.trim() && !mediaUrl)) return;
+
+    const message = {
+      id: Date.now().toString(),
+      sender_id: myId,
+      content: content?.trim(),
+      media_url: mediaUrl,
+      media_type: mediaType,
+      created_at: new Date().toISOString(),
+      sender: {
+        id: myId,
+        username: socket.user.username,
+        avatar_url: socket.user.avatar_url,
+      },
+    };
+
+    // Broadcast to group (including sender for consistency)
+    io.to(`group:${groupId}`).emit("group:message", { groupId, message });
+  });
+
+  // ========== GROUP CALL ==========
+
+  // Start group call
+  socket.on("group:call:start", ({ groupId, callType }) => {
     if (!groupId || !callType) return;
-    
+
+    console.log(`[GroupCall] ${myId} started ${callType} call in group ${groupId}`);
+
+    // Broadcast to all group members except sender
     socket.to(`group:${groupId}`).emit("group:call:incoming", {
       groupId,
-      fromUser: { id: myId, username: socket.user.username },
-      callType, // voice veya video
-    });
-  });
-
-  // Grup çağrısına cevap
-  socket.on("group:call:accept", ({ groupId, toUserId } = {}) => {
-    if (!groupId || !toUserId) return;
-    
-    io.to(`user:${toUserId}`).emit("group:call:accepted", {
-      groupId,
-      fromUserId: myId,
-    });
-  });
-
-  // Grup çağrısını reddet
-  socket.on("group:call:decline", ({ groupId, toUserId } = {}) => {
-    if (!groupId || !toUserId) return;
-    
-    io.to(`user:${toUserId}`).emit("group:call:declined", {
-      groupId,
-      fromUserId: myId,
-    });
-  });
-
-  // WebRTC offer (mesh - herkes herkese)
-  socket.on("group:call:offer", ({ groupId, toUserId, offer, callType } = {}) => {
-    if (!groupId || !toUserId || !offer) return;
-    
-    io.to(`user:${toUserId}`).emit("group:call:offer", {
-      groupId,
-      fromUser: { id: myId, username: socket.user.username },
-      offer,
+      fromUser: {
+        id: myId,
+        username: socket.user.username,
+        avatar_url: socket.user.avatar_url,
+      },
       callType,
     });
   });
 
-  // WebRTC answer
-  socket.on("group:call:answer", ({ groupId, toUserId, answer } = {}) => {
+  // Accept call and send offer
+  socket.on("group:call:accept", ({ groupId, toUserId, offer }) => {
+    if (!groupId || !toUserId || !offer) return;
+
+    console.log(`[GroupCall] ${myId} accepted call, sending offer to ${toUserId}`);
+
+    io.to(`user:${toUserId}`).emit("group:call:accepted", {
+      groupId,
+      fromUserId: myId,
+      offer,
+    });
+  });
+
+  // Send answer
+  socket.on("group:call:answer", ({ groupId, toUserId, answer }) => {
     if (!groupId || !toUserId || !answer) return;
-    
+
     io.to(`user:${toUserId}`).emit("group:call:answer", {
       groupId,
       fromUserId: myId,
@@ -96,10 +87,10 @@ function registerGroupHandlers(io, socket, state) {
     });
   });
 
-  // ICE candidate
-  socket.on("group:call:ice", ({ groupId, toUserId, candidate } = {}) => {
+  // Send ICE candidate
+  socket.on("group:call:ice", ({ groupId, toUserId, candidate }) => {
     if (!groupId || !toUserId || !candidate) return;
-    
+
     io.to(`user:${toUserId}`).emit("group:call:ice", {
       groupId,
       fromUserId: myId,
@@ -107,53 +98,65 @@ function registerGroupHandlers(io, socket, state) {
     });
   });
 
-  // Ekran paylaşımı başlat
-  socket.on("group:screen:start", ({ groupId } = {}) => {
-    if (!groupId) return;
-    
-    socket.to(`group:${groupId}`).emit("group:screen:started", {
-      groupId,
-      fromUserId: myId,
-    });
-  });
-
-  // Ekran paylaşımı durdur
-  socket.on("group:screen:stop", ({ groupId } = {}) => {
-    if (!groupId) return;
-    
-    socket.to(`group:${groupId}`).emit("group:screen:stopped", {
-      groupId,
-      fromUserId: myId,
-    });
-  });
-
-  // Çağrıdan ayrıl
-  socket.on("group:call:leave", ({ groupId } = {}) => {
-    if (!groupId) return;
-    
-    socket.to(`group:${groupId}`).emit("group:call:left", {
-      groupId,
-      userId: myId,
-    });
-  });
-
-  // Meşgul sinyali
-  socket.on("group:call:busy", ({ groupId, toUserId } = {}) => {
+  // Decline call
+  socket.on("group:call:decline", ({ groupId, toUserId }) => {
     if (!groupId || !toUserId) return;
-    
+
+    io.to(`user:${toUserId}`).emit("group:call:declined", {
+      groupId,
+      fromUserId: myId,
+    });
+  });
+
+  // Busy signal
+  socket.on("group:call:busy", ({ groupId, toUserId }) => {
+    if (!groupId || !toUserId) return;
+
     io.to(`user:${toUserId}`).emit("group:call:busy", {
       groupId,
       fromUserId: myId,
     });
   });
 
-  // Çağrıyı sonlandır (herkes için)
-  socket.on("group:call:end", ({ groupId } = {}) => {
+  // Leave call
+  socket.on("group:call:leave", ({ groupId }) => {
     if (!groupId) return;
-    
+
+    socket.to(`group:${groupId}`).emit("group:call:left", {
+      groupId,
+      userId: myId,
+    });
+  });
+
+  // End call for everyone
+  socket.on("group:call:end", ({ groupId }) => {
+    if (!groupId) return;
+
+    console.log(`[GroupCall] ${myId} ended call in group ${groupId}`);
+
     socket.to(`group:${groupId}`).emit("group:call:ended", {
       groupId,
       endedBy: myId,
+    });
+  });
+
+  // Screen share started
+  socket.on("group:screen:start", ({ groupId }) => {
+    if (!groupId) return;
+
+    socket.to(`group:${groupId}`).emit("group:screen:started", {
+      groupId,
+      fromUserId: myId,
+    });
+  });
+
+  // Screen share stopped
+  socket.on("group:screen:stop", ({ groupId }) => {
+    if (!groupId) return;
+
+    socket.to(`group:${groupId}`).emit("group:screen:stopped", {
+      groupId,
+      fromUserId: myId,
     });
   });
 }

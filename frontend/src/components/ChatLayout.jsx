@@ -11,6 +11,7 @@ import { Avatar } from "./ui/Avatar";
 import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
+// Modern Group API
 import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGroup, renameGroup, inviteToGroup } from "../api/groups";
 import { 
   MessageSquare, Users, UserPlus, Bell, Circle, 
@@ -302,24 +303,26 @@ export default function ChatLayout({
   });
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [createGroupOpen, setCreateGroupOpen] = useState(false);
-  const [myGroups, setMyGroups] = useState([]);
-  const [activeGroup, setActiveGroup] = useState(() => {
-    try {
-      const saved = localStorage.getItem("descall_active_group");
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
+  // ========== MODERN GROUP SYSTEM ==========
+  const [groups, setGroups] = useState({
+    list: [],
+    active: null,
+    messages: [],
+    call: {
+      minimized: false,
+      incoming: null, // { groupId, fromUser, callType, groupName }
+    },
+    ui: {
+      createOpen: false,
+      renameOpen: false,
+      inviteOpen: false,
+      newGroupName: "",
+      selectedMembers: [],
+      renameValue: "",
+      inviteUsername: "",
+      groupComposer: "",
+    }
   });
-  const [newGroupName, setNewGroupName] = useState("");
-  const [selectedMembers, setSelectedMembers] = useState([]);
-  const [groupMessages, setGroupMessages] = useState([]);
-  const [groupComposer, setGroupComposer] = useState("");
-  const [renameGroupOpen, setRenameGroupOpen] = useState(false);
-  const [renameGroupValue, setRenameGroupValue] = useState("");
-  const [inviteGroupOpen, setInviteGroupOpen] = useState(false);
-  const [inviteFriendUsername, setInviteFriendUsername] = useState("");
-  const [groupCallMinimized, setGroupCallMinimized] = useState(false);
-  const [incomingGroupCall, setIncomingGroupCall] = useState(null); // { groupId, fromUser, callType }
   const fileInputRef = useRef(null);
 
   const messagesRef = useRef(null);
@@ -341,207 +344,168 @@ export default function ChatLayout({
 
   useEffect(() => { scrollToBottom(); }, [activeDmUser, scrollToBottom]);
 
-  // Fetch my groups
+  // ========== MODERN GROUP SYSTEM ==========
+  
+  // Fetch groups on mount
   useEffect(() => {
     if (!me) return;
-    console.log("[Frontend] Fetching groups...");
     getMyGroups()
-      .then((data) => {
-        console.log("[Frontend] Groups received:", data);
-        setMyGroups(data.groups || []);
-      })
-      .catch((err) => {
-        console.error("[Frontend] Failed to fetch groups:", err);
-        setMyGroups([]);
-      });
+      .then((data) => setGroups(g => ({ ...g, list: data.groups || [] })))
+      .catch(() => setGroups(g => ({ ...g, list: [] })));
   }, [me]);
 
-  // Listen for real-time group messages
+  // Socket event listeners
   useEffect(() => {
-    const socket = groupCall?.socket;
     if (!socket) return;
 
-    const handleGroupMessage = ({ groupId, message }) => {
-      if (groupId === activeGroup?.id) {
-        setGroupMessages((prev) => {
-          // Avoid duplicates
-          if (prev.find(m => m.id === message.id)) return prev;
-          return [...prev, message];
-        });
+    // Real-time group messages
+    const onGroupMessage = ({ groupId, message }) => {
+      if (groupId === groups.active?.id) {
+        setGroups(g => ({
+          ...g,
+          messages: [...g.messages.filter(m => m.id !== message.id), message]
+        }));
       }
     };
 
-    socket.on("group:message", handleGroupMessage);
-    return () => {
-      socket.off("group:message", handleGroupMessage);
-    };
-  }, [groupCall?.socket, activeGroup?.id]);
-
-  // Listen for incoming group calls
-  useEffect(() => {
-    const socket = groupCall?.socket;
-    if (!socket) return;
-
-    const handleIncomingCall = ({ groupId, fromUser, callType }) => {
-      console.log("[ChatLayout] Incoming group call:", { groupId, fromUser, callType });
-      
-      // Don't show if we're already in a group call
+    // Incoming group call
+    const onIncomingCall = ({ groupId, fromUser, callType }) => {
       if (groupCall?.isInCall) {
-        console.log("[ChatLayout] Already in call, sending busy");
         socket.emit("group:call:busy", { groupId, toUserId: fromUser.id });
         return;
       }
-      
-      // Find group info
-      const group = myGroups.find(g => g.id === groupId);
-      
-      setIncomingGroupCall({
-        groupId,
-        groupName: group?.name || "Unknown Group",
-        fromUser,
-        callType,
-      });
+      const group = groups.list.find(g => g.id === groupId);
+      setGroups(g => ({
+        ...g,
+        call: { ...g.call, incoming: { groupId, fromUser, callType, groupName: group?.name } }
+      }));
     };
 
-    const handleCallEnded = () => {
-      setIncomingGroupCall(null);
+    // Call ended
+    const onCallEnded = () => {
+      setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
     };
 
-    socket.on("group:call:incoming", handleIncomingCall);
-    socket.on("group:call:left", handleCallEnded);
-    socket.on("group:call:ended", handleCallEnded);
+    socket.on("group:message", onGroupMessage);
+    socket.on("group:call:incoming", onIncomingCall);
+    socket.on("group:call:left", onCallEnded);
+    socket.on("group:call:ended", onCallEnded);
 
     return () => {
-      socket.off("group:call:incoming", handleIncomingCall);
-      socket.off("group:call:left", handleCallEnded);
-      socket.off("group:call:ended", handleCallEnded);
+      socket.off("group:message", onGroupMessage);
+      socket.off("group:call:incoming", onIncomingCall);
+      socket.off("group:call:left", onCallEnded);
+      socket.off("group:call:ended", onCallEnded);
     };
-  }, [groupCall?.socket, groupCall?.isInCall, myGroups]);
+  }, [socket, groups.active?.id, groups.list, groupCall?.isInCall]);
 
-  // Group handlers
-  const handleCreateGroup = async (e) => {
-    e.preventDefault();
-    if (!newGroupName.trim() || selectedMembers.length === 0) return;
-    try {
-      const result = await createGroup({
-        name: newGroupName.trim(),
-        memberIds: selectedMembers,
-      });
-      setMyGroups((prev) => [result.group, ...prev]);
-      setCreateGroupOpen(false);
-      setNewGroupName("");
-      setSelectedMembers([]);
-      toast?.success?.("Group created!");
-    } catch (err) {
-      toast?.error?.(err.message || "Failed to create group");
-    }
-  };
-
-  const handleOpenGroup = async (group) => {
-    setActiveGroup(group);
-    try { localStorage.setItem("descall_active_group", JSON.stringify(group)); } catch {}
-    setActiveDmUser(null); // DM'yi kapat
-    
-    // Load group messages from API
-    try {
-      const result = await getGroupMessages(group.id);
-      setGroupMessages(result?.messages || []);
-    } catch (err) {
-      console.error("[ChatLayout] Failed to load group messages:", err);
-      setGroupMessages([]);
-    }
-    
-    // Join group room for real-time updates
-    if (group?.id) {
-      groupCall?.socket?.emit?.("group:join", group.id);
-    }
-  };
-
-  const handleSendGroupMessage = async (e) => {
-    e?.preventDefault();
-    const text = groupComposer.trim();
-    if (!text || !activeGroup) return;
-    
-    try {
-      // Send via API to persist in database
-      const result = await sendGroupMessage(activeGroup.id, { content: text });
-      
-      if (result?.message) {
-        setGroupMessages((prev) => [...prev, result.message]);
-      } else {
-        // Fallback to local message if API doesn't return message
-        const newMsg = {
-          id: Date.now().toString(),
-          content: text,
-          sender: { id: me?.id, username: me?.username },
-          created_at: new Date().toISOString(),
-        };
-        setGroupMessages((prev) => [...prev, newMsg]);
+  // Group actions
+  const groupActions = {
+    // Open group
+    open: async (group) => {
+      setActiveDmUser(null);
+      setGroups(g => ({ ...g, active: group }));
+      try {
+        const result = await getGroupMessages(group.id);
+        setGroups(g => ({ ...g, messages: result?.messages || [] }));
+      } catch {
+        setGroups(g => ({ ...g, messages: [] }));
       }
-      setGroupComposer("");
-    } catch (err) {
-      console.error("[ChatLayout] Failed to send group message:", err);
-      toast?.error?.(err.message || "Failed to send message");
-    }
-  };
+      socket?.emit("group:join", group.id);
+    },
 
-  // Leave group
-  const handleLeaveGroup = async (groupId) => {
-    if (!confirm("Leave this group?")) return;
-    try {
-      await leaveGroup(groupId);
-      setMyGroups((prev) => prev.filter((g) => g.id !== groupId));
-      if (activeGroup?.id === groupId) {
-        setActiveGroup(null);
-        try { localStorage.removeItem("descall_active_group"); } catch {}
+    // Send message
+    sendMessage: async (text) => {
+      if (!text?.trim() || !groups.active) return;
+      try {
+        const result = await sendGroupMessage(groups.active.id, { content: text });
+        if (result?.message) {
+          setGroups(g => ({ ...g, messages: [...g.messages, result.message] }));
+        }
+      } catch (err) {
+        toast?.error?.("Failed to send message");
       }
-      toast?.success?.("Left group");
-    } catch (err) {
-      toast?.error?.(err.message || "Failed to leave group");
-    }
-  };
+    },
 
-  // Rename group
-  const handleRenameGroup = async (e) => {
-    e?.preventDefault();
-    if (!renameGroupValue.trim() || !activeGroup) return;
-    try {
-      await renameGroup(activeGroup.id, renameGroupValue.trim());
-      setMyGroups((prev) =>
-        prev.map((g) =>
-          g.id === activeGroup.id ? { ...g, name: renameGroupValue.trim() } : g
-        )
-      );
-      setActiveGroup((prev) => ({ ...prev, name: renameGroupValue.trim() }));
-      setRenameGroupOpen(false);
-      setRenameGroupValue("");
-      toast?.success?.("Group renamed");
-    } catch (err) {
-      toast?.error?.(err.message || "Failed to rename group");
-    }
-  };
-
-  // Invite friend to group
-  const handleInviteToGroup = async (e) => {
-    e?.preventDefault();
-    if (!inviteFriendUsername.trim() || !activeGroup) return;
-    try {
-      // Find friend by username
-      const friend = friends.find(
-        (f) => f.username.toLowerCase() === inviteFriendUsername.trim().toLowerCase()
-      );
-      if (!friend) {
-        toast?.error?.("Friend not found");
-        return;
+    // Create group
+    create: async (e) => {
+      e?.preventDefault();
+      const { newGroupName, selectedMembers } = groups.ui;
+      if (!newGroupName?.trim() || selectedMembers.length === 0) return;
+      try {
+        const result = await createGroup({
+          name: newGroupName.trim(),
+          memberIds: selectedMembers,
+        });
+        setGroups(g => ({
+          ...g,
+          list: [result.group, ...g.list],
+          ui: { ...g.ui, createOpen: false, newGroupName: "", selectedMembers: [] }
+        }));
+        toast?.success?.("Group created!");
+      } catch (err) {
+        toast?.error?.(err.message || "Failed to create group");
       }
-      await inviteToGroup(activeGroup.id, friend.id);
-      setInviteGroupOpen(false);
-      setInviteFriendUsername("");
-      toast?.success?.(`Invited ${friend.username} to group`);
-    } catch (err) {
-      toast?.error?.(err.message || "Failed to invite");
-    }
+    },
+
+    // Leave group
+    leave: async (groupId) => {
+      if (!confirm("Leave this group?")) return;
+      try {
+        await leaveGroup(groupId);
+        setGroups(g => ({
+          ...g,
+          list: g.list.filter(grp => grp.id !== groupId),
+          active: g.active?.id === groupId ? null : g.active
+        }));
+        toast?.success?.("Left group");
+      } catch (err) {
+        toast?.error?.(err.message || "Failed to leave group");
+      }
+    },
+
+    // Rename group
+    rename: async (e) => {
+      e?.preventDefault();
+      const { renameValue } = groups.ui;
+      if (!renameValue?.trim() || !groups.active) return;
+      try {
+        await renameGroup(groups.active.id, renameValue.trim());
+        setGroups(g => ({
+          ...g,
+          list: g.list.map(grp =>
+            grp.id === groups.active.id ? { ...grp, name: renameValue.trim() } : grp
+          ),
+          active: g.active ? { ...g.active, name: renameValue.trim() } : null,
+          ui: { ...g.ui, renameOpen: false, renameValue: "" }
+        }));
+        toast?.success?.("Group renamed!");
+      } catch (err) {
+        toast?.error?.(err.message || "Failed to rename group");
+      }
+    },
+
+    // Invite to group
+    invite: async (e) => {
+      e?.preventDefault();
+      const { inviteUsername } = groups.ui;
+      if (!inviteUsername?.trim() || !groups.active) return;
+      try {
+        await inviteToGroup(groups.active.id, inviteUsername.trim());
+        setGroups(g => ({ ...g, ui: { ...g.ui, inviteOpen: false, inviteUsername: "" } }));
+        toast?.success?.("Friend invited!");
+      } catch (err) {
+        toast?.error?.(err.message || "Failed to invite");
+      }
+    },
+
+    // Update UI state
+    setUI: (updates) => setGroups(g => ({ ...g, ui: { ...g.ui, ...updates } })),
+    
+    // Toggle call minimized
+    toggleMinimized: () => setGroups(g => ({ ...g, call: { ...g.call, minimized: !g.call.minimized } })),
   };
+
 
   const sortedFriends = useMemo(() => [...friends].sort((a, b) => a.username.localeCompare(b.username)), [friends]);
   const filteredFriends = useMemo(() => {
@@ -760,27 +724,27 @@ export default function ChatLayout({
                 <h4>Groups ({myGroups.length})</h4>
                 <button 
                   className="btn-icon"
-                  onClick={() => setCreateGroupOpen(true)}
+                  onClick={() => groupActions.setUI({ createOpen: true })}
                   title="Create group"
                 >
                   <Plus size={20} />
                 </button>
               </div>
               <div className="scroll-list custom-scroll">
-                {myGroups.length === 0 ? (
+                {groups.list.length === 0 ? (
                   <div className="empty-state">
                     <p className="muted">No groups yet</p>
-                    <button className="btn-secondary" onClick={() => setCreateGroupOpen(true)}>
+                    <button className="btn-secondary" onClick={() => groupActions.setUI({ createOpen: true })}>
                       Create your first group
                     </button>
                   </div>
                 ) : (
-                  myGroups.map((group) => (
+                  groups.list.map((group) => (
                     <motion.button
                       key={group.id}
                       type="button"
-                      className={`dm-item ${activeGroup?.id === group.id ? "active" : ""}`}
-                      onClick={() => handleOpenGroup(group)}
+                      className={`dm-item ${groups.active?.id === group.id ? "active" : ""}`}
+                      onClick={() => groupActions.open(group)}
                       whileHover={{ x: 2 }}
                     >
                       <div className="dm-avatar">
@@ -861,7 +825,7 @@ export default function ChatLayout({
           <div className="panel-title-wrap">
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeDmUser ? `dm-${activeDmUser.id}` : activeGroup ? `group-${activeGroup.id}` : "empty"}
+                key={activeDmUser ? `dm-${activeDmUser.id}` : groups.active ? `group-${groups.active.id}` : "empty"}
                 className="panel-title-block"
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -869,10 +833,10 @@ export default function ChatLayout({
                 transition={{ duration: 0.2 }}
               >
                 <strong className="panel-title">
-                  {activeDmUser ? `@${activeDmUser.username}` : activeGroup ? activeGroup.name : "Descall"}
+                  {activeDmUser ? `@${activeDmUser.username}` : groups.active ? groups.active.name : "Descall"}
                 </strong>
                 <span className="panel-sub">
-                  {activeDmUser ? "Direct message" : activeGroup ? "Group chat" : "Select a conversation"}
+                  {activeDmUser ? "Direct message" : groups.active ? "Group chat" : "Select a conversation"}
                 </span>
               </motion.div>
             </AnimatePresence>
@@ -894,7 +858,7 @@ export default function ChatLayout({
                     type="button" 
                     className="header-call-btn voice" 
                     disabled={inCall || !groupCall} 
-                    onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "voice", [])} 
+                    onClick={() => groupCall?.startGroupCall?.(groups.active.id, "voice", [])} 
                     title="Group voice call"
                   >
                     <div className="call-btn-icon">
@@ -906,7 +870,7 @@ export default function ChatLayout({
                     type="button" 
                     className="header-call-btn video" 
                     disabled={inCall || !groupCall} 
-                    onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} 
+                    onClick={() => groupCall?.startGroupCall?.(groups.active.id, "video", [])} 
                     title="Group video call"
                   >
                     <div className="call-btn-icon">
@@ -922,7 +886,7 @@ export default function ChatLayout({
                     <RippleButton 
                       type="button" 
                       className="group-action-btn primary" 
-                      onClick={() => setInviteGroupOpen(true)} 
+                      onClick={() => groupActions.setUI({ inviteOpen: true })} 
                       title="Invite friend"
                     >
                       <div className="action-btn-content">
@@ -936,7 +900,7 @@ export default function ChatLayout({
                     <RippleButton 
                       type="button" 
                       className="group-action-btn secondary" 
-                      onClick={() => { setRenameGroupValue(activeGroup.name); setRenameGroupOpen(true); }} 
+                      onClick={() => { groupActions.setUI({ renameValue: groups.active.name, renameOpen: true }); }} 
                       title="Rename group"
                     >
                       <div className="action-btn-content">
@@ -950,7 +914,7 @@ export default function ChatLayout({
                     <RippleButton 
                       type="button" 
                       className="group-action-btn danger" 
-                      onClick={() => handleLeaveGroup(activeGroup.id)} 
+                      onClick={() => groupActions.leave(groups.active.id)} 
                       title="Leave group"
                     >
                       <div className="action-btn-content">
@@ -972,7 +936,7 @@ export default function ChatLayout({
 
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeDmUser ? `dm-${activeDmUser.id}` : activeGroup ? `group-${activeGroup.id}` : "empty"}
+            key={activeDmUser ? `dm-${activeDmUser.id}` : groups.active ? `group-${groups.active.id}` : "empty"}
             className="messages-wrap"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1043,14 +1007,14 @@ export default function ChatLayout({
               </AnimatePresence>
 
               {/* Group Messages */}
-              {activeGroup && groupMessages.length === 0 && (
+              {groups.active && groups.messages.length === 0 && (
                 <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Group: {activeGroup.name}</h4>
                   <p>No messages yet. Start the conversation!</p>
                 </motion.div>
               )}
 
-              {activeGroup && groupMessages.map((msg) => {
+              {groups.active && groups.messages.map((msg) => {
                 const fromSelf = msg.sender?.id === me?.id;
                 return (
                   <motion.article
@@ -1109,12 +1073,12 @@ export default function ChatLayout({
         {activeGroup && (
           <form
             className={`composer glass-composer ${inCall ? "composer-dimmed" : ""}`}
-            onSubmit={handleSendGroupMessage}
+            onSubmit={(e) => { e.preventDefault(); groupActions.sendMessage(groups.ui.groupComposer); groupActions.setUI({ groupComposer: "" }); }}
           >
             <input
               placeholder={`Message #${activeGroup.name}`}
-              value={groupComposer}
-              onChange={(e) => setGroupComposer(e.target.value)}
+              value={groups.ui.groupComposer || ""}
+              onChange={(e) => groupActions.setUI({ groupComposer: e.target.value })}
             />
             <RippleButton type="submit">Send</RippleButton>
           </form>
@@ -1205,21 +1169,21 @@ export default function ChatLayout({
       </Modal>
 
       {/* Create Group Modal */}
-      <Modal open={createGroupOpen} onClose={() => setCreateGroupOpen(false)}>
+      <Modal open={groups.ui.createOpen} onClose={() => setCreateGroupOpen(false)}>
         <div className="create-group-modal">
           <h3>Create Group</h3>
-          <form onSubmit={handleCreateGroup}>
+          <form onSubmit={groupActions.create}>
             <label className="cg-field">
               <span>Group Name</span>
               <input
                 type="text"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
+                value={groups.ui.newGroupName}
+                onChange={(e) => (v) => groupActions.setUI({ newGroupName: v })(e.target.value)}
                 placeholder="Enter group name"
                 maxLength={50}
                 required
               />
-              <small>{newGroupName.length}/50</small>
+              <small>{groups.ui.newGroupName.length}/50</small>
             </label>
 
             <div className="cg-members">
@@ -1229,17 +1193,17 @@ export default function ChatLayout({
                   <label key={friend.id} className="cg-friend-item">
                     <input
                       type="checkbox"
-                      checked={selectedMembers.includes(friend.id)}
+                      checked={groups.ui.selectedMembers.includes(friend.id)}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          if (selectedMembers.length < 14) {
-                            setSelectedMembers([...selectedMembers, friend.id]);
+                          if (groups.ui.selectedMembers.length < 14) {
+                            setSelectedMembers([...groups.ui.selectedMembers, friend.id]);
                           }
                         } else {
-                          setSelectedMembers(selectedMembers.filter((id) => id !== friend.id));
+                          setSelectedMembers(groups.ui.selectedMembers.filter((id) => id !== friend.id));
                         }
                       }}
-                      disabled={!selectedMembers.includes(friend.id) && selectedMembers.length >= 14}
+                      disabled={!groups.ui.selectedMembers.includes(friend.id) && groups.ui.selectedMembers.length >= 14}
                     />
                     <Avatar src={friend.avatar_url} alt={friend.username} size={28} />
                     <span>{friend.username}</span>
@@ -1249,7 +1213,7 @@ export default function ChatLayout({
                   <p className="muted small">Add friends first to create a group</p>
                 )}
               </div>
-              <small className="cg-count">{selectedMembers.length}/14 friends selected</small>
+              <small className="cg-count">{groups.ui.selectedMembers.length}/14 friends selected</small>
             </div>
 
             <div className="cg-actions">
@@ -1259,7 +1223,7 @@ export default function ChatLayout({
               <RippleButton 
                 type="submit" 
                 className="btn-primary"
-                disabled={!newGroupName.trim() || selectedMembers.length === 0}
+                disabled={!groups.ui.newGroupName.trim() || groups.ui.selectedMembers.length === 0}
               >
                 Create Group
               </RippleButton>
@@ -1269,21 +1233,21 @@ export default function ChatLayout({
       </Modal>
 
       {/* Rename Group Modal */}
-      <Modal open={renameGroupOpen} onClose={() => setRenameGroupOpen(false)}>
+      <Modal open={groups.ui.renameOpen} onClose={() => setRenameGroupOpen(false)}>
         <div className="create-group-modal">
           <h3>Rename Group</h3>
-          <form onSubmit={handleRenameGroup}>
+          <form onSubmit={groupActions.rename}>
             <label className="cg-field">
               <span>New Group Name</span>
               <input
                 type="text"
-                value={renameGroupValue}
+                value={groups.ui.renameValue}
                 onChange={(e) => setRenameGroupValue(e.target.value)}
                 placeholder="Enter new group name"
                 maxLength={50}
                 required
               />
-              <small>{renameGroupValue.length}/50</small>
+              <small>{groups.ui.renameValue.length}/50</small>
             </label>
 
             <div className="cg-actions">
@@ -1293,7 +1257,7 @@ export default function ChatLayout({
               <RippleButton 
                 type="submit" 
                 className="btn-primary"
-                disabled={!renameGroupValue.trim() || renameGroupValue === activeGroup?.name}
+                disabled={!groups.ui.renameValue.trim() || groups.ui.renameValue === activeGroup?.name}
               >
                 Rename
               </RippleButton>
@@ -1303,16 +1267,16 @@ export default function ChatLayout({
       </Modal>
 
       {/* Invite to Group Modal */}
-      <Modal open={inviteGroupOpen} onClose={() => setInviteGroupOpen(false)}>
+      <Modal open={groups.ui.inviteOpen} onClose={() => setInviteGroupOpen(false)}>
         <div className="create-group-modal">
           <h3>Invite Friend to Group</h3>
-          <form onSubmit={handleInviteToGroup}>
+          <form onSubmit={groupActions.invite}>
             <label className="cg-field">
               <span>Friend Username</span>
               <input
                 type="text"
-                value={inviteFriendUsername}
-                onChange={(e) => setInviteFriendUsername(e.target.value)}
+                value={groups.ui.inviteUsername}
+                onChange={(e) => (v) => groupActions.setUI({ inviteUsername: v })(e.target.value)}
                 placeholder="Enter friend's username"
                 maxLength={50}
                 required
@@ -1326,7 +1290,7 @@ export default function ChatLayout({
               <RippleButton 
                 type="submit" 
                 className="btn-primary"
-                disabled={!inviteFriendUsername.trim()}
+                disabled={!groups.ui.inviteUsername.trim()}
               >
                 Invite
               </RippleButton>
@@ -1377,7 +1341,7 @@ export default function ChatLayout({
                 className="btn-decline" 
                 onClick={() => {
                   groupCall?.declineCall?.(incomingGroupCall.groupId, incomingGroupCall.fromUser.id);
-                  setIncomingGroupCall(null);
+                  setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
                 }}
               >
                 Decline
@@ -1391,7 +1355,7 @@ export default function ChatLayout({
                     incomingGroupCall.callType, 
                     incomingGroupCall.fromUser
                   );
-                  setIncomingGroupCall(null);
+                  setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
                   // Open the group
                   const group = myGroups.find(g => g.id === incomingGroupCall.groupId);
                   if (group) handleOpenGroup(group);
