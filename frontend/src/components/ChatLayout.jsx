@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useToast } from "../context/ToastContext";
+import { useMobile } from "../hooks/useMobile";
+import { useProfileCustomization } from "../hooks/useProfileCustomization";
 import TypingIndicator from "./chat/TypingIndicator";
 import SettingsPanel from "./settings/SettingsPanel";
+import ProfileCustomizationPanel from "./profile/ProfileCustomizationPanel";
 import VideoConference from "./VideoConference";
 import UserHoverCard from "./social/UserHoverCard";
 import UserProfilePopover from "./social/UserProfilePopover";
@@ -13,13 +16,14 @@ import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
 // Modern Group API
 import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGroup, renameGroup, inviteToGroup } from "../api/groups";
-import { 
-  MessageSquare, Users, UserPlus, Bell, Circle, 
-  PanelLeftClose, Settings, Send, Paperclip, 
+import {
+  MessageSquare, Users, UserPlus, Bell, Circle,
+  PanelLeftClose, Settings, Send, Paperclip,
   Phone, Video, X, Plus, Clock, Check, CheckCheck,
   Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
   Search, LogOut, Volume2, VolumeX, Maximize2, Grid,
-  ChevronLeft, ChevronRight, MoreVertical, Trash2
+  ChevronLeft, ChevronRight, MoreVertical, Trash2,
+  Menu, Palette, Sparkles, User
 } from "lucide-react";
 
 function asArray(value) {
@@ -331,6 +335,12 @@ export default function ChatLayout({
       groupComposer: "",
     }
   });
+  // ========== MOBILE & CUSTOMIZATION ==========
+  const { isMobile, isPortrait, touchSupported, vibrate } = useMobile();
+  const profileCustomization = useProfileCustomization();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [activeMobileView, setActiveMobileView] = useState("dms"); // "dms", "groups", "calls", "profile"
+  const [customizationOpen, setCustomizationOpen] = useState(false);
   const fileInputRef = useRef(null);
   const groupsList = asArray(groups.list);
   const groupsMessages = asArray(groups.messages);
@@ -1435,6 +1445,195 @@ export default function ChatLayout({
         setFocusedParticipant={groupCall?.setFocusedParticipant || (() => {})}
         duration={groupCall?.duration || 0}
       />
+
+      {/* Profile Customization Modal */}
+      <Modal open={customizationOpen} onClose={() => setCustomizationOpen(false)} wide>
+        <ProfileCustomizationPanel
+          {...profileCustomization}
+          onClose={() => setCustomizationOpen(false)}
+          me={me}
+        />
+      </Modal>
+
+      {/* Mobile UI Components */}
+      {isMobile && (
+        <>
+          {/* Mobile Header */}
+          <div className="mobile-header">
+            <div className="mobile-header-title">Descall</div>
+            <div className="mobile-header-actions">
+              <button
+                className="mobile-header-btn touch-feedback"
+                onClick={() => {
+                  vibrate(20);
+                  setNotificationsOpen(true);
+                }}
+              >
+                <Bell size={20} />
+                {notificationUnread > 0 && (
+                  <span className="badge">{notificationUnread}</span>
+                )}
+              </button>
+              <button
+                className="mobile-header-btn touch-feedback"
+                onClick={() => {
+                  vibrate(20);
+                  setMobileSidebarOpen(true);
+                }}
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Sidebar Overlay */}
+          <div
+            className={`mobile-sidebar-overlay ${mobileSidebarOpen ? "open" : ""}`}
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+
+          {/* Mobile Sidebar Drawer */}
+          <motion.div
+            className={`mobile-sidebar ${mobileSidebarOpen ? "open" : ""}`}
+            initial={{ x: "-100%" }}
+            animate={{ x: mobileSidebarOpen ? "0%" : "-100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            <div className="mobile-sidebar-header">
+              <div className="mobile-sidebar-avatar">
+                {me?.username?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <div className="mobile-sidebar-user">
+                <div className="mobile-sidebar-username">@{me?.username}</div>
+                <div className="mobile-sidebar-status">
+                  {profileCustomization.customization.profile.statusEmoji} {profileCustomization.customization.profile.customStatus || myStatus}
+                </div>
+              </div>
+            </div>
+
+            <nav className="mobile-sidebar-menu">
+              <button
+                className="mobile-sidebar-item touch-feedback"
+                onClick={() => {
+                  vibrate(20);
+                  setActiveMobileView("dms");
+                  setMobileSidebarOpen(false);
+                }}
+              >
+                <MessageSquare size={20} />
+                <span>Messages</span>
+                {totalDmUnread > 0 && <span className="badge">{totalDmUnread}</span>}
+              </button>
+              <button
+                className="mobile-sidebar-item touch-feedback"
+                onClick={() => {
+                  vibrate(20);
+                  setActiveMobileView("groups");
+                  setMobileSidebarOpen(false);
+                }}
+              >
+                <Users size={20} />
+                <span>Groups</span>
+                <span className="badge">{groupsList.length}</span>
+              </button>
+              <button
+                className="mobile-sidebar-item touch-feedback"
+                onClick={() => {
+                  vibrate(20);
+                  setActiveMobileView("profile");
+                  setMobileSidebarOpen(false);
+                }}
+              >
+                <User size={20} />
+                <span>Profile</span>
+              </button>
+              <button
+                className="mobile-sidebar-item touch-feedback"
+                onClick={() => {
+                  vibrate(20);
+                  setCustomizationOpen(true);
+                  setMobileSidebarOpen(false);
+                }}
+              >
+                <Palette size={20} />
+                <span>Customize</span>
+              </button>
+              <button
+                className="mobile-sidebar-item touch-feedback"
+                onClick={() => {
+                  vibrate(20);
+                  setSettingsOpen(true);
+                  setMobileSidebarOpen(false);
+                }}
+              >
+                <Settings size={20} />
+                <span>Settings</span>
+              </button>
+              <button
+                className="mobile-sidebar-item touch-feedback"
+                onClick={() => {
+                  vibrate(50);
+                  onLogout();
+                }}
+              >
+                <LogOut size={20} />
+                <span>Logout</span>
+              </button>
+            </nav>
+          </motion.div>
+
+          {/* Mobile Bottom Navigation */}
+          <nav className="mobile-bottom-nav">
+            <button
+              className={`mobile-nav-item ${activeMobileView === "dms" ? "active" : ""}`}
+              onClick={() => {
+                vibrate(10);
+                setActiveMobileView("dms");
+              }}
+            >
+              <MessageSquare className="mobile-nav-icon" size={24} />
+              <span>Chats</span>
+              {totalDmUnread > 0 && (
+                <span className="mobile-nav-badge">{totalDmUnread}</span>
+              )}
+            </button>
+            <button
+              className={`mobile-nav-item ${activeMobileView === "groups" ? "active" : ""}`}
+              onClick={() => {
+                vibrate(10);
+                setActiveMobileView("groups");
+              }}
+            >
+              <Users className="mobile-nav-icon" size={24} />
+              <span>Groups</span>
+              <span className="mobile-nav-badge">{groupsList.length}</span>
+            </button>
+            <button
+              className={`mobile-nav-item ${activeMobileView === "calls" ? "active" : ""}`}
+              onClick={() => {
+                vibrate(10);
+                setActiveMobileView("calls");
+              }}
+            >
+              <Phone className="mobile-nav-icon" size={24} />
+              <span>Calls</span>
+            </button>
+            <button
+              className={`mobile-nav-item ${activeMobileView === "profile" ? "active" : ""}`}
+              onClick={() => {
+                vibrate(10);
+                setMobileSidebarOpen(true);
+              }}
+            >
+              <User className="mobile-nav-icon" size={24} />
+              <span>Profile</span>
+            </button>
+          </nav>
+        </>
+      )}
     </div>
   );
 }
+
+// Import mobile styles
+import "../styles.mobile.css";
