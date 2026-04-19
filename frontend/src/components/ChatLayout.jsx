@@ -10,8 +10,27 @@ import {
 } from "lucide-react";
 import { useToast } from "../context/ToastContext";
 import { Avatar } from "./ui/Avatar";
-import { formatTime } from "../utils/time";
 import { RippleButton } from "./ui/RippleButton";
+
+// Helper: format time
+function formatTime(timestamp) {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  
+  if (isToday) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+  
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
 import { Icon } from "./ui/Icon";
 import { sendGroupMessage, getGroupMessages, getGroupById, createGroup } from "../api/groups";
 
