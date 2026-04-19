@@ -285,8 +285,11 @@ export default function ChatLayout({
   loadingOlderDm,
   onNotificationRead,
   onNotificationReadAll,
-  peerScreenSharing = false,
+  peerScreenSharing,
   groupCall,
+  onClearDm,
+  myGroups,
+  setMyGroups,
 }) {
   const { toast } = useToast();
   const [composer, setComposer] = useState("");
@@ -406,8 +409,13 @@ export default function ChatLayout({
     // Open group
     open: async (group) => {
       console.log("[ChatLayout] Opening group:", group);
-      setActiveDmUser(null);
+      // Clear active DM when opening a group
+      onClearDm?.();
       setGroups(g => ({ ...g, active: group }));
+      // Also save to localStorage
+      try {
+        localStorage.setItem("descall_active_group", JSON.stringify({ id: group.id, name: group.name }));
+      } catch {}
       try {
         const result = await getGroupMessages(group.id);
         console.log("[ChatLayout] Group messages loaded:", result);

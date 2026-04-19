@@ -454,32 +454,30 @@ router.delete("/:groupId", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const { groupId } = req.params;
-    
+
     // Check if user is creator
     const { data: group, error: fetchError } = await supabase
       .from("groups")
       .select("created_by")
       .eq("id", groupId)
       .single();
-    
+
     if (fetchError || !group) return res.status(404).json({ error: "Group not found" });
     if (group.created_by !== userId) return res.status(403).json({ error: "Only creator can delete group" });
-    
-    // Delete group members
-    await supabase.from("group_members").delete().eq("group_id", groupId);
-    
-    // Delete group messages
-    await supabase.from("group_messages").delete().eq("group_id", groupId);
-    
-    // Delete group
-    await supabase.from("groups").delete().eq("id", groupId);
-    
-    // Notify members via socket
+
+    // Notify members via socket BEFORE deletion
     const io = req.app.get("io");
     if (io) {
       io.to(`group:${groupId}`).emit("group:deleted", { groupId });
     }
-    
+
+    // Delete in order (members first, then messages, then group)
+    // Note: Supabase doesn't support multi-table transactions in JS client easily
+    // We delete in dependency order to minimize issues
+    await supabase.from("group_members").delete().eq("group_id", groupId);
+    await supabase.from("group_messages").delete().eq("group_id", groupId);
+    await supabase.from("groups").delete().eq("id", groupId);
+
     res.json({ success: true, message: "Group deleted" });
   } catch (err) {
     console.error("[Groups] Delete error:", err);
@@ -493,32 +491,39 @@ router.post("/:groupId/avatar", requireAuth, async (req, res) => {
     const userId = req.user.id;
     const { groupId } = req.params;
     const { avatarUrl } = req.body;
-    
+
     if (!avatarUrl) return res.status(400).json({ error: "Avatar URL required" });
-    
+
+    // Validate URL
+    try {
+      new URL(avatarUrl);
+    } catch {
+      return res.status(400).json({ error: "Invalid URL" });
+    }
+
     // Check if user is creator
     const { data: group, error: fetchError } = await supabase
       .from("groups")
       .select("created_by")
       .eq("id", groupId)
       .single();
-    
+
     if (fetchError || !group) return res.status(404).json({ error: "Group not found" });
     if (group.created_by !== userId) return res.status(403).json({ error: "Only creator can update avatar" });
-    
+
     const { error } = await supabase
       .from("groups")
       .update({ avatar_url: avatarUrl })
       .eq("id", groupId);
-    
+
     if (error) throw error;
-    
+
     // Notify members via socket
     const io = req.app.get("io");
     if (io) {
       io.to(`group:${groupId}`).emit("group:avatar:updated", { groupId, avatarUrl });
     }
-    
+
     res.json({ success: true, avatarUrl });
   } catch (err) {
     console.error("[Groups] Avatar update error:", err);

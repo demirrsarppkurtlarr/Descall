@@ -2558,12 +2558,12 @@ html[data-theme="light"] body {
   border-radius: 4px;
 }
 
-.error-resolved:contains("✓") {
+.error-resolved.resolved {
   background: rgba(78, 205, 196, 0.2);
   color: #4ecdc4;
 }
 
-.error-resolved:contains("⚠") {
+.error-resolved.unresolved {
   background: rgba(255, 107, 107, 0.2);
   color: #ff6b6b;
 }

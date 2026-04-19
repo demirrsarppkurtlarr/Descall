@@ -536,6 +536,7 @@ export default function App() {
         peerScreenSharing={peerScreenSharing}
         groupCall={groupCall}
         socket={socketApi}
+        onClearDm={() => setActiveDmUser(null)}
       />
     </>
   );

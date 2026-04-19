@@ -397,9 +397,9 @@ export default function AdminPanel({ socket, onClose }) {
             </div>
 
             <div className="error-stats">
-              <span>Total: {errorLogs.length}</span>
-              <span>Unresolved: {errorLogs.filter(e => !e.resolved).length}</span>
-              <span>Resolved: {errorLogs.filter(e => e.resolved).length}</span>
+              <span>Total: {(errorLogs || []).length}</span>
+              <span>Unresolved: {(errorLogs || []).filter(e => !e.resolved).length}</span>
+              <span>Resolved: {(errorLogs || []).filter(e => e.resolved).length}</span>
             </div>
 
             <div className="error-list">
@@ -417,9 +417,9 @@ export default function AdminPanel({ socket, onClose }) {
                   <div key={e.id} className="error-item" style={{ opacity: e.resolved ? 0.5 : 1 }}>
                     <div className="error-header" onClick={() => setExpandedError(expandedError === e.id ? null : e.id)}>
                       <div className="error-info">
-                        <span className="error-time">{new Date(e.timestamp).toLocaleString()}</span>
+                        <span className="error-time">{e.timestamp ? new Date(e.timestamp).toLocaleString() : 'Invalid'}</span>
                         <span className="error-user mono">{e.user_id?.slice(0, 8)}…</span>
-                        <span className="error-resolved">{e.resolved ? "✓ Resolved" : "⚠ Unresolved"}</span>
+                        <span className={`error-resolved ${e.resolved ? 'resolved' : 'unresolved'}`}>{e.resolved ? "✓ Resolved" : "⚠ Unresolved"}</span>
                       </div>
                       <span className="error-message">{e.message}</span>
                     </div>
@@ -428,7 +428,7 @@ export default function AdminPanel({ socket, onClose }) {
                       <div className="error-details">
                         <div className="error-detail-section">
                           <h4>URL</h4>
-                          <code className="error-url">{e.url}</code>
+                          <code className="error-url">{e.url || 'N/A'}</code>
                         </div>
                         
                         {e.stack && (
