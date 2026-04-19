@@ -2478,6 +2478,199 @@ html[data-theme="light"] body {
 
 .admin-actions {
   display: flex;
+  gap: 8px;
+}
+
+/* Error Log Section */
+.error-stats {
+  display: flex;
+  gap: 20px;
+  padding: 12px;
+  background: var(--panel-2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.error-stats span {
+  color: var(--text);
+}
+
+.error-stats span:nth-child(2) {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+.error-stats span:nth-child(3) {
+  color: #4ecdc4;
+  font-weight: 600;
+}
+
+.error-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.error-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.error-item:hover {
+  border-color: var(--accent);
+}
+
+.error-header {
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.error-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.error-time {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.error-user {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.error-resolved {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.error-resolved:contains("✓") {
+  background: rgba(78, 205, 196, 0.2);
+  color: #4ecdc4;
+}
+
+.error-resolved:contains("⚠") {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.error-message {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.error-details {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error-detail-section h4 {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.error-url {
+  display: block;
+  padding: 8px;
+  background: var(--panel-2);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.error-stack {
+  background: #1a1a1a;
+  color: #ff6b6b;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.error-user-agent {
+  display: block;
+  padding: 8px;
+  background: var(--panel-2);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.error-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.error-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.error-actions button:first-child {
+  background: var(--accent);
+  color: white;
+}
+
+.error-actions button:first-child:hover {
+  background: rgba(var(--accent-rgb), 0.9);
+}
+
+.error-actions button:last-child {
+  background: transparent;
+  color: #ff6b6b;
+  border: 1px solid #ff6b6b;
+}
+
+.error-actions button:last-child:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.admin-select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-actions {
   flex-wrap: wrap;
   gap: 6px;
 }

@@ -26,6 +26,9 @@ export default function AdminPanel({ socket, onClose }) {
   const [system, setSystem] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
   const [errorLogs, setErrorLogs] = useState([]);
+  const [errorQ, setErrorQ] = useState("");
+  const [errorFilter, setErrorFilter] = useState("all"); // all, unresolved, resolved
+  const [expandedError, setExpandedError] = useState(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -371,59 +374,120 @@ export default function AdminPanel({ socket, onClose }) {
           <section className="admin-section">
             <h2>Error Logs</h2>
             <p className="muted">All frontend errors from all users</p>
-            <RippleButton type="button" onClick={() => act(loadErrors)} disabled={busy}>
-              Refresh
-            </RippleButton>
-            <table className="admin-table compact">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>User ID</th>
-                  <th>Message</th>
-                  <th>URL</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {errorLogs.map((e) => (
-                  <tr key={e.id} style={{ opacity: e.resolved ? 0.5 : 1 }}>
-                    <td>{new Date(e.timestamp).toLocaleString()}</td>
-                    <td className="mono">{e.user_id?.slice(0, 8)}…</td>
-                    <td>{e.message}</td>
-                    <td>{e.url}</td>
-                    <td className="admin-actions">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          act(async () => {
-                            await fetch(`${window.location.origin}/api/errors/${e.id}/resolve`, {
-                              method: "PATCH",
-                            });
-                            await loadErrors();
-                          })
-                        }
-                        disabled={e.resolved}
-                      >
-                        {e.resolved ? "Resolved" : "Resolve"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          act(async () => {
-                            await fetch(`${window.location.origin}/api/errors/${e.id}`, {
-                              method: "DELETE",
-                            });
-                            await loadErrors();
-                          })
-                        }
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+            
+            <div className="admin-toolbar">
+              <input
+                className="admin-input"
+                placeholder="Search error message..."
+                value={errorQ}
+                onChange={(e) => setErrorQ(e.target.value)}
+              />
+              <select
+                className="admin-select"
+                value={errorFilter}
+                onChange={(e) => setErrorFilter(e.target.value)}
+              >
+                <option value="all">All Errors</option>
+                <option value="unresolved">Unresolved</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <RippleButton type="button" onClick={() => act(loadErrors)} disabled={busy}>
+                Refresh
+              </RippleButton>
+            </div>
+
+            <div className="error-stats">
+              <span>Total: {errorLogs.length}</span>
+              <span>Unresolved: {errorLogs.filter(e => !e.resolved).length}</span>
+              <span>Resolved: {errorLogs.filter(e => e.resolved).length}</span>
+            </div>
+
+            <div className="error-list">
+              {(errorLogs || [])
+                .filter(e => {
+                  const matchesFilter = errorFilter === "all" || 
+                    (errorFilter === "unresolved" && !e.resolved) ||
+                    (errorFilter === "resolved" && e.resolved);
+                  const matchesSearch = !errorQ || 
+                    e.message?.toLowerCase().includes(errorQ.toLowerCase()) ||
+                    e.url?.toLowerCase().includes(errorQ.toLowerCase());
+                  return matchesFilter && matchesSearch;
+                })
+                .map((e) => (
+                  <div key={e.id} className="error-item" style={{ opacity: e.resolved ? 0.5 : 1 }}>
+                    <div className="error-header" onClick={() => setExpandedError(expandedError === e.id ? null : e.id)}>
+                      <div className="error-info">
+                        <span className="error-time">{new Date(e.timestamp).toLocaleString()}</span>
+                        <span className="error-user mono">{e.user_id?.slice(0, 8)}…</span>
+                        <span className="error-resolved">{e.resolved ? "✓ Resolved" : "⚠ Unresolved"}</span>
+                      </div>
+                      <span className="error-message">{e.message}</span>
+                    </div>
+                    
+                    {expandedError === e.id && (
+                      <div className="error-details">
+                        <div className="error-detail-section">
+                          <h4>URL</h4>
+                          <code className="error-url">{e.url}</code>
+                        </div>
+                        
+                        {e.stack && (
+                          <div className="error-detail-section">
+                            <h4>Error Stack</h4>
+                            <pre className="error-stack">{e.stack}</pre>
+                          </div>
+                        )}
+                        
+                        {e.component_stack && (
+                          <div className="error-detail-section">
+                            <h4>Component Stack</h4>
+                            <pre className="error-stack">{e.component_stack}</pre>
+                          </div>
+                        )}
+                        
+                        {e.user_agent && (
+                          <div className="error-detail-section">
+                            <h4>User Agent</h4>
+                            <code className="error-user-agent">{e.user_agent}</code>
+                          </div>
+                        )}
+                        
+                        <div className="error-actions">
+                          {!e.resolved && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                act(async () => {
+                                  await fetch(`${window.location.origin}/api/errors/${e.id}/resolve`, {
+                                    method: "PATCH",
+                                  });
+                                  await loadErrors();
+                                })
+                              }
+                            >
+                              Mark as Resolved
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              act(async () => {
+                                await fetch(`${window.location.origin}/api/errors/${e.id}`, {
+                                  method: "DELETE",
+                                });
+                                await loadErrors();
+                              })
+                            }
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </tbody>
-            </table>
+            </div>
+            
             {errorLogs.length === 0 && <p className="muted">No errors logged yet</p>}
           </section>
         )}
