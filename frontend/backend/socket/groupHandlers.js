@@ -72,6 +72,11 @@ function registerGroupHandlers(io, socket, state) {
     io.to(`user:${toUserId}`).emit("group:call:accepted", {
       groupId,
       fromUserId: myId,
+      fromUser: {
+        id: myId,
+        username: socket.user.username,
+        avatar_url: socket.user.avatar_url,
+      },
       offer,
     });
   });

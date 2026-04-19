@@ -24,6 +24,12 @@ function mergeById(existing, incoming) {
   return out.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 }
 
+function normalizeGroups(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.groups)) return payload.groups;
+  return [];
+}
+
 export default function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -382,9 +388,10 @@ export default function App() {
   // Gruplari cek
   const fetchGroups = useCallback(async () => {
     try {
-      const groups = await getMyGroups();
-      console.log("[App] Fetched groups:", groups?.length || 0);
-      setMyGroups(groups || []);
+      const raw = await getMyGroups();
+      const groups = normalizeGroups(raw);
+      console.log("[App] Fetched groups:", groups.length || 0);
+      setMyGroups(groups);
     } catch (err) {
       console.error("[App] Failed to fetch groups:", err);
       setMyGroups([]);

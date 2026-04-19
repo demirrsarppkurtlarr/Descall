@@ -66,7 +66,8 @@ export default function AdminPanel({ socket, onClose }) {
 
   const loadErrors = useCallback(async () => {
     const d = await adminFetch("/api/errors");
-    setErrorLogs(d || []);
+    const logs = Array.isArray(d) ? d : Array.isArray(d?.errors) ? d.errors : [];
+    setErrorLogs(logs);
   }, []);
 
   useEffect(() => {
@@ -398,67 +399,70 @@ export default function AdminPanel({ socket, onClose }) {
 
             <div className="error-stats">
               <span>Total: {(errorLogs || []).length}</span>
-              <span>Unresolved: {(errorLogs || []).filter(e => !e.resolved).length}</span>
-              <span>Resolved: {(errorLogs || []).filter(e => e.resolved).length}</span>
+              <span>Unresolved: {(errorLogs || []).filter((e) => !(e.resolved ?? e.is_resolved)).length}</span>
+              <span>Resolved: {(errorLogs || []).filter((e) => (e.resolved ?? e.is_resolved)).length}</span>
             </div>
 
             <div className="error-list">
               {(errorLogs || [])
                 .filter(e => {
+                  const resolved = e.resolved ?? e.is_resolved ?? false;
+                  const message = e.message || e.error_message || "";
+                  const url = e.url || e.page_url || "";
                   const matchesFilter = errorFilter === "all" || 
-                    (errorFilter === "unresolved" && !e.resolved) ||
-                    (errorFilter === "resolved" && e.resolved);
+                    (errorFilter === "unresolved" && !resolved) ||
+                    (errorFilter === "resolved" && resolved);
                   const matchesSearch = !errorQ || 
-                    e.message?.toLowerCase().includes(errorQ.toLowerCase()) ||
-                    e.url?.toLowerCase().includes(errorQ.toLowerCase());
+                    message.toLowerCase().includes(errorQ.toLowerCase()) ||
+                    url.toLowerCase().includes(errorQ.toLowerCase());
                   return matchesFilter && matchesSearch;
                 })
                 .map((e) => (
-                  <div key={e.id} className="error-item" style={{ opacity: e.resolved ? 0.5 : 1 }}>
+                  <div key={e.id} className="error-item" style={{ opacity: (e.resolved ?? e.is_resolved) ? 0.5 : 1 }}>
                     <div className="error-header" onClick={() => setExpandedError(expandedError === e.id ? null : e.id)}>
                       <div className="error-info">
                         <span className="error-time">{e.timestamp ? new Date(e.timestamp).toLocaleString() : 'Invalid'}</span>
-                        <span className="error-user mono">{e.user_id?.slice(0, 8)}…</span>
-                        <span className={`error-resolved ${e.resolved ? 'resolved' : 'unresolved'}`}>{e.resolved ? "✓ Resolved" : "⚠ Unresolved"}</span>
+                        <span className="error-user mono">{(e.user_id || e.userId || "anonymous").slice(0, 8)}…</span>
+                        <span className={`error-resolved ${(e.resolved ?? e.is_resolved) ? 'resolved' : 'unresolved'}`}>{(e.resolved ?? e.is_resolved) ? "✓ Resolved" : "⚠ Unresolved"}</span>
                       </div>
-                      <span className="error-message">{e.message}</span>
+                      <span className="error-message">{e.message || e.error_message || "Unknown error"}</span>
                     </div>
                     
                     {expandedError === e.id && (
                       <div className="error-details">
                         <div className="error-detail-section">
                           <h4>URL</h4>
-                          <code className="error-url">{e.url || 'N/A'}</code>
+                          <code className="error-url">{e.url || e.page_url || "N/A"}</code>
                         </div>
                         
-                        {e.stack && (
+                        {(e.stack || e.error_stack) && (
                           <div className="error-detail-section">
                             <h4>Error Stack</h4>
-                            <pre className="error-stack">{e.stack}</pre>
+                            <pre className="error-stack">{e.stack || e.error_stack}</pre>
                           </div>
                         )}
                         
-                        {e.component_stack && (
+                        {(e.component_stack || e.componentStack) && (
                           <div className="error-detail-section">
                             <h4>Component Stack</h4>
-                            <pre className="error-stack">{e.component_stack}</pre>
+                            <pre className="error-stack">{e.component_stack || e.componentStack}</pre>
                           </div>
                         )}
                         
-                        {e.user_agent && (
+                        {(e.user_agent || e.userAgent) && (
                           <div className="error-detail-section">
                             <h4>User Agent</h4>
-                            <code className="error-user-agent">{e.user_agent}</code>
+                            <code className="error-user-agent">{e.user_agent || e.userAgent}</code>
                           </div>
                         )}
                         
                         <div className="error-actions">
-                          {!e.resolved && (
+                          {!(e.resolved ?? e.is_resolved) && (
                             <button
                               type="button"
                               onClick={() =>
                                 act(async () => {
-                                  await fetch(`${window.location.origin}/api/errors/${e.id}/resolve`, {
+                                  await adminFetch(`/api/errors/${e.id}/resolve`, {
                                     method: "PATCH",
                                   });
                                   await loadErrors();
@@ -472,7 +476,7 @@ export default function AdminPanel({ socket, onClose }) {
                             type="button"
                             onClick={() =>
                               act(async () => {
-                                await fetch(`${window.location.origin}/api/errors/${e.id}`, {
+                                await adminFetch(`/api/errors/${e.id}`, {
                                   method: "DELETE",
                                 });
                                 await loadErrors();

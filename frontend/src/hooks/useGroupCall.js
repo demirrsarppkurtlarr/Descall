@@ -44,6 +44,7 @@ export function useGroupCall(socket) {
   const isInitiatorRef = useRef(null);
   const isInCallRef = useRef(false);
   const callTypeRef = useRef(null);
+  const cameraTrackRef = useRef(null);
 
   // Update ref when participants change
   useEffect(() => {
@@ -70,14 +71,14 @@ export function useGroupCall(socket) {
   }, []);
 
   // Create peer connection
-  const createPeerConnection = useCallback((userId, isCaller) => {
+  const createPeerConnection = useCallback((userId, groupId) => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
     pc.onicecandidate = (e) => {
       if (e.candidate && socketRef.current && pc.connectionState !== 'closed') {
         try {
           socketRef.current.emit("group:call:ice", {
-            groupId: activeGroupId,
+            groupId: groupId || activeGroupIdRef.current,
             toUserId: userId,
             candidate: e.candidate,
           });
@@ -111,6 +112,7 @@ export function useGroupCall(socket) {
             stream,
             hasVideo,
             hasAudio,
+            username: "Member",
           },
         ];
       });
@@ -137,7 +139,7 @@ export function useGroupCall(socket) {
 
     peerConnections.current.set(userId, pc);
     return pc;
-  }, [activeGroupId]);
+  }, []);
 
   // Start group call (as initiator)
   const startGroupCall = useCallback(async (groupId, type, memberIds) => {
@@ -150,6 +152,8 @@ export function useGroupCall(socket) {
       setActiveGroupId(groupId);
       setDuration(0);
       setParticipants([]);
+      activeGroupIdRef.current = groupId;
+      callTypeRef.current = type;
       
       // Notify all members
       socketRef.current?.emit("group:call:start", { groupId, callType: type });
@@ -178,9 +182,11 @@ export function useGroupCall(socket) {
       setActiveGroupId(groupId);
       setDuration(0);
       setIncomingCall(null);
+      activeGroupIdRef.current = groupId;
+      callTypeRef.current = type;
       
       // Create peer connection to caller
-      const pc = createPeerConnection(fromUser.id, false);
+      const pc = createPeerConnection(fromUser.id, groupId);
       
       // Create and send offer
       const offer = await pc.createOffer();
@@ -221,7 +227,7 @@ export function useGroupCall(socket) {
         socketRef.current?.emit("group:call:end", { groupId: activeGroupIdRef.current });
       }
     }
-    cleanup();
+    cleanup({ notify: false });
   }, []);
 
   // Toggle mute
@@ -290,20 +296,16 @@ export function useGroupCall(socket) {
       setScreenStream(stream);
       setIsScreenSharing(true);
 
-      // Replace video track in all peer connections
       const screenTrack = stream.getVideoTracks()[0];
-      
-      // Add screen track to local stream
-      if (localStreamRef.current) {
-        localStreamRef.current.addTrack(screenTrack);
-      }
+      if (!screenTrack) return;
+      cameraTrackRef.current = localStreamRef.current?.getVideoTracks?.()[0] || null;
       
       peerConnections.current.forEach((pc) => {
         if (pc.connectionState === 'closed') return;
         const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
         if (videoSender) {
           videoSender.replaceTrack(screenTrack);
-        } else if (localStreamRef.current) {
+        } else if (localStreamRef.current && callTypeRef.current === "video") {
           pc.addTrack(screenTrack, localStreamRef.current);
         }
       });
@@ -327,7 +329,7 @@ export function useGroupCall(socket) {
     setIsScreenSharing(false);
 
     // Restore camera track if available
-    const videoTrack = localStreamRef.current?.getVideoTracks()[0];
+    const videoTrack = cameraTrackRef.current || localStreamRef.current?.getVideoTracks?.()[0];
     peerConnections.current.forEach((pc) => {
       if (pc.connectionState === 'closed') return;
       const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
@@ -335,6 +337,7 @@ export function useGroupCall(socket) {
         videoSender.replaceTrack(videoTrack);
       }
     });
+    cameraTrackRef.current = null;
   }, []);
 
   // Update refs when state changes
@@ -345,9 +348,10 @@ export function useGroupCall(socket) {
   useEffect(() => { socketRef.current = socket; }, [socket]);
 
   // Cleanup function
-  const cleanup = useCallback(() => {
+  const cleanup = useCallback((options = {}) => {
+    const { notify = true } = options;
     // Notify others we're leaving
-    if (socketRef.current && activeGroupIdRef.current) {
+    if (notify && socketRef.current && activeGroupIdRef.current) {
       if (isInitiatorRef.current) {
         socketRef.current.emit("group:call:end", { groupId: activeGroupIdRef.current });
       }
@@ -387,6 +391,7 @@ export function useGroupCall(socket) {
     setDominantSpeaker(null);
     setFocusedParticipant(null);
     setIncomingCall(null);
+    cameraTrackRef.current = null;
 
     audioManager.stop("incomingCall");
   }, []);
@@ -406,11 +411,11 @@ export function useGroupCall(socket) {
     };
 
     // Someone accepted our call (as initiator)
-    const handleAccepted = async ({ groupId, fromUserId, offer }) => {
+    const handleAccepted = async ({ groupId, fromUserId, fromUser, offer }) => {
       if (!isInitiatorRef.current || groupId !== activeGroupIdRef.current) return;
 
       try {
-        const pc = createPeerConnection(fromUserId, true);
+        const pc = createPeerConnection(fromUserId, groupId);
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         
         const answer = await pc.createAnswer();
@@ -427,9 +432,9 @@ export function useGroupCall(socket) {
           const hasVideo = callTypeRef.current === "video";
           const existing = prev.find((p) => p.id === fromUserId);
           if (existing) {
-            return prev.map((p) => p.id === fromUserId ? { ...p, hasVideo } : p);
+            return prev.map((p) => p.id === fromUserId ? { ...p, hasVideo, username: fromUser?.username || p.username, avatarUrl: fromUser?.avatar_url || p.avatarUrl } : p);
           }
-          return [...prev, { id: fromUserId, hasVideo, hasAudio: true }];
+          return [...prev, { id: fromUserId, hasVideo, hasAudio: true, username: fromUser?.username || "Member", avatarUrl: fromUser?.avatar_url || null }];
         });
       } catch (err) {
         console.error("[GroupCall] Failed to handle accepted call:", err);
@@ -443,6 +448,7 @@ export function useGroupCall(socket) {
 
     // Received answer (as joiner)
     const handleAnswer = async ({ groupId, fromUserId, answer }) => {
+      if (groupId !== activeGroupIdRef.current) return;
       const pc = peerConnections.current.get(fromUserId);
       if (pc && pc.connectionState !== 'closed') {
         try {
@@ -457,6 +463,7 @@ export function useGroupCall(socket) {
 
     // ICE candidate
     const handleIce = async ({ groupId, fromUserId, candidate }) => {
+      if (groupId !== activeGroupIdRef.current) return;
       const pc = peerConnections.current.get(fromUserId);
       if (pc && pc.connectionState !== 'closed') {
         try {
@@ -469,6 +476,7 @@ export function useGroupCall(socket) {
 
     // Someone left
     const handleLeft = ({ groupId, userId }) => {
+      if (groupId !== activeGroupIdRef.current) return;
       const pc = peerConnections.current.get(userId);
       if (pc) {
         try {
@@ -484,7 +492,8 @@ export function useGroupCall(socket) {
 
     // Call ended
     const handleEnded = ({ groupId }) => {
-      cleanup();
+      if (groupId !== activeGroupIdRef.current) return;
+      cleanup({ notify: false });
     };
 
     // Someone declined

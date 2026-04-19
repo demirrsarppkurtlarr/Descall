@@ -33,6 +33,7 @@ export default function VideoConference({
   setFocusedParticipant,
   duration = 0,
 }) {
+  const safeParticipants = Array.isArray(participants) ? participants : [];
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "focus"
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef(null);
@@ -85,7 +86,7 @@ export default function VideoConference({
               </div>
               <span className="vc-pip-participants">
                 <Users size={12} />
-                {participants.length + 1}
+                {safeParticipants.length + 1}
               </span>
             </div>
             <div className="vc-pip-window-controls">
@@ -161,7 +162,7 @@ export default function VideoConference({
   }
 
   // Filter active participants (with streams)
-  const activeParticipants = (participants || []).filter(p =>
+  const activeParticipants = safeParticipants.filter((p) =>
     call.remoteStreams.current.has(p.id)
   );
 
@@ -181,11 +182,11 @@ export default function VideoConference({
 
   // Focus view: who to show big
   const focusTarget = focusedParticipant || 
-    participants.find(p => p.isScreenSharing)?.id ||
+    safeParticipants.find((p) => p.isScreenSharing)?.id ||
     dominantSpeaker ||
     activeParticipants[0]?.id;
 
-  const focusParticipant = participants.find(p => p.id === focusTarget);
+  const focusParticipant = safeParticipants.find((p) => p.id === focusTarget);
   const focusStream = focusTarget ? call.remoteStreams.current.get(focusTarget) : null;
 
   // Thumbnail participants (focus view)
@@ -211,7 +212,7 @@ export default function VideoConference({
       >
         <div className="vc-title">
           <Users size={18} />
-          <span>{participants.length + 1} participants</span>
+          <span>{safeParticipants.length + 1} participants</span>
         </div>
         <div className="vc-view-toggle">
           <button

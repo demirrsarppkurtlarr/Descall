@@ -299,7 +299,35 @@ router.post("/:groupId/invite", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const { groupId } = req.params;
-    const { invitedUserId } = req.body;
+    const { invitedUserId, invitedUsername, username } = req.body;
+    const invitedIdentity = invitedUserId || invitedUsername || username;
+
+    if (!invitedIdentity) {
+      return res.status(400).json({ error: "invitedUserId or username required" });
+    }
+
+    let resolvedInvitedUserId = invitedIdentity;
+    if (typeof invitedIdentity === "string") {
+      const trimmed = invitedIdentity.trim();
+      if (!trimmed) {
+        return res.status(400).json({ error: "Invalid invite target" });
+      }
+      const isUuidLike = /^[0-9a-fA-F-]{32,36}$/.test(trimmed);
+      if (!isUuidLike) {
+        const { data: invitedUser, error: invitedLookupError } = await supabase
+          .from("users")
+          .select("id")
+          .eq("username", trimmed)
+          .maybeSingle();
+        if (invitedLookupError) throw invitedLookupError;
+        if (!invitedUser?.id) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        resolvedInvitedUserId = invitedUser.id;
+      } else {
+        resolvedInvitedUserId = trimmed;
+      }
+    }
     
     // Check if group has space
     const { count } = await supabase
@@ -326,7 +354,7 @@ router.post("/:groupId/invite", requireAuth, async (req, res) => {
       .from("group_members")
       .select("group_id")
       .eq("group_id", groupId)
-      .eq("user_id", invitedUserId)
+      .eq("user_id", resolvedInvitedUserId)
       .maybeSingle();
     
     if (existingMember) return res.status(409).json({ error: "Already a member" });
@@ -337,7 +365,7 @@ router.post("/:groupId/invite", requireAuth, async (req, res) => {
       .insert({
         group_id: groupId,
         invited_by: userId,
-        invited_user_id: invitedUserId,
+        invited_user_id: resolvedInvitedUserId,
       })
       .select()
       .single();

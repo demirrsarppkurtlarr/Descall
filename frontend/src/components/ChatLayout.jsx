@@ -22,6 +22,10 @@ import {
   ChevronLeft, ChevronRight, MoreVertical, Trash2
 } from "lucide-react";
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function StatusBadge({ status = "offline" }) {
   return <span className={`status-dot ${status}`} title={status} />;
 }
@@ -329,6 +333,8 @@ export default function ChatLayout({
     }
   });
   const fileInputRef = useRef(null);
+  const groupsList = asArray(groups.list);
+  const groupsMessages = asArray(groups.messages);
 
   const messagesRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -355,7 +361,13 @@ export default function ChatLayout({
   useEffect(() => {
     if (!me) return;
     getMyGroups()
-      .then((data) => setGroups(g => ({ ...g, list: data.groups || [] })))
+      .then((data) => {
+        const normalized =
+          Array.isArray(data) ? data :
+          Array.isArray(data?.groups) ? data.groups :
+          [];
+        setGroups((g) => ({ ...g, list: normalized }));
+      })
       .catch(() => setGroups(g => ({ ...g, list: [] })));
   }, [me]);
 
@@ -379,7 +391,7 @@ export default function ChatLayout({
         socket.emit("group:call:busy", { groupId, toUserId: fromUser.id });
         return;
       }
-      const group = groups.list.find(g => g.id === groupId);
+      const group = groupsList.find(g => g.id === groupId);
       setGroups(g => ({
         ...g,
         call: { ...g.call, incoming: { groupId, fromUser, callType, groupName: group?.name } }
@@ -402,7 +414,17 @@ export default function ChatLayout({
       socket.off("group:call:left", onCallEnded);
       socket.off("group:call:ended", onCallEnded);
     };
-  }, [socket, groups.active?.id, groupCall?.isInCall, groups.list]);
+  }, [socket, groups.active?.id, groupCall?.isInCall, groupsList]);
+
+  // Keep socket subscribed to all my group rooms for live messages/calls.
+  useEffect(() => {
+    if (!socket) return;
+    const ids = groupsList.map((g) => g?.id).filter(Boolean);
+    ids.forEach((id) => socket.emit("group:join", id));
+    return () => {
+      ids.forEach((id) => socket.emit("group:leave", id));
+    };
+  }, [socket, groupsList]);
 
   // Group actions
   const groupActions = {
@@ -734,7 +756,7 @@ export default function ChatLayout({
           {sidebarView === "groups" && (
             <div className="sidebar-section grow">
               <div className="sidebar-section-header">
-                <h4>Groups ({groups.list.length})</h4>
+                <h4>Groups ({groupsList.length})</h4>
                 <button 
                   className="btn-icon"
                   onClick={() => groupActions.setUI({ createOpen: true })}
@@ -744,7 +766,7 @@ export default function ChatLayout({
                 </button>
               </div>
               <div className="scroll-list custom-scroll">
-                {groups.list.length === 0 ? (
+                {groupsList.length === 0 ? (
                   <div className="empty-state">
                     <p className="muted">No groups yet</p>
                     <button className="btn-secondary" onClick={() => groupActions.setUI({ createOpen: true })}>
@@ -752,7 +774,7 @@ export default function ChatLayout({
                     </button>
                   </div>
                 ) : (
-                  (groups.list || []).map((group) => (
+                  groupsList.map((group) => (
                     <motion.button
                       key={group.id}
                       type="button"
@@ -1020,14 +1042,14 @@ export default function ChatLayout({
               </AnimatePresence>
 
               {/* Group Messages */}
-              {groups.active && groups.messages.length === 0 && (
+              {groups.active && groupsMessages.length === 0 && (
                 <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Group: {groups.active.name}</h4>
                   <p>No messages yet. Start the conversation!</p>
                 </motion.div>
               )}
 
-              {groups.active && (groups.messages || []).map((msg) => {
+              {groups.active && groupsMessages.map((msg) => {
                 const fromSelf = msg.sender?.id === me?.id;
                 return (
                   <motion.article
@@ -1390,7 +1412,7 @@ export default function ChatLayout({
                   );
                   setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
                   // Open the group
-                  const group = groups.list.find(g => g.id === groups.call.incoming.groupId);
+                  const group = groupsList.find(g => g.id === groups.call.incoming.groupId);
                   if (group) groupActions.open(group);
                 }}
               >

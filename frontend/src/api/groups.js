@@ -53,10 +53,15 @@ export async function getGroupMembers(groupId) {
 }
 
 export async function inviteToGroup(groupId, invitedUserId) {
+  const value = typeof invitedUserId === "string" ? invitedUserId.trim() : invitedUserId;
   const res = await fetch(`${BASE}/${groupId}/invite`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ invitedUserId }),
+    body: JSON.stringify({
+      invitedUserId: value,
+      invitedUsername: value,
+      username: value,
+    }),
   });
   if (!res.ok) throw new Error("Failed to invite");
   return res.json();
