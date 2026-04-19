@@ -404,12 +404,15 @@ export default function ChatLayout({
   const groupActions = {
     // Open group
     open: async (group) => {
+      console.log("[ChatLayout] Opening group:", group);
       setActiveDmUser(null);
       setGroups(g => ({ ...g, active: group }));
       try {
         const result = await getGroupMessages(group.id);
+        console.log("[ChatLayout] Group messages loaded:", result);
         setGroups(g => ({ ...g, messages: result?.messages || [] }));
-      } catch {
+      } catch (err) {
+        console.error("[ChatLayout] Failed to load group messages:", err);
         setGroups(g => ({ ...g, messages: [] }));
       }
       // Socket join handled by useGroupCall hook
