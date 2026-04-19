@@ -332,14 +332,28 @@ export function useGroupCall(socket) {
     });
   }, []);
 
+  // Refs to avoid stale closures
+  const isInCallRef = useRef(isInCall);
+  const isInitiatorRef = useRef(isInitiator);
+  const activeGroupIdRef = useRef(activeGroupId);
+  const callTypeRef = useRef(callType);
+  const socketRef = useRef(socket);
+
+  // Update refs when state changes
+  useEffect(() => { isInCallRef.current = isInCall; }, [isInCall]);
+  useEffect(() => { isInitiatorRef.current = isInitiator; }, [isInitiator]);
+  useEffect(() => { activeGroupIdRef.current = activeGroupId; }, [activeGroupId]);
+  useEffect(() => { callTypeRef.current = callType; }, [callType]);
+  useEffect(() => { socketRef.current = socket; }, [socket]);
+
   // Cleanup function
   const cleanup = useCallback(() => {
     // Notify others we're leaving
-    if (socket && activeGroupIdRef.current) {
+    if (socketRef.current && activeGroupIdRef.current) {
       if (isInitiatorRef.current) {
-        socket.emit("group:call:end", { groupId: activeGroupIdRef.current });
+        socketRef.current.emit("group:call:end", { groupId: activeGroupIdRef.current });
       }
-      socket.emit("group:call:leave", { groupId: activeGroupIdRef.current });
+      socketRef.current.emit("group:call:leave", { groupId: activeGroupIdRef.current });
     }
 
     // Stop timer
@@ -368,7 +382,7 @@ export function useGroupCall(socket) {
     setLocalStream(null);
     setScreenStream(null);
     setIsMuted(false);
-    setIsCameraOn(false);
+  setIsCameraOn(false);
     setIsScreenSharing(false);
     setDuration(0);
     setParticipants([]);
@@ -377,19 +391,7 @@ export function useGroupCall(socket) {
     setIncomingCall(null);
 
     audioManager.stop("incomingCall");
-  }, [socket]);
-
-  // Refs to avoid stale closures
-  const isInCallRef = useRef(isInCall);
-  const isInitiatorRef = useRef(isInitiator);
-  const activeGroupIdRef = useRef(activeGroupId);
-  const callTypeRef = useRef(callType);
-
-  // Update refs when state changes
-  useEffect(() => { isInCallRef.current = isInCall; }, [isInCall]);
-  useEffect(() => { isInitiatorRef.current = isInitiator; }, [isInitiator]);
-  useEffect(() => { activeGroupIdRef.current = activeGroupId; }, [activeGroupId]);
-  useEffect(() => { callTypeRef.current = callType; }, [callType]);
+  }, []);
 
   // Socket event handlers
   useEffect(() => {
