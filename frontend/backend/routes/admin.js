@@ -59,16 +59,20 @@ function cleanupUserMemory(userId) {
   );
 }
 
-router.get("/stats", (req, res) => {
-  res.json({
-    uptime: process.uptime(),
-    onlineUsers: state.presence.size,
-    generalMessageCount: state.generalMessages.length,
-    dmConversationKeys: state.dmHistory.size,
-    bannedUsers: state.bannedUserIds.size,
-    auditEntries: state.auditLog.length,
-    memory: process.memoryUsage(),
-  });
+router.get("/stats", (_req, res) => {
+  try {
+    res.json({
+      uptime: process.uptime(),
+      onlineUsers: state?.presence?.size || 0,
+      generalMessageCount: state?.generalMessages?.length || 0,
+      dmConversationKeys: state?.dmHistory?.size || 0,
+      bannedUsers: state?.bannedUserIds?.size || 0,
+      auditEntries: state?.auditLog?.length || 0,
+      memory: process.memoryUsage(),
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load stats." });
+  }
 });
 
 router.get("/health", (_req, res) => {

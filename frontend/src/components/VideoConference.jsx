@@ -66,6 +66,7 @@ export default function VideoConference({
         initial={{ opacity: 0, y: 20, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.9 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         drag
         dragMomentum={false}
         whileDrag={{ scale: 1.02, cursor: "grabbing" }}
@@ -199,9 +200,11 @@ export default function VideoConference({
     <motion.div
       ref={containerRef}
       className="video-conference-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0, scale: 0.94 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      style={{ transformOrigin: "50% 50%" }}
       onMouseMove={resetControlsTimer}
       onClick={resetControlsTimer}
     >

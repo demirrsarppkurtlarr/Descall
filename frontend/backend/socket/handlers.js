@@ -158,6 +158,7 @@ function registerSocketHandlers(io) {
       status: "online",
       socketId: socket.id,
     });
+    socket.join(`user:${myId}`);
     socketToUser.set(socket.id, myId);
     socket.data.activeDmPeer = null;
 

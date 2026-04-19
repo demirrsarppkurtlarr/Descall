@@ -19,6 +19,7 @@ const DEFAULT_SOUNDS = {
   // Replace with actual files: /assets/sounds/incoming-call.mp3
   incomingCall: "/sounds/incoming-call.mp3",
   outgoingCall: "/sounds/outgoing-call.mp3",
+  callStart: "/sounds/outgoing-call.mp3",
   message: "/sounds/message.mp3",
   notification: "/sounds/notification.mp3"
 };
@@ -37,6 +38,7 @@ class AudioManager {
       globalMute: false,
       incomingCall: true,
       outgoingCall: true,
+      callStart: true,
       message: true,
       notification: true,
       volume: 1.0,
