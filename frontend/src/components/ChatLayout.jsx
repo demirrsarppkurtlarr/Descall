@@ -420,7 +420,7 @@ export default function ChatLayout({
   const handleOpenGroup = async (group) => {
     setActiveGroup(group);
     try { localStorage.setItem("descall_active_group", JSON.stringify(group)); } catch {}
-    setActiveDmUser(null); // DM'yi kapat
+    onOpenDm(null); // DM'yi kapat
     // Load group messages from API
     try {
       const data = await getGroupMessages(group.id);

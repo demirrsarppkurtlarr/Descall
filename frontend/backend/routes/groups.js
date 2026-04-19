@@ -398,4 +398,85 @@ router.post("/:groupId/rename", requireAuth, async (req, res) => {
   }
 });
 
+// Get group messages
+router.get("/:groupId/messages", requireAuth, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user.id;
+    
+    // Check if user is member
+    const { data: member, error: memberError } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("user_id", userId)
+      .single();
+    
+    if (memberError || !member) {
+      return res.status(403).json({ error: "Not a member of this group" });
+    }
+    
+    const { data: messages, error } = await supabase
+      .from("group_messages")
+      .select("*, sender:sender_id(id, username, avatar_url)")
+      .eq("group_id", groupId)
+      .order("created_at", { ascending: true })
+      .limit(100);
+    
+    if (error) throw error;
+    res.json({ messages: messages || [] });
+  } catch (err) {
+    console.error("[Groups] Get messages error:", err);
+    res.status(500).json({ error: "Failed to get messages" });
+  }
+});
+
+// Send group message
+router.post("/:groupId/messages", requireAuth, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user.id;
+    const { content } = req.body;
+    
+    if (!content?.trim()) {
+      return res.status(400).json({ error: "Content required" });
+    }
+    
+    // Check if user is member
+    const { data: member, error: memberError } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", groupId)
+      .eq("user_id", userId)
+      .single();
+    
+    if (memberError || !member) {
+      return res.status(403).json({ error: "Not a member of this group" });
+    }
+    
+    const { data: message, error } = await supabase
+      .from("group_messages")
+      .insert({
+        group_id: groupId,
+        sender_id: userId,
+        content: content.trim(),
+      })
+      .select("*, sender:sender_id(id, username, avatar_url)")
+      .single();
+    
+    if (error) throw error;
+    
+    // Notify other members via socket
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`group:${groupId}`).emit("group:message", { message });
+    }
+    
+    res.json({ message });
+  } catch (err) {
+    console.error("[Groups] Send message error:", err);
+    res.status(500).json({ error: "Failed to send message" });
+  }
+});
+
 module.exports = router;
