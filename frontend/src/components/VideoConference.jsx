@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users, Minimize2 } from "lucide-react";
 import RippleButton from "./ui/RippleButton";
 
 /**
@@ -13,6 +13,8 @@ import RippleButton from "./ui/RippleButton";
 export default function VideoConference({
   isOpen,
   onClose,
+  minimized = false,
+  onMinimize,
   call,
   participants,
   localStream,
@@ -52,6 +54,64 @@ export default function VideoConference({
   }, [resetControlsTimer]);
 
   if (!isOpen) return null;
+
+  // Minimized view - small floating window
+  if (minimized) {
+    return (
+      <motion.div
+        className="video-conference-minimized"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        drag
+        dragMomentum={false}
+        style={{ position: "fixed", bottom: 20, right: 20, zIndex: 100 }}
+      >
+        <div className="vc-minimized-content">
+          <div className="vc-minimized-header">
+            <span className="vc-minimized-title">
+              <Users size={14} />
+              {participants.length + 1} participants
+            </span>
+            <div className="vc-minimized-actions">
+              <button onClick={onMinimize} title="Maximize">
+                <Maximize2 size={16} />
+              </button>
+              <button onClick={leaveCall} className="danger" title="End call">
+                <PhoneOff size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="vc-minimized-video">
+            {isCameraOn ? (
+              <video
+                ref={(el) => {
+                  if (el && localStream) el.srcObject = localStream;
+                }}
+                autoPlay
+                playsInline
+                muted
+                className="vc-mini-video"
+              />
+            ) : (
+              <div className="vc-mini-avatar">You</div>
+            )}
+            <div className="vc-mini-indicator">
+              {isMuted ? <MicOff size={12} /> : <Mic size={12} />}
+            </div>
+          </div>
+          <div className="vc-minimized-controls">
+            <button onClick={toggleMute} className={isMuted ? "muted" : ""}>
+              {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+            <button onClick={toggleCamera} className={!isCameraOn ? "off" : ""}>
+              {isCameraOn ? <Video size={16} /> : <VideoOff size={16} />}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   // Filter active participants (with streams)
   const activeParticipants = participants.filter(p => 
@@ -119,6 +179,11 @@ export default function VideoConference({
           >
             <Maximize2 size={18} />
           </button>
+          {onMinimize && (
+            <button onClick={onMinimize} title="Minimize">
+              <Minimize2 size={18} />
+            </button>
+          )}
         </div>
       </motion.div>
 

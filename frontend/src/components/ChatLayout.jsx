@@ -11,7 +11,7 @@ import { Avatar } from "./ui/Avatar";
 import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
-import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages } from "../api/groups";
+import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGroup, renameGroup, inviteToGroup } from "../api/groups";
 import { 
   MessageSquare, Users, UserPlus, Bell, Circle, 
   PanelLeftClose, Settings, Send, Paperclip, 
@@ -314,6 +314,11 @@ export default function ChatLayout({
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [groupMessages, setGroupMessages] = useState([]);
   const [groupComposer, setGroupComposer] = useState("");
+  const [renameGroupOpen, setRenameGroupOpen] = useState(false);
+  const [renameGroupValue, setRenameGroupValue] = useState("");
+  const [inviteGroupOpen, setInviteGroupOpen] = useState(false);
+  const [inviteFriendUsername, setInviteFriendUsername] = useState("");
+  const [groupCallMinimized, setGroupCallMinimized] = useState(false);
   const fileInputRef = useRef(null);
 
   const messagesRef = useRef(null);
@@ -435,6 +440,64 @@ export default function ChatLayout({
     } catch (err) {
       console.error("[ChatLayout] Failed to send group message:", err);
       toast?.error?.(err.message || "Failed to send message");
+    }
+  };
+
+  // Leave group
+  const handleLeaveGroup = async (groupId) => {
+    if (!confirm("Leave this group?")) return;
+    try {
+      await leaveGroup(groupId);
+      setMyGroups((prev) => prev.filter((g) => g.id !== groupId));
+      if (activeGroup?.id === groupId) {
+        setActiveGroup(null);
+        try { localStorage.removeItem("descall_active_group"); } catch {}
+      }
+      toast?.success?.("Left group");
+    } catch (err) {
+      toast?.error?.(err.message || "Failed to leave group");
+    }
+  };
+
+  // Rename group
+  const handleRenameGroup = async (e) => {
+    e?.preventDefault();
+    if (!renameGroupValue.trim() || !activeGroup) return;
+    try {
+      await renameGroup(activeGroup.id, renameGroupValue.trim());
+      setMyGroups((prev) =>
+        prev.map((g) =>
+          g.id === activeGroup.id ? { ...g, name: renameGroupValue.trim() } : g
+        )
+      );
+      setActiveGroup((prev) => ({ ...prev, name: renameGroupValue.trim() }));
+      setRenameGroupOpen(false);
+      setRenameGroupValue("");
+      toast?.success?.("Group renamed");
+    } catch (err) {
+      toast?.error?.(err.message || "Failed to rename group");
+    }
+  };
+
+  // Invite friend to group
+  const handleInviteToGroup = async (e) => {
+    e?.preventDefault();
+    if (!inviteFriendUsername.trim() || !activeGroup) return;
+    try {
+      // Find friend by username
+      const friend = friends.find(
+        (f) => f.username.toLowerCase() === inviteFriendUsername.trim().toLowerCase()
+      );
+      if (!friend) {
+        toast?.error?.("Friend not found");
+        return;
+      }
+      await inviteToGroup(activeGroup.id, friend.id);
+      setInviteGroupOpen(false);
+      setInviteFriendUsername("");
+      toast?.success?.(`Invited ${friend.username} to group`);
+    } catch (err) {
+      toast?.error?.(err.message || "Failed to invite");
     }
   };
 
@@ -782,14 +845,27 @@ export default function ChatLayout({
               </div>
             )}
             {activeGroup && (
-              <div className="header-call-btns">
-                <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "voice", [])} title="Group voice call">
-                  <Phone size={18} />
-                </RippleButton>
-                <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} title="Group video call">
-                  <Video size={18} />
-                </RippleButton>
-              </div>
+              <>
+                <div className="header-call-btns">
+                  <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "voice", [])} title="Group voice call">
+                    <Phone size={18} />
+                  </RippleButton>
+                  <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} title="Group video call">
+                    <Video size={18} />
+                  </RippleButton>
+                </div>
+                <div className="header-group-actions" style={{ display: "flex", gap: "8px", marginLeft: "12px" }}>
+                  <RippleButton type="button" className="header-action" onClick={() => { setRenameGroupValue(activeGroup.name); setRenameGroupOpen(true); }} title="Rename group">
+                    <Settings size={16} />
+                  </RippleButton>
+                  <RippleButton type="button" className="header-action" onClick={() => setInviteGroupOpen(true)} title="Invite friend">
+                    <UserPlus size={16} />
+                  </RippleButton>
+                  <RippleButton type="button" className="header-action danger" onClick={() => handleLeaveGroup(activeGroup.id)} title="Leave group">
+                    <LogOut size={16} />
+                  </RippleButton>
+                </div>
+              </>
             )}
           </div>
           <div className="panel-header-right">
@@ -1095,6 +1171,73 @@ export default function ChatLayout({
         </div>
       </Modal>
 
+      {/* Rename Group Modal */}
+      <Modal open={renameGroupOpen} onClose={() => setRenameGroupOpen(false)}>
+        <div className="create-group-modal">
+          <h3>Rename Group</h3>
+          <form onSubmit={handleRenameGroup}>
+            <label className="cg-field">
+              <span>New Group Name</span>
+              <input
+                type="text"
+                value={renameGroupValue}
+                onChange={(e) => setRenameGroupValue(e.target.value)}
+                placeholder="Enter new group name"
+                maxLength={50}
+                required
+              />
+              <small>{renameGroupValue.length}/50</small>
+            </label>
+
+            <div className="cg-actions">
+              <RippleButton type="button" className="btn-secondary" onClick={() => setRenameGroupOpen(false)}>
+                Cancel
+              </RippleButton>
+              <RippleButton 
+                type="submit" 
+                className="btn-primary"
+                disabled={!renameGroupValue.trim() || renameGroupValue === activeGroup?.name}
+              >
+                Rename
+              </RippleButton>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* Invite to Group Modal */}
+      <Modal open={inviteGroupOpen} onClose={() => setInviteGroupOpen(false)}>
+        <div className="create-group-modal">
+          <h3>Invite Friend to Group</h3>
+          <form onSubmit={handleInviteToGroup}>
+            <label className="cg-field">
+              <span>Friend Username</span>
+              <input
+                type="text"
+                value={inviteFriendUsername}
+                onChange={(e) => setInviteFriendUsername(e.target.value)}
+                placeholder="Enter friend's username"
+                maxLength={50}
+                required
+              />
+            </label>
+
+            <div className="cg-actions">
+              <RippleButton type="button" className="btn-secondary" onClick={() => setInviteGroupOpen(false)}>
+                Cancel
+              </RippleButton>
+              <RippleButton 
+                type="submit" 
+                className="btn-primary"
+                disabled={!inviteFriendUsername.trim()}
+              >
+                Invite
+              </RippleButton>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
       <UserProfilePopover
         open={!!profileUser}
         onClose={() => setProfileUser(null)}
@@ -1120,6 +1263,8 @@ export default function ChatLayout({
       <VideoConference
         isOpen={groupCall?.isInCall || false}
         onClose={groupCall?.leaveCall || (() => {})}
+        minimized={groupCallMinimized}
+        onMinimize={() => setGroupCallMinimized((v) => !v)}
         call={groupCall}
         participants={groupCall?.participants || []}
         localStream={groupCall?.localStream}
