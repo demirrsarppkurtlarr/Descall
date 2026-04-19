@@ -820,12 +820,12 @@ export default function ChatLayout({
                 </RippleButton>
               </div>
             )}
-            {activeGroup && (
+            {activeGroup && activeGroup.id && (
               <div className="header-call-btns">
-                <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "voice", [])} title="Group voice call">
+                <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup?.id, "voice", [])} title="Group voice call">
                   <Phone size={18} />
                 </RippleButton>
-                <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} title="Group video call">
+                <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup?.id, "video", [])} title="Group video call">
                   <Video size={18} />
                 </RippleButton>
                 <RippleButton type="button" className="header-call" onClick={() => setGroupSettingsOpen(true)} title="Group settings">
