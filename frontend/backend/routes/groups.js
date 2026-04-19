@@ -241,6 +241,15 @@ router.post("/:groupId/messages", requireAuth, async (req, res) => {
     
     if (error) throw error;
     
+    // Broadcast to other group members via socket
+    const io = req.app.get("io");
+    if (io && message) {
+      io.to(`group:${groupId}`).emit("group:message", {
+        groupId,
+        message,
+      });
+    }
+    
     res.json({ message });
   } catch (err) {
     console.error("[Groups] Send error:", err);

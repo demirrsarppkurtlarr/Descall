@@ -502,6 +502,9 @@ export function useGroupCall(socket) {
     focusedParticipant,
     remoteStreams: remoteStreamsRef,
     
+    // Socket for manual group:join
+    socket,
+    
     // Actions
     startGroupCall,
     acceptGroupCall,

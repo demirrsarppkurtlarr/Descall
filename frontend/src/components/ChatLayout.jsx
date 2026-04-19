@@ -11,7 +11,7 @@ import { Avatar } from "./ui/Avatar";
 import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
-import { getMyGroups, createGroup } from "../api/groups";
+import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages } from "../api/groups";
 import { 
   MessageSquare, Users, UserPlus, Bell, Circle, 
   PanelLeftClose, Settings, Send, Paperclip, 
@@ -350,6 +350,27 @@ export default function ChatLayout({
       });
   }, [me]);
 
+  // Listen for real-time group messages
+  useEffect(() => {
+    const socket = groupCall?.socket;
+    if (!socket) return;
+
+    const handleGroupMessage = ({ groupId, message }) => {
+      if (groupId === activeGroup?.id) {
+        setGroupMessages((prev) => {
+          // Avoid duplicates
+          if (prev.find(m => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      }
+    };
+
+    socket.on("group:message", handleGroupMessage);
+    return () => {
+      socket.off("group:message", handleGroupMessage);
+    };
+  }, [groupCall?.socket, activeGroup?.id]);
+
   // Group handlers
   const handleCreateGroup = async (e) => {
     e.preventDefault();
@@ -369,27 +390,52 @@ export default function ChatLayout({
     }
   };
 
-  const handleOpenGroup = (group) => {
+  const handleOpenGroup = async (group) => {
     setActiveGroup(group);
     try { localStorage.setItem("descall_active_group", JSON.stringify(group)); } catch {}
     setActiveDmUser(null); // DM'yi kapat
-    // TODO: Load group messages from API
-    setGroupMessages([]);
+    
+    // Load group messages from API
+    try {
+      const result = await getGroupMessages(group.id);
+      setGroupMessages(result?.messages || []);
+    } catch (err) {
+      console.error("[ChatLayout] Failed to load group messages:", err);
+      setGroupMessages([]);
+    }
+    
+    // Join group room for real-time updates
+    if (group?.id) {
+      groupCall?.socket?.emit?.("group:join", group.id);
+    }
   };
 
-  const handleSendGroupMessage = (e) => {
+  const handleSendGroupMessage = async (e) => {
     e?.preventDefault();
     const text = groupComposer.trim();
     if (!text || !activeGroup) return;
-    // TODO: Send via API
-    const newMsg = {
-      id: Date.now().toString(),
-      content: text,
-      sender: { id: me?.id, username: me?.username },
-      created_at: new Date().toISOString(),
-    };
-    setGroupMessages((prev) => [...prev, newMsg]);
-    setGroupComposer("");
+    
+    try {
+      // Send via API to persist in database
+      const result = await sendGroupMessage(activeGroup.id, { content: text });
+      
+      if (result?.message) {
+        setGroupMessages((prev) => [...prev, result.message]);
+      } else {
+        // Fallback to local message if API doesn't return message
+        const newMsg = {
+          id: Date.now().toString(),
+          content: text,
+          sender: { id: me?.id, username: me?.username },
+          created_at: new Date().toISOString(),
+        };
+        setGroupMessages((prev) => [...prev, newMsg]);
+      }
+      setGroupComposer("");
+    } catch (err) {
+      console.error("[ChatLayout] Failed to send group message:", err);
+      toast?.error?.(err.message || "Failed to send message");
+    }
   };
 
   const sortedFriends = useMemo(() => [...friends].sort((a, b) => a.username.localeCompare(b.username)), [friends]);
