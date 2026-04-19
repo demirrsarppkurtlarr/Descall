@@ -8,7 +8,7 @@ export function hashString(s) {
   return Math.abs(h);
 }
 
-export default function Avatar({ name = "?", size = 36, imageUrl, onClick }) {
+export function Avatar({ name = "?", size = 36, imageUrl, onClick }) {
   const letter = (name && name[0] ? name[0] : "?").toUpperCase();
   const bg = PALETTES[hashString(name || "") % PALETTES.length];
   return (
