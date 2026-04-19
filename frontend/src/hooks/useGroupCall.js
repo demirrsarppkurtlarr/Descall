@@ -543,14 +543,32 @@ export function useGroupCall(socket) {
       if (!isInitiatorRef.current || groupId !== activeGroupIdRef.current) return;
 
       try {
-        // Ensure we have local media before creating peer connection
-        if (!localStreamRef.current) {
-          console.log("[GroupCall] Local stream not ready, getting media...");
-          await getLocalMedia(callTypeRef.current || "voice");
+        // Check if we already have a peer connection for this user
+        let pc = peerConnections.current.get(fromUserId);
+        if (pc) {
+          console.log(`[GroupCall] Peer connection already exists for ${fromUserId}, reusing`);
+          // If already stable, ignore this duplicate offer
+          if (pc.signalingState === 'stable') {
+            console.log(`[GroupCall] Connection already stable, ignoring duplicate offer from ${fromUserId}`);
+            return;
+          }
+        } else {
+          // Ensure we have local media before creating peer connection
+          if (!localStreamRef.current) {
+            console.log("[GroupCall] Local stream not ready, getting media...");
+            await getLocalMedia(callTypeRef.current || "voice");
+          }
+          
+          console.log(`[GroupCall] Creating peer connection for accepted call from ${fromUserId}`);
+          pc = createPeerConnection(fromUserId, groupId);
         }
         
-        console.log(`[GroupCall] Creating peer connection for accepted call from ${fromUserId}`);
-        const pc = createPeerConnection(fromUserId, groupId);
+        // Only set remote description if we're in have-remote-offer state
+        if (pc.signalingState !== 'have-remote-offer') {
+          console.log(`[GroupCall] Cannot set remote offer, signaling state is ${pc.signalingState}`);
+          return;
+        }
+        
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         
         const answer = await pc.createAnswer();
@@ -586,12 +604,18 @@ export function useGroupCall(socket) {
       if (groupId !== activeGroupIdRef.current) return;
       const pc = peerConnections.current.get(fromUserId);
       if (pc && pc.connectionState !== 'closed') {
+        // Check signaling state - only set remote answer if we're in have-local-offer state
+        if (pc.signalingState !== 'have-local-offer') {
+          console.log(`[GroupCall] Ignoring answer from ${fromUserId}, signaling state is ${pc.signalingState} (expected: have-local-offer)`);
+          return;
+        }
         try {
+          console.log(`[GroupCall] Setting remote answer from ${fromUserId}`);
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          console.log(`[GroupCall] Remote answer set successfully for ${fromUserId}`);
         } catch (err) {
           console.error("[GroupCall] Failed to set remote description (answer):", err);
-          pc.close();
-          peerConnections.current.delete(fromUserId);
+          // Don't close the connection on error, just log it
         }
       }
     };
@@ -601,10 +625,16 @@ export function useGroupCall(socket) {
       if (groupId !== activeGroupIdRef.current) return;
       const pc = peerConnections.current.get(fromUserId);
       if (pc && pc.connectionState !== 'closed') {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (err) {
-          console.error("[GroupCall] Failed to add ICE candidate:", err);
+        // Only add ICE candidate if we have remote description set
+        if (pc.signalingState === 'stable' || pc.signalingState === 'have-remote-offer' || pc.signalingState === 'have-local-pranswer') {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log(`[GroupCall] ICE candidate added for ${fromUserId}`);
+          } catch (err) {
+            console.error("[GroupCall] Failed to add ICE candidate:", err);
+          }
+        } else {
+          console.log(`[GroupCall] Skipping ICE candidate, signaling state: ${pc.signalingState}`);
         }
       }
     };
