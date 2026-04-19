@@ -500,44 +500,6 @@ export default function ChatLayout({
     }
   };
 
-  const handleOpenGroup = async (group) => {
-    if (!group || !group.id) {
-      console.error("[Groups] Invalid group:", group);
-      return;
-    }
-    setActiveGroup(group);
-    try { localStorage.setItem("descall_active_group", JSON.stringify(group)); } catch {}
-    if (onOpenDm) onOpenDm(null); // DM'yi kapat
-    // Load group messages from API
-    try {
-      const data = await getGroupMessages(group.id);
-      setGroupMessages(data?.messages || []);
-    } catch (err) {
-      console.error("[Groups] Failed to load messages:", err);
-      setGroupMessages([]);
-    }
-  };
-
-  const handleSendGroupMessage = async (e) => {
-    e?.preventDefault();
-    const text = groupComposer.trim();
-    if (!text || !activeGroup) return;
-    try {
-      const result = await sendGroupMessage(activeGroup.id, text);
-      // Add the message to the list
-      const newMsg = {
-        id: result.message?.id || Date.now().toString(),
-        content: text,
-        sender: { id: me?.id, username: me?.username },
-        created_at: new Date().toISOString(),
-      };
-      setGroupMessages((prev) => [...prev, newMsg]);
-      setGroupComposer("");
-    } catch (err) {
-      toast?.error?.(err.message || "Failed to send message");
-    }
-  };
-
   const sortedFriends = useMemo(() => [...friends].sort((a, b) => a.username.localeCompare(b.username)), [friends]);
   const filteredFriends = useMemo(() => {
     const q = friendFilter.trim().toLowerCase();
