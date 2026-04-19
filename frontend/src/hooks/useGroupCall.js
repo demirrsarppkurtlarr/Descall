@@ -32,13 +32,18 @@ export function useGroupCall(socket) {
   const [incomingCall, setIncomingCall] = useState(null);
 
   // Refs
-  const peerConnections = useRef(new Map());
-  const remoteStreams = useRef(new Map());
+  const socketRef = useRef(socket);
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
+  const peerConnections = useRef(new Map());
+  const remoteStreams = useRef(new Map());
   const timerRef = useRef(null);
   const myIdRef = useRef(null);
   const participantsRef = useRef([]);
+  const activeGroupIdRef = useRef(null);
+  const isInitiatorRef = useRef(null);
+  const isInCallRef = useRef(false);
+  const callTypeRef = useRef(null);
 
   // Update ref when participants change
   useEffect(() => {
@@ -69,9 +74,9 @@ export function useGroupCall(socket) {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
     pc.onicecandidate = (e) => {
-      if (e.candidate && socket && pc.connectionState !== 'closed') {
+      if (e.candidate && socketRef.current && pc.connectionState !== 'closed') {
         try {
-          socket.emit("group:call:ice", {
+          socketRef.current.emit("group:call:ice", {
             groupId: activeGroupId,
             toUserId: userId,
             candidate: e.candidate,
@@ -132,7 +137,7 @@ export function useGroupCall(socket) {
 
     peerConnections.current.set(userId, pc);
     return pc;
-  }, [socket, activeGroupId]);
+  }, [activeGroupId]);
 
   // Start group call (as initiator)
   const startGroupCall = useCallback(async (groupId, type, memberIds) => {
@@ -147,7 +152,7 @@ export function useGroupCall(socket) {
       setParticipants([]);
       
       // Notify all members
-      socket?.emit("group:call:start", { groupId, callType: type });
+      socketRef.current?.emit("group:call:start", { groupId, callType: type });
       
       // Start duration timer
       timerRef.current = setInterval(() => {
@@ -160,7 +165,7 @@ export function useGroupCall(socket) {
       console.error("[GroupCall] Start failed:", err);
       cleanup();
     }
-  }, [getLocalMedia, socket]);
+  }, [getLocalMedia]);
 
   // Accept incoming group call
   const acceptGroupCall = useCallback(async (groupId, type, fromUser) => {
@@ -181,7 +186,7 @@ export function useGroupCall(socket) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       
-      socket?.emit("group:call:accept", {
+      socketRef.current?.emit("group:call:accept", {
         groupId,
         toUserId: fromUser.id,
         offer,
@@ -199,25 +204,25 @@ export function useGroupCall(socket) {
       console.error("[GroupCall] Accept failed:", err);
       cleanup();
     }
-  }, [getLocalMedia, createPeerConnection, socket]);
+  }, [getLocalMedia, createPeerConnection]);
 
   // Decline call
   const declineCall = useCallback((groupId, fromUserId) => {
-    socket?.emit("group:call:decline", { groupId, toUserId: fromUserId });
+    socketRef.current?.emit("group:call:decline", { groupId, toUserId: fromUserId });
     setIncomingCall(null);
     audioManager.stop("incomingCall");
-  }, [socket]);
+  }, []);
 
   // Leave call
   const leaveCall = useCallback(() => {
-    if (activeGroupId) {
-      socket?.emit("group:call:leave", { groupId: activeGroupId });
-      if (isInitiator) {
-        socket?.emit("group:call:end", { groupId: activeGroupId });
+    if (activeGroupIdRef.current) {
+      socketRef.current?.emit("group:call:leave", { groupId: activeGroupIdRef.current });
+      if (isInitiatorRef.current) {
+        socketRef.current?.emit("group:call:end", { groupId: activeGroupIdRef.current });
       }
     }
     cleanup();
-  }, [activeGroupId, isInitiator, socket]);
+  }, []);
 
   // Toggle mute
   const toggleMute = useCallback(() => {
@@ -332,13 +337,6 @@ export function useGroupCall(socket) {
     });
   }, []);
 
-  // Refs to avoid stale closures
-  const isInCallRef = useRef(isInCall);
-  const isInitiatorRef = useRef(isInitiator);
-  const activeGroupIdRef = useRef(activeGroupId);
-  const callTypeRef = useRef(callType);
-  const socketRef = useRef(socket);
-
   // Update refs when state changes
   useEffect(() => { isInCallRef.current = isInCall; }, [isInCall]);
   useEffect(() => { isInitiatorRef.current = isInitiator; }, [isInitiator]);
@@ -395,12 +393,12 @@ export function useGroupCall(socket) {
 
   // Socket event handlers
   useEffect(() => {
-    if (!socket) return;
+    if (!socketRef.current) return;
 
     // Incoming call
     const handleIncoming = ({ groupId, fromUser, callType }) => {
       if (isInCallRef.current) {
-        socket.emit("group:call:busy", { groupId, toUserId: fromUser.id });
+        socketRef.current.emit("group:call:busy", { groupId, toUserId: fromUser.id });
         return;
       }
       setIncomingCall({ groupId, fromUser, callType });
@@ -418,7 +416,7 @@ export function useGroupCall(socket) {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
-        socket.emit("group:call:answer", {
+        socketRef.current.emit("group:call:answer", {
           groupId,
           toUserId: fromUserId,
           answer,
@@ -494,24 +492,24 @@ export function useGroupCall(socket) {
       console.log("[GroupCall] Declined by:", fromUserId);
     };
 
-    socket.on("group:call:incoming", handleIncoming);
-    socket.on("group:call:accepted", handleAccepted);
-    socket.on("group:call:answer", handleAnswer);
-    socket.on("group:call:ice", handleIce);
-    socket.on("group:call:left", handleLeft);
-    socket.on("group:call:ended", handleEnded);
-    socket.on("group:call:declined", handleDeclined);
+    socketRef.current.on("group:call:incoming", handleIncoming);
+    socketRef.current.on("group:call:accepted", handleAccepted);
+    socketRef.current.on("group:call:answer", handleAnswer);
+    socketRef.current.on("group:call:ice", handleIce);
+    socketRef.current.on("group:call:left", handleLeft);
+    socketRef.current.on("group:call:ended", handleEnded);
+    socketRef.current.on("group:call:declined", handleDeclined);
 
     return () => {
-      socket.off("group:call:incoming", handleIncoming);
-      socket.off("group:call:accepted", handleAccepted);
-      socket.off("group:call:answer", handleAnswer);
-      socket.off("group:call:ice", handleIce);
-      socket.off("group:call:left", handleLeft);
-      socket.off("group:call:ended", handleEnded);
-      socket.off("group:call:declined", handleDeclined);
+      socketRef.current.off("group:call:incoming", handleIncoming);
+      socketRef.current.off("group:call:accepted", handleAccepted);
+      socketRef.current.off("group:call:answer", handleAnswer);
+      socketRef.current.off("group:call:ice", handleIce);
+      socketRef.current.off("group:call:left", handleLeft);
+      socketRef.current.off("group:call:ended", handleEnded);
+      socketRef.current.off("group:call:declined", handleDeclined);
     };
-  }, [socket, createPeerConnection, cleanup]);
+  }, [createPeerConnection, cleanup]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -522,10 +520,10 @@ export function useGroupCall(socket) {
 
   // Set my ID from socket
   useEffect(() => {
-    if (socket) {
-      myIdRef.current = socket.user?.id || socket.id;
+    if (socketRef.current) {
+      myIdRef.current = socketRef.current.user?.id || socketRef.current.id;
     }
-  }, [socket]);
+  }, []);
 
   // Format duration
   const formatDuration = useCallback((seconds) => {
