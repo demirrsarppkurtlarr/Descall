@@ -54,15 +54,37 @@ export function useGroupCall(socket) {
   // Get local media
   const getLocalMedia = useCallback(async (type) => {
     try {
+      // Check if we already have a stream with the right tracks
+      const existingStream = localStreamRef.current;
+      const existingAudio = existingStream?.getAudioTracks?.()[0];
+      const existingVideo = existingStream?.getVideoTracks?.()[0];
+      
+      // If we have both audio and video (for video call), or just audio (for voice call), reuse
+      if (existingAudio && (type === "voice" || existingVideo)) {
+        console.log("[GroupCall] Reusing existing media stream");
+        return existingStream;
+      }
+
       const constraints = {
-        audio: { echoCancellation: true, noiseSuppression: true },
-        video: type === "video" ? { width: 1280, height: 720 } : false,
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: type === "video" ? { width: 1280, height: 720, facingMode: "user" } : false,
       };
+      
+      console.log(`[GroupCall] Getting local media: ${type}`, constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Enable all tracks by default
+      stream.getTracks().forEach(track => {
+        track.enabled = true;
+        console.log(`[GroupCall] Track added: ${track.kind}, enabled: ${track.enabled}`);
+      });
+      
       localStreamRef.current = stream;
       setLocalStream(stream);
       setIsMuted(false);
       setIsCameraOn(type === "video");
+      
+      console.log(`[GroupCall] Local media acquired: ${stream.getAudioTracks().length} audio, ${stream.getVideoTracks().length} video`);
       return stream;
     } catch (err) {
       console.error("[GroupCall] Failed to get media:", err);
@@ -70,12 +92,21 @@ export function useGroupCall(socket) {
     }
   }, []);
 
-  // Create peer connection
+  // Create peer connection - CRITICAL FUNCTION
   const createPeerConnection = useCallback((userId, groupId) => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    console.log(`[GroupCall] Creating peer connection for user: ${userId}, group: ${groupId}`);
+    
+    const pc = new RTCPeerConnection({ 
+      iceServers: ICE_SERVERS,
+      iceTransportPolicy: 'all',
+      bundlePolicy: 'balanced',
+      rtcpMuxPolicy: 'require'
+    });
 
+    // ICE candidate handler
     pc.onicecandidate = (e) => {
       if (e.candidate && socketRef.current && pc.connectionState !== 'closed') {
+        console.log(`[GroupCall] Sending ICE candidate to ${userId}`);
         try {
           socketRef.current.emit("group:call:ice", {
             groupId: groupId || activeGroupIdRef.current,
@@ -88,12 +119,19 @@ export function useGroupCall(socket) {
       }
     };
 
+    // Track received handler - INCOMING AUDIO/VIDEO
     pc.ontrack = (e) => {
       const stream = e.streams?.[0];
       if (!stream) {
         console.warn("[GroupCall] No stream in track event");
         return;
       }
+      
+      console.log(`[GroupCall] Received remote stream from ${userId}:`, {
+        audio: stream.getAudioTracks().length,
+        video: stream.getVideoTracks().length
+      });
+      
       remoteStreams.current.set(userId, stream);
       
       setParticipants((prev) => {
@@ -118,7 +156,12 @@ export function useGroupCall(socket) {
       });
     };
 
+    // Connection state change handler
     pc.onconnectionstatechange = () => {
+      console.log(`[GroupCall] Connection state with ${userId}: ${pc.connectionState}`);
+      if (pc.connectionState === "connected") {
+        console.log(`[GroupCall] Successfully connected to ${userId}`);
+      }
       if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
         setParticipants((prev) => prev.filter((p) => p.id !== userId));
         remoteStreams.current.delete(userId);
@@ -126,15 +169,29 @@ export function useGroupCall(socket) {
       }
     };
 
-    // Add local stream tracks
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => {
+    // ICE connection state change
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[GroupCall] ICE connection state with ${userId}: ${pc.iceConnectionState}`);
+    };
+
+    // Add local stream tracks - OUTGOING AUDIO/VIDEO
+    const localStream = localStreamRef.current;
+    if (localStream) {
+      console.log(`[GroupCall] Adding local tracks to peer connection for ${userId}:`, {
+        audio: localStream.getAudioTracks().length,
+        video: localStream.getVideoTracks().length
+      });
+      
+      localStream.getTracks().forEach((track) => {
         try {
-          pc.addTrack(track, localStreamRef.current);
+          const sender = pc.addTrack(track, localStream);
+          console.log(`[GroupCall] Added ${track.kind} track, enabled: ${track.enabled}`);
         } catch (err) {
-          console.error("[GroupCall] Failed to add track:", err);
+          console.error(`[GroupCall] Failed to add ${track.kind} track:`, err);
         }
       });
+    } else {
+      console.warn(`[GroupCall] No local stream available when creating peer connection for ${userId}`);
     }
 
     peerConnections.current.set(userId, pc);
