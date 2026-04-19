@@ -31,7 +31,7 @@ function formatTime(timestamp) {
   
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
-import { Icon } from "./ui/Icon";
+// Icon component doesn't exist, using Lucide icons directly
 import { sendGroupMessage, getGroupMessages, getGroupById, createGroup } from "../api/groups";
 
 // Hidden audio for remote stream
@@ -359,8 +359,8 @@ export default function ChatLayout({
             <h2 className="incoming-call-name">{call.peer?.username}</h2>
             <p className="incoming-call-status">
               Incoming {call.callType === "video" ? "video" : "voice"} call
-              {call.callType === "video" && <Icon name="video" />}
-              {call.callType === "voice" && <Icon name="call" />}
+              {call.callType === "video" && <Video size={16} />}
+              {call.callType === "voice" && <Phone size={16} />}
             </p>
           </div>
           <div className="incoming-call-actions">

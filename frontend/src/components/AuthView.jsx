@@ -21,7 +21,7 @@ export default function AuthView({ onLogin, onRegister, loading, error }) {
     <main className="auth-shell">
       <section className="auth-card">
         <h1>Descall</h1>
-        <p>Render backend connected real-time chat</p>
+        <p></p>
         <div className="auth-tabs">
           <button
             className={mode === "login" ? "active" : ""}
