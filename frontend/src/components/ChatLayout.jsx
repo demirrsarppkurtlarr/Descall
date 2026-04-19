@@ -1174,27 +1174,36 @@ export default function ChatLayout({
 
       {/* Create Group Modal */}
       <Modal open={groups.ui.createOpen} onClose={() => groupActions.setUI({ createOpen: false })}>
-        <div className="create-group-modal">
-          <h3>Create Group</h3>
+        <div className="create-group-modal modern-modal">
+          <div className="modal-header">
+            <h3>Create Group</h3>
+            <button type="button" className="modal-close" onClick={() => groupActions.setUI({ createOpen: false })}>
+              <X size={20} />
+            </button>
+          </div>
           <form onSubmit={groupActions.create}>
-            <label className="cg-field">
+            <label className="modern-field">
               <span>Group Name</span>
               <input
                 type="text"
                 value={groups.ui.newGroupName}
-                onChange={(e) => (v) => groupActions.setUI({ newGroupName: v })(e.target.value)}
+                onChange={(e) => groupActions.setUI({ newGroupName: e.target.value })}
                 placeholder="Enter group name"
                 maxLength={50}
                 required
+                className="modern-input"
               />
-              <small>{groups.ui.newGroupName.length}/50</small>
+              <small className="char-count">{groups.ui.newGroupName.length}/50</small>
             </label>
 
-            <div className="cg-members">
-              <span>Select Members (max 15)</span>
-              <div className="cg-friends-list">
+            <div className="cg-members modern-members">
+              <div className="members-header">
+                <span>Select Members (max 15)</span>
+                <small className="member-count">{groups.ui.selectedMembers.length}/14 friends selected</small>
+              </div>
+              <div className="cg-friends-list modern-friends-list">
                 {friends.map((friend) => (
-                  <label key={friend.id} className="cg-friend-item">
+                  <label key={friend.id} className="cg-friend-item modern-friend-item">
                     <input
                       type="checkbox"
                       checked={groups.ui.selectedMembers.includes(friend.id)}
@@ -1209,24 +1218,23 @@ export default function ChatLayout({
                       }}
                       disabled={!groups.ui.selectedMembers.includes(friend.id) && groups.ui.selectedMembers.length >= 14}
                     />
-                    <Avatar src={friend.avatar_url} alt={friend.username} size={28} />
+                    <Avatar src={friend.avatar_url} alt={friend.username} size={32} />
                     <span>{friend.username}</span>
                   </label>
                 ))}
                 {friends.length === 0 && (
-                  <p className="muted small">Add friends first to create a group</p>
+                  <p className="muted small empty-hint">Add friends first to create a group</p>
                 )}
               </div>
-              <small className="cg-count">{groups.ui.selectedMembers.length}/14 friends selected</small>
             </div>
 
-            <div className="cg-actions">
-              <RippleButton type="button" className="btn-secondary" onClick={() => groupActions.setUI({ createOpen: false })}>
+            <div className="cg-actions modern-actions">
+              <RippleButton type="button" className="btn-secondary modern-btn" onClick={() => groupActions.setUI({ createOpen: false })}>
                 Cancel
               </RippleButton>
-              <RippleButton 
-                type="submit" 
-                className="btn-primary"
+              <RippleButton
+                type="submit"
+                className="btn-primary modern-btn"
                 disabled={!groups.ui.newGroupName.trim() || groups.ui.selectedMembers.length === 0}
               >
                 Create Group
@@ -1238,10 +1246,15 @@ export default function ChatLayout({
 
       {/* Rename Group Modal */}
       <Modal open={groups.ui.renameOpen} onClose={() => groupActions.setUI({ renameOpen: false })}>
-        <div className="create-group-modal">
-          <h3>Rename Group</h3>
+        <div className="create-group-modal modern-modal">
+          <div className="modal-header">
+            <h3>Rename Group</h3>
+            <button type="button" className="modal-close" onClick={() => groupActions.setUI({ renameOpen: false })}>
+              <X size={20} />
+            </button>
+          </div>
           <form onSubmit={groupActions.rename}>
-            <label className="cg-field">
+            <label className="modern-field">
               <span>New Group Name</span>
               <input
                 type="text"
@@ -1250,17 +1263,18 @@ export default function ChatLayout({
                 placeholder="Enter new group name"
                 maxLength={50}
                 required
+                className="modern-input"
               />
-              <small>{groups.ui.renameValue.length}/50</small>
+              <small className="char-count">{groups.ui.renameValue.length}/50</small>
             </label>
 
-            <div className="cg-actions">
-              <RippleButton type="button" className="btn-secondary" onClick={() => groupActions.setUI({ renameOpen: false })}>
+            <div className="cg-actions modern-actions">
+              <RippleButton type="button" className="btn-secondary modern-btn" onClick={() => groupActions.setUI({ renameOpen: false })}>
                 Cancel
               </RippleButton>
-              <RippleButton 
-                type="submit" 
-                className="btn-primary"
+              <RippleButton
+                type="submit"
+                className="btn-primary modern-btn"
                 disabled={!groups.ui.renameValue.trim() || groups.ui.renameValue === groups.active?.name}
               >
                 Rename
@@ -1272,28 +1286,34 @@ export default function ChatLayout({
 
       {/* Invite to Group Modal */}
       <Modal open={groups.ui.inviteOpen} onClose={() => groupActions.setUI({ inviteOpen: false })}>
-        <div className="create-group-modal">
-          <h3>Invite Friend to Group</h3>
+        <div className="create-group-modal modern-modal">
+          <div className="modal-header">
+            <h3>Invite Friend to Group</h3>
+            <button type="button" className="modal-close" onClick={() => groupActions.setUI({ inviteOpen: false })}>
+              <X size={20} />
+            </button>
+          </div>
           <form onSubmit={groupActions.invite}>
-            <label className="cg-field">
+            <label className="modern-field">
               <span>Friend Username</span>
               <input
                 type="text"
                 value={groups.ui.inviteUsername}
-                onChange={(e) => (v) => groupActions.setUI({ inviteUsername: v })(e.target.value)}
+                onChange={(e) => groupActions.setUI({ inviteUsername: e.target.value })}
                 placeholder="Enter friend's username"
                 maxLength={50}
                 required
+                className="modern-input"
               />
             </label>
 
-            <div className="cg-actions">
-              <RippleButton type="button" className="btn-secondary" onClick={() => groupActions.setUI({ inviteOpen: false })}>
+            <div className="cg-actions modern-actions">
+              <RippleButton type="button" className="btn-secondary modern-btn" onClick={() => groupActions.setUI({ inviteOpen: false })}>
                 Cancel
               </RippleButton>
-              <RippleButton 
-                type="submit" 
-                className="btn-primary"
+              <RippleButton
+                type="submit"
+                className="btn-primary modern-btn"
                 disabled={!groups.ui.inviteUsername.trim()}
               >
                 Invite
