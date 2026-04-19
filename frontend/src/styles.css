@@ -4617,3 +4617,377 @@ button, a, input, select, .clickable {
 .light .auth-footer {
   color: rgba(0, 0, 0, 0.5);
 }
+
+/* ========================
+   NEW GROUP MANAGEMENT BUTTONS (Premium Design)
+   ======================== */
+
+/* Header Call Buttons - Modern Style */
+.header-call-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.15), rgba(88, 101, 242, 0.05));
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  color: #5865f2;
+}
+
+.header-call-btn:hover {
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.25), rgba(88, 101, 242, 0.1));
+  border-color: rgba(88, 101, 242, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(88, 101, 242, 0.2);
+}
+
+.header-call-btn.voice {
+  background: linear-gradient(135deg, rgba(35, 165, 90, 0.15), rgba(35, 165, 90, 0.05));
+  border-color: rgba(35, 165, 90, 0.3);
+  color: #23a55a;
+}
+
+.header-call-btn.voice:hover {
+  background: linear-gradient(135deg, rgba(35, 165, 90, 0.25), rgba(35, 165, 90, 0.1));
+  border-color: rgba(35, 165, 90, 0.5);
+  box-shadow: 0 4px 12px rgba(35, 165, 90, 0.2);
+}
+
+.header-call-btn.video {
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.15), rgba(88, 101, 242, 0.05));
+  border-color: rgba(88, 101, 242, 0.3);
+  color: #5865f2;
+}
+
+.header-call-btn.video:hover {
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.25), rgba(88, 101, 242, 0.1));
+  border-color: rgba(88, 101, 242, 0.5);
+  box-shadow: 0 4px 12px rgba(88, 101, 242, 0.2);
+}
+
+.header-call-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.call-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.call-btn-label {
+  font-size: 12px;
+}
+
+/* Group Actions Menu - Premium Rounded Design */
+.header-group-actions {
+  display: flex;
+  align-items: center;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+}
+
+.group-actions-menu {
+  display: flex;
+  gap: 8px;
+}
+
+.group-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.action-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.action-icon-wrapper.invite {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+  color: #3b82f6;
+}
+
+.action-icon-wrapper.rename {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.1));
+  color: #a855f7;
+}
+
+.action-icon-wrapper.leave {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+  color: #ef4444;
+}
+
+.action-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.group-action-btn.primary:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+}
+
+.group-action-btn.secondary:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.05));
+  border-color: rgba(168, 85, 247, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.15);
+}
+
+.group-action-btn.danger:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+  border-color: rgba(239, 68, 68, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15);
+}
+
+.group-action-btn:active {
+  transform: translateY(0);
+}
+
+/* ========================
+   VIDEO CONFERENCE PIP (Minimized - Premium Rectangle)
+   ======================== */
+
+.video-conference-pip {
+  user-select: none;
+  touch-action: none;
+}
+
+.vc-pip-container {
+  width: 280px;
+  background: linear-gradient(180deg, #1a1d29 0%, #0f1218 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+}
+
+/* Header with drag handle */
+.vc-pip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vc-pip-drag-handle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: grab;
+  flex: 1;
+}
+
+.vc-pip-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.vc-pip-dots span {
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+}
+
+.vc-pip-participants {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.vc-pip-window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.vc-pip-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.vc-pip-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.vc-pip-btn.danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.vc-pip-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* Video Area - 16:9 Rectangle */
+.vc-pip-video-area {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #0a0c10;
+  overflow: hidden;
+}
+
+.vc-pip-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vc-pip-avatar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1d29, #0f1218);
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Status Overlay */
+.vc-pip-status {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.vc-pip-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.vc-pip-badge.muted {
+  background: rgba(239, 68, 68, 0.8);
+  color: white;
+}
+
+.vc-pip-badge.screen {
+  background: rgba(34, 197, 94, 0.8);
+  color: white;
+  margin-top: 4px;
+}
+
+.vc-pip-duration {
+  align-self: flex-end;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+
+/* Control Bar */
+.vc-pip-controls {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  justify-content: center;
+}
+
+.vc-pip-control {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vc-pip-control:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.vc-pip-control.active {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.vc-pip-control.active:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* Smooth drag animation */
+.video-conference-pip:active {
+  cursor: grabbing;
+}
+
+.video-conference-pip:hover .vc-pip-container {
+  box-shadow: 
+    0 25px 60px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}

@@ -846,24 +846,79 @@ export default function ChatLayout({
             )}
             {activeGroup && (
               <>
+                {/* Call Buttons */}
                 <div className="header-call-btns">
-                  <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "voice", [])} title="Group voice call">
-                    <Phone size={18} />
+                  <RippleButton 
+                    type="button" 
+                    className="header-call-btn voice" 
+                    disabled={inCall || !groupCall} 
+                    onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "voice", [])} 
+                    title="Group voice call"
+                  >
+                    <div className="call-btn-icon">
+                      <Phone size={18} />
+                    </div>
+                    <span className="call-btn-label">Voice</span>
                   </RippleButton>
-                  <RippleButton type="button" className="header-call" disabled={inCall || !groupCall} onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} title="Group video call">
-                    <Video size={18} />
+                  <RippleButton 
+                    type="button" 
+                    className="header-call-btn video" 
+                    disabled={inCall || !groupCall} 
+                    onClick={() => groupCall?.startGroupCall?.(activeGroup.id, "video", [])} 
+                    title="Group video call"
+                  >
+                    <div className="call-btn-icon">
+                      <Video size={18} />
+                    </div>
+                    <span className="call-btn-label">Video</span>
                   </RippleButton>
                 </div>
-                <div className="header-group-actions" style={{ display: "flex", gap: "8px", marginLeft: "12px" }}>
-                  <RippleButton type="button" className="header-action" onClick={() => { setRenameGroupValue(activeGroup.name); setRenameGroupOpen(true); }} title="Rename group">
-                    <Settings size={16} />
-                  </RippleButton>
-                  <RippleButton type="button" className="header-action" onClick={() => setInviteGroupOpen(true)} title="Invite friend">
-                    <UserPlus size={16} />
-                  </RippleButton>
-                  <RippleButton type="button" className="header-action danger" onClick={() => handleLeaveGroup(activeGroup.id)} title="Leave group">
-                    <LogOut size={16} />
-                  </RippleButton>
+
+                {/* Group Management Actions */}
+                <div className="header-group-actions">
+                  <div className="group-actions-menu">
+                    <RippleButton 
+                      type="button" 
+                      className="group-action-btn primary" 
+                      onClick={() => setInviteGroupOpen(true)} 
+                      title="Invite friend"
+                    >
+                      <div className="action-btn-content">
+                        <div className="action-icon-wrapper invite">
+                          <UserPlus size={16} />
+                        </div>
+                        <span className="action-label">Invite</span>
+                      </div>
+                    </RippleButton>
+                    
+                    <RippleButton 
+                      type="button" 
+                      className="group-action-btn secondary" 
+                      onClick={() => { setRenameGroupValue(activeGroup.name); setRenameGroupOpen(true); }} 
+                      title="Rename group"
+                    >
+                      <div className="action-btn-content">
+                        <div className="action-icon-wrapper rename">
+                          <Settings size={16} />
+                        </div>
+                        <span className="action-label">Rename</span>
+                      </div>
+                    </RippleButton>
+                    
+                    <RippleButton 
+                      type="button" 
+                      className="group-action-btn danger" 
+                      onClick={() => handleLeaveGroup(activeGroup.id)} 
+                      title="Leave group"
+                    >
+                      <div className="action-btn-content">
+                        <div className="action-icon-wrapper leave">
+                          <LogOut size={16} />
+                        </div>
+                        <span className="action-label">Leave</span>
+                      </div>
+                    </RippleButton>
+                  </div>
                 </div>
               </>
             )}

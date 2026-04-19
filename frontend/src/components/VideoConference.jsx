@@ -55,35 +55,51 @@ export default function VideoConference({
 
   if (!isOpen) return null;
 
-  // Minimized view - small floating window
+  // Minimized view - sleek draggable rectangle
   if (minimized) {
     return (
       <motion.div
-        className="video-conference-minimized"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.8 }}
+        className="video-conference-pip"
+        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.9 }}
         drag
         dragMomentum={false}
-        style={{ position: "fixed", bottom: 20, right: 20, zIndex: 100 }}
+        whileDrag={{ scale: 1.02, cursor: "grabbing" }}
+        dragConstraints={{ left: -window.innerWidth + 320, right: 0, top: -window.innerHeight + 240, bottom: 0 }}
+        style={{ 
+          position: "fixed", 
+          bottom: 24, 
+          right: 24, 
+          zIndex: 1000,
+          cursor: "grab"
+        }}
       >
-        <div className="vc-minimized-content">
-          <div className="vc-minimized-header">
-            <span className="vc-minimized-title">
-              <Users size={14} />
-              {participants.length + 1} participants
-            </span>
-            <div className="vc-minimized-actions">
-              <button onClick={onMinimize} title="Maximize">
-                <Maximize2 size={16} />
+        <div className="vc-pip-container">
+          {/* Draggable Header Bar */}
+          <div className="vc-pip-header">
+            <div className="vc-pip-drag-handle">
+              <div className="vc-pip-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <span className="vc-pip-participants">
+                <Users size={12} />
+                {participants.length + 1}
+              </span>
+            </div>
+            <div className="vc-pip-window-controls">
+              <button className="vc-pip-btn" onClick={onMinimize} title="Restore">
+                <Maximize2 size={14} />
               </button>
-              <button onClick={leaveCall} className="danger" title="End call">
-                <PhoneOff size={16} />
+              <button className="vc-pip-btn danger" onClick={leaveCall} title="End call">
+                <PhoneOff size={14} />
               </button>
             </div>
           </div>
-          <div className="vc-minimized-video">
-            {isCameraOn ? (
+
+          {/* Main Video Area - Rectangle 16:9 */}
+          <div className="vc-pip-video-area">
+            {isCameraOn || isScreenSharing ? (
               <video
                 ref={(el) => {
                   if (el && localStream) el.srcObject = localStream;
@@ -91,21 +107,51 @@ export default function VideoConference({
                 autoPlay
                 playsInline
                 muted
-                className="vc-mini-video"
+                className="vc-pip-video"
               />
             ) : (
-              <div className="vc-mini-avatar">You</div>
+              <div className="vc-pip-avatar">
+                <span>You</span>
+              </div>
             )}
-            <div className="vc-mini-indicator">
-              {isMuted ? <MicOff size={12} /> : <Mic size={12} />}
+            
+            {/* Status Overlay */}
+            <div className="vc-pip-status">
+              {isMuted && (
+                <div className="vc-pip-badge muted">
+                  <MicOff size={12} />
+                </div>
+              )}
+              {isScreenSharing && (
+                <div className="vc-pip-badge screen">
+                  <Monitor size={12} />
+                </div>
+              )}
+              <div className="vc-pip-duration">
+                {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
+              </div>
             </div>
           </div>
-          <div className="vc-minimized-controls">
-            <button onClick={toggleMute} className={isMuted ? "muted" : ""}>
+
+          {/* Control Bar */}
+          <div className="vc-pip-controls">
+            <button 
+              className={`vc-pip-control ${isMuted ? 'active' : ''}`} 
+              onClick={toggleMute}
+            >
               {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
             </button>
-            <button onClick={toggleCamera} className={!isCameraOn ? "off" : ""}>
+            <button 
+              className={`vc-pip-control ${!isCameraOn ? 'active' : ''}`} 
+              onClick={toggleCamera}
+            >
               {isCameraOn ? <Video size={16} /> : <VideoOff size={16} />}
+            </button>
+            <button 
+              className={`vc-pip-control ${isScreenSharing ? 'active' : ''}`} 
+              onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+            >
+              <Monitor size={16} />
             </button>
           </div>
         </div>
