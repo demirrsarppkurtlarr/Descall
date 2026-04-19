@@ -127,16 +127,37 @@ export function useGroupCall(socket) {
         return;
       }
       
+      const audioTracks = stream.getAudioTracks();
+      const videoTracks = stream.getVideoTracks();
+      
       console.log(`[GroupCall] Received remote stream from ${userId}:`, {
-        audio: stream.getAudioTracks().length,
-        video: stream.getVideoTracks().length
+        audio: audioTracks.length,
+        video: videoTracks.length,
+        audioEnabled: audioTracks.map(t => t.enabled),
+        audioMuted: audioTracks.map(t => t.muted),
+        videoEnabled: videoTracks.map(t => t.enabled),
+        trackEvent: { 
+          track: e.track?.kind, 
+          trackEnabled: e.track?.enabled,
+          trackMuted: e.track?.muted
+        }
+      });
+      
+      // Ensure all received tracks are enabled
+      audioTracks.forEach(track => {
+        track.enabled = true;
+        console.log(`[GroupCall] Enabled incoming audio track from ${userId}`);
+      });
+      videoTracks.forEach(track => {
+        track.enabled = true;
+        console.log(`[GroupCall] Enabled incoming video track from ${userId}`);
       });
       
       remoteStreams.current.set(userId, stream);
       
       setParticipants((prev) => {
-        const hasVideo = stream.getVideoTracks().length > 0;
-        const hasAudio = stream.getAudioTracks().length > 0;
+        const hasVideo = videoTracks.length > 0;
+        const hasAudio = audioTracks.length > 0;
         const exists = prev.find((p) => p.id === userId);
         if (exists) {
           return prev.map((p) =>
@@ -177,19 +198,43 @@ export function useGroupCall(socket) {
     // Add local stream tracks - OUTGOING AUDIO/VIDEO
     const localStream = localStreamRef.current;
     if (localStream) {
+      const audioTracks = localStream.getAudioTracks();
+      const videoTracks = localStream.getVideoTracks();
+      
       console.log(`[GroupCall] Adding local tracks to peer connection for ${userId}:`, {
-        audio: localStream.getAudioTracks().length,
-        video: localStream.getVideoTracks().length
+        audio: audioTracks.length,
+        video: videoTracks.length
       });
       
-      localStream.getTracks().forEach((track) => {
+      // Add audio tracks first (critical for mobile browsers)
+      audioTracks.forEach((track) => {
         try {
+          // Ensure track is enabled
+          track.enabled = true;
           const sender = pc.addTrack(track, localStream);
-          console.log(`[GroupCall] Added ${track.kind} track, enabled: ${track.enabled}`);
+          console.log(`[GroupCall] Added AUDIO track for ${userId}, enabled: ${track.enabled}, muted: ${track.muted}, readyState: ${track.readyState}`);
         } catch (err) {
-          console.error(`[GroupCall] Failed to add ${track.kind} track:`, err);
+          console.error(`[GroupCall] Failed to add AUDIO track for ${userId}:`, err);
         }
       });
+      
+      // Add video tracks
+      videoTracks.forEach((track) => {
+        try {
+          // Ensure track is enabled
+          track.enabled = true;
+          const sender = pc.addTrack(track, localStream);
+          console.log(`[GroupCall] Added VIDEO track for ${userId}, enabled: ${track.enabled}, muted: ${track.muted}, readyState: ${track.readyState}`);
+        } catch (err) {
+          console.error(`[GroupCall] Failed to add VIDEO track for ${userId}:`, err);
+        }
+      });
+      
+      // Log all senders
+      const senders = pc.getSenders();
+      console.log(`[GroupCall] Peer connection ${userId} has ${senders.length} senders:`, 
+        senders.map(s => ({ kind: s.track?.kind, enabled: s.track?.enabled }))
+      );
     } else {
       console.warn(`[GroupCall] No local stream available when creating peer connection for ${userId}`);
     }
@@ -249,9 +294,21 @@ export function useGroupCall(socket) {
       // Create peer connection to caller
       const pc = createPeerConnection(fromUser.id, groupId);
       
-      // Create and send offer
-      const offer = await pc.createOffer();
+      // Create and send offer with explicit audio/video direction
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: callTypeRef.current === "video"
+      });
+      
+      // Ensure all tracks are set to sendrecv
+      const sdp = offer.sdp;
+      if (sdp) {
+        // Modify SDP to ensure sendrecv direction for audio
+        offer.sdp = sdp.replace(/a=sendonly/g, 'a=sendrecv').replace(/a=recvonly/g, 'a=sendrecv');
+      }
+      
       await pc.setLocalDescription(offer);
+      console.log(`[GroupCall] Local offer set, sending to ${fromUser.id}`);
       
       socketRef.current?.emit("group:call:accept", {
         groupId,
@@ -570,8 +627,17 @@ export function useGroupCall(socket) {
         }
         
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        console.log(`[GroupCall] Remote offer set from ${fromUserId}`);
         
+        // Create answer with explicit direction
         const answer = await pc.createAnswer();
+        
+        // Ensure answer has sendrecv direction
+        if (answer.sdp) {
+          answer.sdp = answer.sdp.replace(/a=sendonly/g, 'a=sendrecv').replace(/a=recvonly/g, 'a=sendrecv');
+        }
+        
+        console.log(`[GroupCall] Created answer for ${fromUserId}`);
         await pc.setLocalDescription(answer);
 
         socket.emit("group:call:answer", {
