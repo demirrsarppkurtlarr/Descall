@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AuthView from "./components/AuthView";
 import ChatLayout from "./components/ChatLayout";
 import { getMe, login, register } from "./api/auth";
-import { getGroups } from "./api/groups";
+import { getMyGroups } from "./api/groups";
 import { createSocket } from "./socket";
 import { API_BASE_URL } from "./config/api";
 import { useCall } from "./hooks/useCall";
@@ -382,7 +382,7 @@ export default function App() {
   // Gruplari cek
   const fetchGroups = useCallback(async () => {
     try {
-      const groups = await getGroups();
+      const groups = await getMyGroups();
       console.log("[App] Fetched groups:", groups?.length || 0);
       setMyGroups(groups || []);
     } catch (err) {
