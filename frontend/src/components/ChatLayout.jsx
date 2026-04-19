@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useToast } from "../context/ToastContext";
 import { Avatar } from "./ui/Avatar";
-import { RippleButton } from "./ui/RippleButton";
+import RippleButton from "./ui/RippleButton";
 
 // Helper: format time
 function formatTime(timestamp) {
