@@ -699,7 +699,7 @@ export default function ChatLayout({
                     </button>
                   </div>
                 ) : (
-                  myGroups.map((group) => (
+                  myGroups.filter(g => g && g.id).map((group) => (
                     <motion.button
                       key={group.id}
                       type="button"
@@ -709,14 +709,14 @@ export default function ChatLayout({
                     >
                       <div className="dm-avatar">
                         {group.avatar_url ? (
-                          <img src={group.avatar_url} alt={group.name} />
+                          <img src={group.avatar_url} alt={group.name || "Group"} />
                         ) : (
-                          <div className="avatar-fallback">{group.name.charAt(0).toUpperCase()}</div>
+                          <div className="avatar-fallback">{(group.name || "G").charAt(0).toUpperCase()}</div>
                         )}
                       </div>
                       <div className="dm-meta">
                         <div className="dm-name-row">
-                          <span className="dm-name">{group.name}</span>
+                          <span className="dm-name">{group.name || "Unnamed Group"}</span>
                           {group.unread > 0 && <span className="dm-badge">{group.unread}</span>}
                         </div>
                         <div className="dm-preview">
