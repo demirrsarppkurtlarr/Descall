@@ -21,7 +21,41 @@ export default class ErrorBoundary extends React.Component {
       stack: error?.stack || "",
       componentStack: errorInfo?.componentStack || "",
     });
+
+    // Log error to backend
+    this.logErrorToBackend(error, errorInfo);
   }
+
+  logErrorToBackend = async (error, errorInfo) => {
+    try {
+      const errorData = {
+        message: error?.message || "Unknown error",
+        stack: error?.stack || "",
+        componentStack: errorInfo?.componentStack || "",
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+        userId: this.getUserId(),
+      };
+
+      await fetch(`${window.location.origin}/api/errors`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(errorData),
+      });
+    } catch (err) {
+      console.error("[Descall] Failed to log error to backend:", err);
+    }
+  };
+
+  getUserId = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("descall_user") || "null");
+      return user?.id || "anonymous";
+    } catch {
+      return "anonymous";
+    }
+  };
 
   handleReset = () => {
     try {

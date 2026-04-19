@@ -12,6 +12,7 @@ const authRoutes = require("./routes/auth");
 const adminRoutes = require("./routes/admin");
 const mediaRoutes = require("./routes/media");
 const groupRoutes = require("./routes/groups");
+const errorRoutes = require("./routes/errors");
 const { socketAuthMiddleware } = require("./middleware/socketAuth");
 const { registerSocketHandlers } = require("./socket/handlers");
 
@@ -79,6 +80,7 @@ app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/media", mediaRoutes);
 app.use("/groups", groupRoutes);
+app.use("/api/errors", errorRoutes);
 app.use("/media/files", express.static(path.join(__dirname, "uploads")));
 
 // Serve frontend build in production

@@ -9,6 +9,7 @@ const TABS = [
   { id: "messages", label: "Messages" },
   { id: "dm", label: "DM" },
   { id: "sockets", label: "Sockets" },
+  { id: "errors", label: "Errors" },
   { id: "system", label: "System" },
   { id: "audit", label: "Audit" },
 ];
@@ -24,6 +25,7 @@ export default function AdminPanel({ socket, onClose }) {
   const [audit, setAudit] = useState([]);
   const [system, setSystem] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
+  const [errorLogs, setErrorLogs] = useState([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -57,6 +59,11 @@ export default function AdminPanel({ socket, onClose }) {
   const loadSystem = useCallback(async () => {
     const d = await adminFetch("/system");
     setSystem(d);
+  }, []);
+
+  const loadErrors = useCallback(async () => {
+    const d = await adminFetch("/api/errors");
+    setErrorLogs(d || []);
   }, []);
 
   useEffect(() => {
@@ -93,9 +100,10 @@ export default function AdminPanel({ socket, onClose }) {
     if (tab === "users") loadUsers().catch((e) => setErr(e.message));
     if (tab === "messages") loadMessages().catch((e) => setErr(e.message));
     if (tab === "dm") loadDm().catch((e) => setErr(e.message));
+    if (tab === "errors") loadErrors().catch((e) => setErr(e.message));
     if (tab === "audit") loadAudit().catch((e) => setErr(e.message));
     if (tab === "system") loadSystem().catch((e) => setErr(e.message));
-  }, [tab, loadUsers, loadMessages, loadDm, loadAudit, loadSystem]);
+  }, [tab, loadUsers, loadMessages, loadDm, loadErrors, loadAudit, loadSystem]);
 
   const act = async (fn) => {
     try {
@@ -356,6 +364,67 @@ export default function AdminPanel({ socket, onClose }) {
                 Disconnect everyone
               </RippleButton>
             </div>
+          </section>
+        )}
+
+        {tab === "errors" && (
+          <section className="admin-section">
+            <h2>Error Logs</h2>
+            <p className="muted">All frontend errors from all users</p>
+            <RippleButton type="button" onClick={() => act(loadErrors)} disabled={busy}>
+              Refresh
+            </RippleButton>
+            <table className="admin-table compact">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>User ID</th>
+                  <th>Message</th>
+                  <th>URL</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {errorLogs.map((e) => (
+                  <tr key={e.id} style={{ opacity: e.resolved ? 0.5 : 1 }}>
+                    <td>{new Date(e.timestamp).toLocaleString()}</td>
+                    <td className="mono">{e.user_id?.slice(0, 8)}…</td>
+                    <td>{e.message}</td>
+                    <td>{e.url}</td>
+                    <td className="admin-actions">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          act(async () => {
+                            await fetch(`${window.location.origin}/api/errors/${e.id}/resolve`, {
+                              method: "PATCH",
+                            });
+                            await loadErrors();
+                          })
+                        }
+                        disabled={e.resolved}
+                      >
+                        {e.resolved ? "Resolved" : "Resolve"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          act(async () => {
+                            await fetch(`${window.location.origin}/api/errors/${e.id}`, {
+                              method: "DELETE",
+                            });
+                            await loadErrors();
+                          })
+                        }
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {errorLogs.length === 0 && <p className="muted">No errors logged yet</p>}
           </section>
         )}
 
