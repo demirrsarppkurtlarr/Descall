@@ -27,6 +27,38 @@
     padding-bottom: var(--mobile-safe-bottom);
   }
 
+  /* Hide desktop sidebar and right rail on mobile */
+  .sidebar {
+    display: none !important;
+  }
+
+  .right-rail {
+    display: none !important;
+  }
+
+  /* Mobile Main Panel */
+  .main-panel {
+    grid-column: 1 !important;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  .main-panel .messages-wrap {
+    padding-top: calc(var(--mobile-header-height) + 8px);
+    padding-bottom: calc(var(--mobile-bottom-nav-height) + 80px);
+  }
+
+  .main-panel .composer {
+    position: fixed;
+    bottom: var(--mobile-bottom-nav-height);
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+
   /* Mobile Header */
   .mobile-header {
     position: fixed;
