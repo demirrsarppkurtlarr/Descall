@@ -43,6 +43,7 @@ function formatRelativeTime(iso) {
 }
 
 function groupDmRows(messages) {
+  if (!messages || !Array.isArray(messages)) return [];
   return messages.map((msg, i) => {
     const prev = messages[i - 1];
     let compact = false;
@@ -659,7 +660,7 @@ export default function ChatLayout({
             <div className="sidebar-section grow">
               <h4>Direct messages</h4>
               <div className="scroll-list custom-scroll">
-                {dmList.map(({ friend, unread, preview, timeLabel }) => (
+                {(dmList || []).map(({ friend, unread, preview, timeLabel }) => (
                   <motion.button
                     key={friend.id}
                     type="button"
@@ -695,7 +696,7 @@ export default function ChatLayout({
               <input className="filter-input" placeholder="Search friends..." value={friendFilter} onChange={(e) => setFriendFilter(e.target.value)} />
               <h4>Friends ({filteredFriends.length})</h4>
               <div className="scroll-list custom-scroll">
-                {filteredFriends.map((friend) => (
+                {(filteredFriends || []).map((friend) => (
                   <div
                     key={friend.id}
                     className="friend-row"
@@ -743,7 +744,7 @@ export default function ChatLayout({
                     </button>
                   </div>
                 ) : (
-                  groups.list.map((group) => (
+                  (groups.list || []).map((group) => (
                     <motion.button
                       key={group.id}
                       type="button"
@@ -778,7 +779,7 @@ export default function ChatLayout({
             <div className="sidebar-section grow">
               <h4>Online ({onlineUsers.length})</h4>
               <div className="scroll-list custom-scroll">
-                {onlineUsers.map((user) => (
+                {(onlineUsers || []).map((user) => (
                   <div key={user.id ?? user.username} className="list-item static online-row">
                     <StatusBadge status={user.status} />
                     <span>{user.username}</span>
@@ -793,7 +794,7 @@ export default function ChatLayout({
           <div className="sidebar-section compact">
             <h4>Incoming requests</h4>
             {friendRequests.length === 0 && <p className="muted small">None</p>}
-            {friendRequests.map((req) => (
+            {(friendRequests || []).map((req) => (
               <div key={req.id} className="request-row compact-req">
                 <span>{req.username}</span>
                 <div>
@@ -964,7 +965,7 @@ export default function ChatLayout({
                 </motion.div>
               )}
 
-              {activeDmUser && dmGrouped.map(({ msg, compact }) => {
+              {activeDmUser && (dmGrouped || []).map(({ msg, compact }) => {
                 const fromSelf = msg.from?.id === me.id;
                 return (
                   <motion.article
@@ -1018,7 +1019,7 @@ export default function ChatLayout({
                 </motion.div>
               )}
 
-              {groups.active && groups.messages.map((msg) => {
+              {groups.active && (groups.messages || []).map((msg) => {
                 const fromSelf = msg.sender?.id === me?.id;
                 return (
                   <motion.article
@@ -1130,7 +1131,7 @@ export default function ChatLayout({
             )}
             <div className="notif-list custom-scroll">
               {notifications.length === 0 && <p className="muted small pad">No notifications.</p>}
-              {notifications.map((n) => (
+              {(notifications || []).map((n) => (
                 <motion.button
                   key={n.id}
                   type="button"
@@ -1202,7 +1203,7 @@ export default function ChatLayout({
                 <small className="member-count">{groups.ui.selectedMembers.length}/14 friends selected</small>
               </div>
               <div className="cg-friends-list modern-friends-list">
-                {friends.map((friend) => (
+                {(friends || []).map((friend) => (
                   <label key={friend.id} className="cg-friend-item modern-friend-item">
                     <input
                       type="checkbox"
