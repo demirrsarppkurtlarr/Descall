@@ -296,6 +296,9 @@ export default function ChatLayout({
   const [groupMessages, setGroupMessages] = useState([]);
   const [groupComposer, setGroupComposer] = useState("");
   
+  // Safe array access
+  const safeMyGroups = (myGroups || []).filter(g => g && typeof g === 'object' && g.id);
+  
   // Group management modals
   const [leaveGroupModalOpen, setLeaveGroupModalOpen] = useState(false);
   const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
@@ -706,7 +709,7 @@ export default function ChatLayout({
                     </button>
                   </div>
                 ) : (
-                  myGroups.filter(g => g && g.id).map((group) => (
+                  safeMyGroups.map((group) => (
                     <motion.button
                       key={group.id}
                       type="button"
