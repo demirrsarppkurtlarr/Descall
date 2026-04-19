@@ -325,23 +325,6 @@ function CallBar({ call, peerScreenSharing }) {
 
 function VideoPanel({ call, peerScreenSharing }) {
   return null; // DMCallOverlay kullanılıyor
-            playsInline 
-            muted 
-            className="video-screen"
-          />
-          <div className="screen-share-label local">🖥 You are sharing</div>
-        </div>
-      )}
-      
-      {/* Voice-only indicator */}
-      {!hasVideo && (
-        <div className="voice-indicator">
-          <span className="voice-icon">🎤</span>
-          <span>Voice call active</span>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ChatLayout({
