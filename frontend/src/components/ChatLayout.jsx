@@ -397,7 +397,7 @@ export default function ChatLayout({
       socket.off("group:call:left", onCallEnded);
       socket.off("group:call:ended", onCallEnded);
     };
-  }, [socket, groups.active?.id, groups.list, groupCall?.isInCall]);
+  }, [socket, groups.active?.id, groupCall?.isInCall]);
 
   // Group actions
   const groupActions = {
@@ -721,7 +721,7 @@ export default function ChatLayout({
           {sidebarView === "groups" && (
             <div className="sidebar-section grow">
               <div className="sidebar-section-header">
-                <h4>Groups ({myGroups.length})</h4>
+                <h4>Groups ({groups.list.length})</h4>
                 <button 
                   className="btn-icon"
                   onClick={() => groupActions.setUI({ createOpen: true })}
@@ -760,7 +760,7 @@ export default function ChatLayout({
                           {group.unread > 0 && <span className="dm-badge">{group.unread}</span>}
                         </div>
                         <div className="dm-preview">
-                          {group.last_message ? group.last_message.content : "No messages yet"}
+                          {group.last_message?.content || "No messages yet"}
                         </div>
                       </div>
                     </motion.button>

@@ -69,24 +69,34 @@ export function useGroupCall(socket) {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
     pc.onicecandidate = (e) => {
-      if (e.candidate && socket) {
-        socket.emit("group:call:ice", {
-          groupId: activeGroupId,
-          toUserId: userId,
-          candidate: e.candidate,
-        });
+      if (e.candidate && socket && pc.connectionState !== 'closed') {
+        try {
+          socket.emit("group:call:ice", {
+            groupId: activeGroupId,
+            toUserId: userId,
+            candidate: e.candidate,
+          });
+        } catch (err) {
+          console.error("[GroupCall] Failed to emit ICE candidate:", err);
+        }
       }
     };
 
     pc.ontrack = (e) => {
-      const stream = e.streams[0];
+      const stream = e.streams?.[0];
+      if (!stream) {
+        console.warn("[GroupCall] No stream in track event");
+        return;
+      }
       remoteStreams.current.set(userId, stream);
       
       setParticipants((prev) => {
+        const hasVideo = stream.getVideoTracks().length > 0;
+        const hasAudio = stream.getAudioTracks().length > 0;
         const exists = prev.find((p) => p.id === userId);
         if (exists) {
           return prev.map((p) =>
-            p.id === userId ? { ...p, stream, hasVideo: stream.getVideoTracks().length > 0 } : p
+            p.id === userId ? { ...p, stream, hasVideo, hasAudio } : p
           );
         }
         return [
@@ -94,15 +104,15 @@ export function useGroupCall(socket) {
           {
             id: userId,
             stream,
-            hasVideo: stream.getVideoTracks().length > 0,
-            hasAudio: stream.getAudioTracks().length > 0,
+            hasVideo,
+            hasAudio,
           },
         ];
       });
     };
 
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+      if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
         setParticipants((prev) => prev.filter((p) => p.id !== userId));
         remoteStreams.current.delete(userId);
         peerConnections.current.delete(userId);
@@ -112,7 +122,11 @@ export function useGroupCall(socket) {
     // Add local stream tracks
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStreamRef.current);
+        try {
+          pc.addTrack(track, localStreamRef.current);
+        } catch (err) {
+          console.error("[GroupCall] Failed to add track:", err);
+        }
       });
     }
 
@@ -227,6 +241,13 @@ export function useGroupCall(socket) {
     } else {
       // Turn on
       try {
+        // Stop previous video track if exists
+        const prevVideoTrack = localStreamRef.current?.getVideoTracks()[0];
+        if (prevVideoTrack) {
+          prevVideoTrack.stop();
+          localStreamRef.current.removeTrack(prevVideoTrack);
+        }
+
         const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
         const videoTrack = newStream.getVideoTracks()[0];
         
@@ -239,6 +260,7 @@ export function useGroupCall(socket) {
         
         // Replace in all peer connections
         peerConnections.current.forEach((pc) => {
+          if (pc.connectionState === 'closed') return;
           const sender = pc.getSenders().find((s) => s.track?.kind === "video");
           if (sender) {
             sender.replaceTrack(videoTrack);
@@ -266,9 +288,12 @@ export function useGroupCall(socket) {
       // Replace video track in all peer connections
       const screenTrack = stream.getVideoTracks()[0];
       peerConnections.current.forEach((pc) => {
+        if (pc.connectionState === 'closed') return;
         const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
         if (videoSender) {
           videoSender.replaceTrack(screenTrack);
+        } else if (localStreamRef.current) {
+          pc.addTrack(screenTrack, localStreamRef.current);
         }
       });
 
@@ -293,6 +318,7 @@ export function useGroupCall(socket) {
     // Restore camera track if available
     const videoTrack = localStreamRef.current?.getVideoTracks()[0];
     peerConnections.current.forEach((pc) => {
+      if (pc.connectionState === 'closed') return;
       const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
       if (videoSender && videoTrack) {
         videoSender.replaceTrack(videoTrack);
@@ -339,13 +365,25 @@ export function useGroupCall(socket) {
     audioManager.stop("incomingCall");
   }, []);
 
+  // Refs to avoid stale closures
+  const isInCallRef = useRef(false);
+  const isInitiatorRef = useRef(false);
+  const activeGroupIdRef = useRef(null);
+  const callTypeRef = useRef(null);
+
+  // Update refs when state changes
+  useEffect(() => { isInCallRef.current = isInCall; }, [isInCall]);
+  useEffect(() => { isInitiatorRef.current = isInitiator; }, [isInitiator]);
+  useEffect(() => { activeGroupIdRef.current = activeGroupId; }, [activeGroupId]);
+  useEffect(() => { callTypeRef.current = callType; }, [callType]);
+
   // Socket event handlers
   useEffect(() => {
     if (!socket) return;
 
     // Incoming call
     const handleIncoming = ({ groupId, fromUser, callType }) => {
-      if (isInCall) {
+      if (isInCallRef.current) {
         socket.emit("group:call:busy", { groupId, toUserId: fromUser.id });
         return;
       }
@@ -355,40 +393,63 @@ export function useGroupCall(socket) {
 
     // Someone accepted our call (as initiator)
     const handleAccepted = async ({ groupId, fromUserId, offer }) => {
-      if (!isInitiator || groupId !== activeGroupId) return;
+      if (!isInitiatorRef.current || groupId !== activeGroupIdRef.current) return;
 
-      const pc = createPeerConnection(fromUserId, true);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      try {
+        const pc = createPeerConnection(fromUserId, true);
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
 
-      socket.emit("group:call:answer", {
-        groupId,
-        toUserId: fromUserId,
-        answer,
-      });
+        socket.emit("group:call:answer", {
+          groupId,
+          toUserId: fromUserId,
+          answer,
+        });
 
-      // Add to participants
-      setParticipants((prev) => {
-        if (prev.find((p) => p.id === fromUserId)) return prev;
-        return [...prev, { id: fromUserId, hasVideo: callType === "video", hasAudio: true }];
-      });
+        // Add to participants
+        setParticipants((prev) => {
+          const hasVideo = callTypeRef.current === "video";
+          const existing = prev.find((p) => p.id === fromUserId);
+          if (existing) {
+            return prev.map((p) => p.id === fromUserId ? { ...p, hasVideo } : p);
+          }
+          return [...prev, { id: fromUserId, hasVideo, hasAudio: true }];
+        });
+      } catch (err) {
+        console.error("[GroupCall] Failed to handle accepted call:", err);
+        const pc = peerConnections.current.get(fromUserId);
+        if (pc) {
+          pc.close();
+          peerConnections.current.delete(fromUserId);
+        }
+      }
     };
 
     // Received answer (as joiner)
     const handleAnswer = async ({ groupId, fromUserId, answer }) => {
       const pc = peerConnections.current.get(fromUserId);
-      if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      if (pc && pc.connectionState !== 'closed') {
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (err) {
+          console.error("[GroupCall] Failed to set remote description (answer):", err);
+          pc.close();
+          peerConnections.current.delete(fromUserId);
+        }
       }
     };
 
     // ICE candidate
     const handleIce = async ({ groupId, fromUserId, candidate }) => {
       const pc = peerConnections.current.get(fromUserId);
-      if (pc) {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      if (pc && pc.connectionState !== 'closed') {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error("[GroupCall] Failed to add ICE candidate:", err);
+        }
       }
     };
 
@@ -396,7 +457,11 @@ export function useGroupCall(socket) {
     const handleLeft = ({ groupId, userId }) => {
       const pc = peerConnections.current.get(userId);
       if (pc) {
-        pc.close();
+        try {
+          pc.close();
+        } catch (err) {
+          console.error("[GroupCall] Failed to close peer connection:", err);
+        }
         peerConnections.current.delete(userId);
       }
       remoteStreams.current.delete(userId);
@@ -430,7 +495,14 @@ export function useGroupCall(socket) {
       socket.off("group:call:ended", handleEnded);
       socket.off("group:call:declined", handleDeclined);
     };
-  }, [socket, isInCall, isInitiator, activeGroupId, callType, createPeerConnection, cleanup]);
+  }, [socket, createPeerConnection, cleanup]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
 
   // Set my ID from socket
   useEffect(() => {
@@ -462,7 +534,6 @@ export function useGroupCall(socket) {
     dominantSpeaker,
     focusedParticipant,
     incomingCall,
-    socket,
 
     // Actions
     startGroupCall,

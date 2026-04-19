@@ -26,7 +26,7 @@ function registerGroupHandlers(io, socket, state) {
     if (!groupId || (!content?.trim() && !mediaUrl)) return;
 
     const message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       sender_id: myId,
       content: content?.trim(),
       media_url: mediaUrl,
