@@ -17,7 +17,7 @@ import {
   PanelLeftClose, Settings, Send, Paperclip, 
   Phone, Video, VideoOff, X, Plus, Clock, Check, CheckCheck,
   Mic, MicOff, Camera, CameraOff, Monitor, MonitorX, PhoneOff,
-  Search, LogOut, Volume2, VolumeX, Maximize2, Grid,
+  Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid,
   ChevronLeft, ChevronRight, MoreVertical, Trash2
 } from "lucide-react";
 
@@ -161,7 +161,9 @@ function IncomingCallModal({ call }) {
 }
 
 // DM Call Overlay - VideoConference tarzı modern arayüz
-function DMCallOverlay({ call, peerScreenSharing }) {
+function DMCallOverlay({ call, peerScreenSharing, onToggleSidebar, sidebarVisible }) {
+  const [isFullscreen, setIsFullscreen] = useState(true);
+  
   if (!call || call.mode === null) return null;
   
   const isActive = call.mode === "active";
@@ -171,8 +173,36 @@ function DMCallOverlay({ call, peerScreenSharing }) {
   if (!isActive && !isOutgoing) return null;
   if (!call.peer) return null;
   
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+  
   return (
-    <div className="call-overlay dm-call-overlay" style={{ zIndex: 9998 }}>
+    <div className={`call-overlay dm-call-overlay ${isFullscreen ? 'fullscreen' : 'minimized'}`} style={{ zIndex: 9998 }}>
+      {/* Sidebar Toggle - Tam ekrandayken soldan menüye geçiş */}
+      <motion.button
+        type="button"
+        className="dm-sidebar-toggle"
+        onClick={onToggleSidebar}
+        whileHover={{ x: 5 }}
+        whileTap={{ scale: 0.95 }}
+        title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
+      >
+        {sidebarVisible ? <PanelLeftClose size={20} /> : <PanelLeftClose size={20} style={{ transform: 'rotate(180deg)' }} />}
+      </motion.button>
+      
+      {/* Fullscreen Toggle */}
+      <motion.button
+        type="button"
+        className="dm-fullscreen-toggle"
+        onClick={toggleFullscreen}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        title={isFullscreen ? "Minimize" : "Fullscreen"}
+      >
+        {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+      </motion.button>
+      
       <motion.div 
         className="dm-call-container"
         initial={{ opacity: 0 }} 
@@ -1178,7 +1208,12 @@ export default function ChatLayout({
       <IncomingCallModal call={call} />
 
       {/* DM Call Overlay - VideoConference tarzı modern arayüz */}
-      <DMCallOverlay call={call} peerScreenSharing={peerScreenSharing} />
+      <DMCallOverlay 
+        call={call} 
+        peerScreenSharing={peerScreenSharing} 
+        onToggleSidebar={() => setSidebarOpen(v => !v)}
+        sidebarVisible={sidebarOpen}
+      />
 
       <AnimatePresence>
         {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
