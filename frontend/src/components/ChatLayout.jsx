@@ -319,7 +319,6 @@ export default function ChatLayout({
     messages: [],
     call: {
       minimized: false,
-      incoming: null, // { groupId, fromUser, callType, groupName }
     },
     ui: {
       createOpen: false,
@@ -385,36 +384,26 @@ export default function ChatLayout({
       }
     };
 
-    // Incoming group call
-    const onIncomingCall = ({ groupId, fromUser, callType }) => {
-      if (groupCall?.isInCall) {
-        socket.emit("group:call:busy", { groupId, toUserId: fromUser.id });
-        return;
-      }
-      const group = groupsList.find(g => g.id === groupId);
-      setGroups(g => ({
-        ...g,
-        call: { ...g.call, incoming: { groupId, fromUser, callType, groupName: group?.name } }
-      }));
-    };
-
     // Call ended
     const onCallEnded = () => {
-      setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
+      setGroups((g) => ({ ...g, call: { ...g.call, minimized: false } }));
     };
 
     socket.on("group:message", onGroupMessage);
-    socket.on("group:call:incoming", onIncomingCall);
     socket.on("group:call:left", onCallEnded);
     socket.on("group:call:ended", onCallEnded);
 
     return () => {
       socket.off("group:message", onGroupMessage);
-      socket.off("group:call:incoming", onIncomingCall);
       socket.off("group:call:left", onCallEnded);
       socket.off("group:call:ended", onCallEnded);
     };
-  }, [socket, groups.active?.id, groupCall?.isInCall, groupsList]);
+  }, [socket, groups.active?.id, groupsList]);
+
+  useEffect(() => {
+    if (groupCall?.isInCall) return;
+    setGroups((g) => ({ ...g, call: { ...g.call, minimized: false } }));
+  }, [groupCall?.isInCall]);
 
   // Keep socket subscribed to all my group rooms for live messages/calls.
   useEffect(() => {
@@ -893,7 +882,7 @@ export default function ChatLayout({
                     type="button" 
                     className="header-call-btn voice" 
                     disabled={inCall || !groupCall} 
-                    onClick={() => groupCall?.startGroupCall?.(groups.active.id, "voice", [])} 
+                    onClick={() => groupCall?.startGroupCall?.(groups.active.id, "voice", (groups.active?.memberIds || []).filter((id) => id !== me?.id))} 
                     title="Group voice call"
                   >
                     <div className="call-btn-icon">
@@ -905,7 +894,7 @@ export default function ChatLayout({
                     type="button" 
                     className="header-call-btn video" 
                     disabled={inCall || !groupCall} 
-                    onClick={() => groupCall?.startGroupCall?.(groups.active.id, "video", [])} 
+                    onClick={() => groupCall?.startGroupCall?.(groups.active.id, "video", (groups.active?.memberIds || []).filter((id) => id !== me?.id))} 
                     title="Group video call"
                   >
                     <div className="call-btn-icon">
@@ -1376,7 +1365,7 @@ export default function ChatLayout({
       </AnimatePresence>
 
       {/* Incoming Group Call Modal - DM Style */}
-      {groups.call.incoming && !groupCall?.isInCall && (
+      {groupCall?.incomingCall && !groupCall?.isInCall && (
         <div className="voice-modal-overlay group-call-overlay">
           <motion.div
             className="voice-modal group-call-modal"
@@ -1384,19 +1373,18 @@ export default function ChatLayout({
             animate={{ scale: 1, opacity: 1 }}
           >
             <div className="group-call-avatar">
-              {groups.call.incoming.fromUser.username?.charAt(0).toUpperCase()}
+              {groupCall.incomingCall.fromUser.username?.charAt(0).toUpperCase()}
             </div>
-            <h3>{groups.call.incoming.fromUser.username}</h3>
-            <p className="group-name">in {groups.call.incoming.groupName}</p>
-            <p className="call-type">Incoming {groups.call.incoming.callType} call</p>
+            <h3>{groupCall.incomingCall.fromUser.username}</h3>
+            <p className="group-name">in {groupsList.find((g) => g.id === groupCall.incomingCall.groupId)?.name || "Group"}</p>
+            <p className="call-type">Incoming {groupCall.incomingCall.callType} call</p>
 
             <div className="voice-modal-actions">
               <RippleButton
                 type="button"
                 className="btn-decline"
                 onClick={() => {
-                  groupCall?.declineCall?.(groups.call.incoming.groupId, groups.call.incoming.fromUser.id);
-                  setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
+                  groupCall?.declineCall?.(groupCall.incomingCall.groupId, groupCall.incomingCall.fromUser.id);
                 }}
               >
                 Decline
@@ -1406,13 +1394,12 @@ export default function ChatLayout({
                 className="btn-accept"
                 onClick={() => {
                   groupCall?.acceptGroupCall?.(
-                    groups.call.incoming.groupId,
-                    groups.call.incoming.callType,
-                    groups.call.incoming.fromUser
+                    groupCall.incomingCall.groupId,
+                    groupCall.incomingCall.callType,
+                    groupCall.incomingCall.fromUser
                   );
-                  setGroups(g => ({ ...g, call: { ...g.call, incoming: null } }));
                   // Open the group
-                  const group = groupsList.find(g => g.id === groups.call.incoming.groupId);
+                  const group = groupsList.find((g) => g.id === groupCall.incomingCall.groupId);
                   if (group) groupActions.open(group);
                 }}
               >
@@ -1425,6 +1412,7 @@ export default function ChatLayout({
 
       {/* Group Video Conference Overlay */}
       <VideoConference
+        key={`${groupCall?.activeGroupId || "none"}-${groups.call.minimized ? "mini" : "full"}`}
         isOpen={groupCall?.isInCall || false}
         onClose={groupCall?.leaveCall || (() => {})}
         minimized={groups.call.minimized}

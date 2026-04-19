@@ -142,7 +142,7 @@ export function useGroupCall(socket) {
   }, []);
 
   // Start group call (as initiator)
-  const startGroupCall = useCallback(async (groupId, type, memberIds) => {
+  const startGroupCall = useCallback(async (groupId, type, memberIds = []) => {
     try {
       await getLocalMedia(type);
       
@@ -156,7 +156,11 @@ export function useGroupCall(socket) {
       callTypeRef.current = type;
       
       // Notify all members
-      socketRef.current?.emit("group:call:start", { groupId, callType: type });
+      socketRef.current?.emit("group:call:start", {
+        groupId,
+        callType: type,
+        memberIds: Array.isArray(memberIds) ? memberIds : [],
+      });
       
       // Start duration timer
       timerRef.current = setInterval(() => {

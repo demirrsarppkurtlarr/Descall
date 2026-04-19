@@ -46,13 +46,12 @@ function registerGroupHandlers(io, socket, state) {
   // ========== GROUP CALL ==========
 
   // Start group call
-  socket.on("group:call:start", ({ groupId, callType }) => {
+  socket.on("group:call:start", ({ groupId, callType, memberIds = [] }) => {
     if (!groupId || !callType) return;
 
     console.log(`[GroupCall] ${myId} started ${callType} call in group ${groupId}`);
 
-    // Broadcast to all group members except sender
-    socket.to(`group:${groupId}`).emit("group:call:incoming", {
+    const payload = {
       groupId,
       fromUser: {
         id: myId,
@@ -60,7 +59,19 @@ function registerGroupHandlers(io, socket, state) {
         avatar_url: socket.user.avatar_url,
       },
       callType,
-    });
+    };
+
+    // Prefer direct user-targeted delivery (DM call style reliability).
+    if (Array.isArray(memberIds) && memberIds.length > 0) {
+      const uniqueTargets = [...new Set(memberIds)].filter((id) => id && id !== myId);
+      uniqueTargets.forEach((targetUserId) => {
+        io.to(`user:${targetUserId}`).emit("group:call:incoming", payload);
+      });
+      return;
+    }
+
+    // Fallback room broadcast if member list is not available.
+    socket.to(`group:${groupId}`).emit("group:call:incoming", payload);
   });
 
   // Accept call and send offer
