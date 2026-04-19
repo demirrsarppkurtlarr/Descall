@@ -34,6 +34,7 @@ export default function VideoConference({
   duration = 0,
 }) {
   const safeParticipants = Array.isArray(participants) ? participants : [];
+  const remoteStreamMap = call?.remoteStreams?.current instanceof Map ? call.remoteStreams.current : new Map();
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "focus"
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef(null);
@@ -163,7 +164,7 @@ export default function VideoConference({
 
   // Filter active participants (with streams)
   const activeParticipants = safeParticipants.filter((p) =>
-    call.remoteStreams.current.has(p.id)
+    remoteStreamMap.has(p.id)
   );
 
   // Grid layout calculation
@@ -187,7 +188,7 @@ export default function VideoConference({
     activeParticipants[0]?.id;
 
   const focusParticipant = safeParticipants.find((p) => p.id === focusTarget);
-  const focusStream = focusTarget ? call.remoteStreams.current.get(focusTarget) : null;
+  const focusStream = focusTarget ? remoteStreamMap.get(focusTarget) : null;
 
   // Thumbnail participants (focus view)
   const thumbnailParticipants = viewMode === "focus"
@@ -275,7 +276,7 @@ export default function VideoConference({
 
             {/* Remote Videos */}
             {activeParticipants.map((participant) => {
-              const stream = call.remoteStreams.current.get(participant.id);
+              const stream = remoteStreamMap.get(participant.id);
               const isFocused = focusedParticipant === participant.id;
               
               return (
@@ -386,7 +387,7 @@ export default function VideoConference({
 
               {/* Remote thumbnails */}
               {thumbnailParticipants.map((p) => {
-                const stream = call.remoteStreams.current.get(p.id);
+                const stream = remoteStreamMap.get(p.id);
                 return (
                   <div 
                     key={p.id}

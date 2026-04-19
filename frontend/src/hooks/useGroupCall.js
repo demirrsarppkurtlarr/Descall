@@ -574,5 +574,7 @@ export function useGroupCall(socket) {
     setFocusedParticipant,
     formatDuration,
     cleanup,
+    remoteStreams,
+    peerConnections,
   };
 }
