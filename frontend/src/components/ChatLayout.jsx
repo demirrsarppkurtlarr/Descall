@@ -8,7 +8,7 @@ import {
   Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid,
   ChevronLeft, ChevronRight, MoreVertical, Trash2
 } from "lucide-react";
-import { useToast } from "../hooks/useToast";
+import { useToast } from "../context/ToastContext";
 import { Avatar } from "./Avatar";
 import { formatTime } from "../utils/time";
 import { RippleButton } from "./RippleButton";
