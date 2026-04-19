@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AuthView from "./components/AuthView";
 import ChatLayout from "./components/ChatLayout";
 import { getMe, login, register } from "./api/auth";
+import { getGroups } from "./api/groups";
 import { createSocket } from "./socket";
 import { API_BASE_URL } from "./config/api";
 import { useCall } from "./hooks/useCall";
@@ -45,6 +46,7 @@ export default function App() {
   const [reconnectState, setReconnectState] = useState("idle");
   const [adminOpen, setAdminOpen] = useState(false);
   const [peerScreenSharing, setPeerScreenSharing] = useState(false);
+  const [myGroups, setMyGroups] = useState([]);
 
   const socketRef = useRef(null);
   const activeDmRef = useRef(null);
@@ -374,7 +376,27 @@ export default function App() {
     setIsConnected(false); setOnlineUsers([]); setFriends([]); setFriendRequests([]);
     setDmByUserId({}); setDmUnread({}); setNotifications([]);
     setActiveDmUser(null); setAuthError(""); setTypingDmUser(null); setDmHasMore(true);
+    setMyGroups([]);
   };
+
+  // Gruplari cek
+  const fetchGroups = useCallback(async () => {
+    try {
+      const groups = await getGroups();
+      console.log("[App] Fetched groups:", groups?.length || 0);
+      setMyGroups(groups || []);
+    } catch (err) {
+      console.error("[App] Failed to fetch groups:", err);
+      setMyGroups([]);
+    }
+  }, []);
+
+  // Login oldugunda gruplari cek
+  useEffect(() => {
+    if (me?.id) {
+      fetchGroups();
+    }
+  }, [me?.id, fetchGroups]);
 
   const handleOpenDm = (friend) => {
     if (!friend || !friend.id) {
