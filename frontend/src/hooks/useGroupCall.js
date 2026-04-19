@@ -245,33 +245,49 @@ export function useGroupCall(socket) {
 
   // Toggle camera
   const toggleCamera = useCallback(async () => {
+    // Cannot toggle camera while screen sharing
+    if (isScreenSharing) {
+      console.warn("[GroupCall] Cannot toggle camera while screen sharing");
+      return;
+    }
+
     if (isCameraOn) {
-      // Turn off
+      // Turn off - stop and remove video track from all peer connections
       const videoTrack = localStreamRef.current?.getVideoTracks()[0];
       if (videoTrack) {
+        // Remove from all peer connections first
+        peerConnections.current.forEach((pc) => {
+          if (pc.connectionState === 'closed') return;
+          const sender = pc.getSenders().find((s) => s.track === videoTrack);
+          if (sender) {
+            try {
+              sender.replaceTrack(null);
+            } catch (err) {
+              console.error("[GroupCall] Failed to replace track with null:", err);
+            }
+          }
+        });
         videoTrack.stop();
         localStreamRef.current.removeTrack(videoTrack);
       }
       setIsCameraOn(false);
+      cameraTrackRef.current = null;
     } else {
       // Turn on
       try {
-        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const newStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
         const videoTrack = newStream.getVideoTracks()[0];
         
-        // Stop previous video track after successfully getting new one
-        const prevVideoTrack = localStreamRef.current?.getVideoTracks()[0];
-        if (prevVideoTrack) {
-          prevVideoTrack.stop();
-          localStreamRef.current.removeTrack(prevVideoTrack);
-        }
-
         // Add to local stream
         if (localStreamRef.current) {
           localStreamRef.current.addTrack(videoTrack);
         } else {
+          // If no local stream, create new one with video track
           localStreamRef.current = new MediaStream([videoTrack]);
         }
+        
+        // Store camera track for later restoration
+        cameraTrackRef.current = videoTrack;
         
         // Replace in all peer connections
         peerConnections.current.forEach((pc) => {
@@ -280,7 +296,12 @@ export function useGroupCall(socket) {
           if (sender) {
             sender.replaceTrack(videoTrack);
           } else {
-            pc.addTrack(videoTrack, localStreamRef.current);
+            // No existing video sender, add new track
+            try {
+              pc.addTrack(videoTrack, localStreamRef.current);
+            } catch (err) {
+              console.error("[GroupCall] Failed to add track:", err);
+            }
           }
         });
         
@@ -290,31 +311,45 @@ export function useGroupCall(socket) {
         console.error("[GroupCall] Failed to toggle camera:", err);
       }
     }
-  }, [isCameraOn]);
+  }, [isCameraOn, isScreenSharing]);
 
   // Start screen share
   const startScreenShare = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
       screenStreamRef.current = stream;
       setScreenStream(stream);
       setIsScreenSharing(true);
 
       const screenTrack = stream.getVideoTracks()[0];
       if (!screenTrack) return;
-      cameraTrackRef.current = localStreamRef.current?.getVideoTracks?.()[0] || null;
       
+      // Store current camera track before replacing with screen
+      const currentCameraTrack = localStreamRef.current?.getVideoTracks?.()[0];
+      if (currentCameraTrack) {
+        cameraTrackRef.current = currentCameraTrack;
+        // Don't stop camera track, just pause it in peer connections
+      }
+      
+      // Replace video track with screen track in all peer connections
       peerConnections.current.forEach((pc) => {
         if (pc.connectionState === 'closed') return;
         const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
         if (videoSender) {
           videoSender.replaceTrack(screenTrack);
-        } else if (localStreamRef.current && callTypeRef.current === "video") {
-          pc.addTrack(screenTrack, localStreamRef.current);
+        } else {
+          // No existing video sender, add new one
+          try {
+            if (localStreamRef.current) {
+              pc.addTrack(screenTrack, localStreamRef.current);
+            }
+          } catch (err) {
+            console.error("[GroupCall] Failed to add screen track:", err);
+          }
         }
       });
 
-      // Handle screen share stop
+      // Handle screen share stop (user clicks browser's stop sharing button)
       screenTrack.onended = () => {
         stopScreenShare();
       };
@@ -325,6 +360,7 @@ export function useGroupCall(socket) {
 
   // Stop screen share
   const stopScreenShare = useCallback(() => {
+    // Stop screen sharing tracks
     if (screenStreamRef.current) {
       screenStreamRef.current.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
@@ -332,15 +368,43 @@ export function useGroupCall(socket) {
     setScreenStream(null);
     setIsScreenSharing(false);
 
-    // Restore camera track if available
-    const videoTrack = cameraTrackRef.current || localStreamRef.current?.getVideoTracks?.()[0];
-    peerConnections.current.forEach((pc) => {
-      if (pc.connectionState === 'closed') return;
-      const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
-      if (videoSender && videoTrack) {
-        videoSender.replaceTrack(videoTrack);
-      }
-    });
+    // Restore camera track if it was active before screen sharing
+    const cameraTrack = cameraTrackRef.current;
+    if (cameraTrack && cameraTrack.readyState === 'live') {
+      // Camera track is still active, restore it to peer connections
+      peerConnections.current.forEach((pc) => {
+        if (pc.connectionState === 'closed') return;
+        const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
+        if (videoSender) {
+          videoSender.replaceTrack(cameraTrack);
+        } else {
+          // Add camera track if no video sender exists
+          try {
+            if (localStreamRef.current) {
+              pc.addTrack(cameraTrack, localStreamRef.current);
+            }
+          } catch (err) {
+            console.error("[GroupCall] Failed to restore camera track:", err);
+          }
+        }
+      });
+      setIsCameraOn(true);
+    } else {
+      // No active camera track, set camera to off
+      setIsCameraOn(false);
+      // Remove null video track from senders
+      peerConnections.current.forEach((pc) => {
+        if (pc.connectionState === 'closed') return;
+        const videoSender = pc.getSenders().find((s) => s.track?.kind === "video");
+        if (videoSender) {
+          try {
+            videoSender.replaceTrack(null);
+          } catch (err) {
+            // Ignore error
+          }
+        }
+      });
+    }
     cameraTrackRef.current = null;
   }, []);
 
