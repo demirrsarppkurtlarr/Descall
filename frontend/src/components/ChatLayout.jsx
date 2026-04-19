@@ -975,7 +975,7 @@ export default function ChatLayout({
 
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeDmUser ? `dm-${activeDmUser.id}` : groups.active ? `group-${groups.active.id}` : "empty"}
+            key={isMobile ? `mobile-${activeMobileView}` : activeDmUser ? `dm-${activeDmUser.id}` : groups.active ? `group-${groups.active.id}` : "empty"}
             className="messages-wrap"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -985,7 +985,153 @@ export default function ChatLayout({
             <div className="messages custom-scroll" ref={messagesRef} onScroll={handleMessagesScroll}>
               {loadingOlderDm && activeDmUser && <div className="load-older-banner">Loading older messages…</div>}
 
-              {!activeDmUser && !groups.active && (
+              {/* Mobile View Switcher */}
+              {isMobile && activeMobileView === "dms" && !activeDmUser && !groups.active && (
+                <motion.div className="mobile-view-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div className="mobile-section">
+                    <h4>Direct Messages</h4>
+                    {(dmList || []).length === 0 ? (
+                      <div className="empty-state glass">
+                        <h4>No conversations yet</h4>
+                        <p>Go to Friends to start chatting</p>
+                      </div>
+                    ) : (
+                      <div className="mobile-list">
+                        {(dmList || []).map(({ friend, unread, preview, timeLabel }) => (
+                          <motion.button
+                            key={friend.id}
+                            className="mobile-list-item"
+                            onClick={() => {
+                              setGroups(g => ({ ...g, active: null }));
+                              try { localStorage.removeItem("descall_active_group"); } catch {}
+                              onOpenDm(friend);
+                            }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Avatar name={friend.username} size={48} imageUrl={friend.avatarUrl} />
+                            <div className="mobile-list-body">
+                              <div className="mobile-list-top">
+                                <span className="mobile-list-name">{friend.username}</span>
+                                {timeLabel && <span className="mobile-list-time">{timeLabel}</span>}
+                              </div>
+                              <div className="mobile-list-preview">{preview || "No messages"}</div>
+                            </div>
+                            {unread > 0 && <span className="mobile-badge">{unread > 9 ? "9+" : unread}</span>}
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {isMobile && activeMobileView === "groups" && !groups.active && (
+                <motion.div className="mobile-view-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div className="mobile-section">
+                    <div className="mobile-section-header">
+                      <h4>Groups</h4>
+                      <button className="mobile-fab" onClick={() => groupActions.setUI({ createOpen: true })}>
+                        <Plus size={20} />
+                      </button>
+                    </div>
+                    {(groupsList || []).length === 0 ? (
+                      <div className="empty-state glass">
+                        <h4>No groups yet</h4>
+                        <p>Create a group to start chatting with multiple friends</p>
+                      </div>
+                    ) : (
+                      <div className="mobile-list">
+                        {(groupsList || []).map((group) => (
+                          <motion.button
+                            key={group.id}
+                            className="mobile-list-item"
+                            onClick={() => groupActions.open(group)}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="mobile-group-avatar">{group.name?.charAt(0).toUpperCase()}</div>
+                            <div className="mobile-list-body">
+                              <div className="mobile-list-top">
+                                <span className="mobile-list-name">{group.name}</span>
+                                <span className="mobile-list-time">{group.memberCount} members</span>
+                              </div>
+                              <div className="mobile-list-preview">Click to open group chat</div>
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {isMobile && activeMobileView === "calls" && (
+                <motion.div className="mobile-view-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div className="mobile-section">
+                    <h4>Recent Calls</h4>
+                    <div className="empty-state glass">
+                      <Phone size={48} className="mobile-icon-muted" />
+                      <h4>No recent calls</h4>
+                      <p>Start a call from a DM or Group chat</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {isMobile && activeMobileView === "friends" && (
+                <motion.div className="mobile-view-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div className="mobile-section">
+                    <div className="mobile-section-header">
+                      <h4>Friends</h4>
+                    </div>
+                    <form className="mobile-search-form" onSubmit={submitFriendRequest}>
+                      <input 
+                        className="mobile-search-input" 
+                        placeholder="Add friend by username..." 
+                        value={friendUsername} 
+                        onChange={(e) => setFriendUsername(e.target.value)} 
+                      />
+                      <button type="submit" className="mobile-fab">
+                        <Plus size={20} />
+                      </button>
+                    </form>
+                    {(filteredFriends || []).length === 0 ? (
+                      <div className="empty-state glass">
+                        <UserPlus size={48} className="mobile-icon-muted" />
+                        <h4>No friends yet</h4>
+                        <p>Add friends to start chatting</p>
+                      </div>
+                    ) : (
+                      <div className="mobile-list">
+                        {(filteredFriends || []).map((friend) => (
+                          <motion.div
+                            key={friend.id}
+                            className="mobile-friend-item"
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <div className="mobile-friend-info" onClick={() => onOpenDm(friend)}>
+                              <StatusBadge status={friend.status} />
+                              <span className="mobile-friend-name">{friend.username}</span>
+                            </div>
+                            <div className="mobile-friend-actions">
+                              <button className="mobile-icon-btn" onClick={() => call?.startCall(friend, "voice")}>
+                                <Phone size={16} />
+                              </button>
+                              <button className="mobile-icon-btn" onClick={() => call?.startCall(friend, "video")}>
+                                <Video size={16} />
+                              </button>
+                              <button className="mobile-icon-btn danger" onClick={() => onRemoveFriend(friend.id)}>
+                                <X size={16} />
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {!isMobile && !activeDmUser && !groups.active && (
                 <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Welcome to Descall</h4>
                   <p>Select a friend or start a new conversation to begin messaging.</p>
@@ -1627,14 +1773,14 @@ export default function ChatLayout({
               <span>Calls</span>
             </button>
             <button
-              className={`mobile-nav-item ${activeMobileView === "profile" ? "active" : ""}`}
+              className={`mobile-nav-item ${activeMobileView === "friends" ? "active" : ""}`}
               onClick={() => {
                 vibrate(10);
-                setMobileSidebarOpen(true);
+                setActiveMobileView("friends");
               }}
             >
-              <User className="mobile-nav-icon" size={24} />
-              <span>Profile</span>
+              <UserPlus className="mobile-nav-icon" size={24} />
+              <span>Friends</span>
             </button>
           </nav>
         </>
