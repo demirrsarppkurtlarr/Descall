@@ -486,6 +486,8 @@ export default function App() {
         friends={friends}
         friendRequests={friendRequests}
         notifications={notifications}
+        myGroups={myGroups}
+        setMyGroups={setMyGroups}
         activeDmUser={activeDmUser}
         dmMessages={dmMessages}
         dmUnread={dmUnread}

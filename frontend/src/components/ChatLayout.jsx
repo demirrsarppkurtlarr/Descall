@@ -362,6 +362,8 @@ export default function ChatLayout({
   onNotificationReadAll,
   peerScreenSharing = false,
   groupCall,
+  myGroups: myGroupsProp,
+  setMyGroups: setMyGroupsProp,
 }) {
   const { toast } = useToast();
   const [composer, setComposer] = useState("");
@@ -381,7 +383,10 @@ export default function ChatLayout({
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
-  const [myGroups, setMyGroups] = useState([]);
+  
+  // Use props or local state
+  const myGroups = myGroupsProp || [];
+  const setMyGroups = setMyGroupsProp || (() => {});
   const [activeGroup, setActiveGroup] = useState(() => {
     try {
       const saved = localStorage.getItem("descall_active_group");
@@ -558,16 +563,22 @@ export default function ChatLayout({
     setSearchResults({ users: userResults, groups: groupResults, messages: [] });
   };
 
-  // Grup mesaji gonderme
+  // Grup mesaji gonderme - DUZELTILDI: API object formati
   const handleSendGroupMessage = async (e) => {
     e?.preventDefault();
-    const text = groupComposer.trim();
-    if (!text || !activeGroup || !activeGroup.id) return;
+    e?.stopPropagation();
+    const text = groupComposer?.trim();
+    if (!text || !activeGroup?.id) return;
+    
+    console.log("[GroupMessage] Sending message to group:", activeGroup.id, "text:", text);
     
     try {
-      const result = await sendGroupMessage(activeGroup.id, text);
+      // API: sendGroupMessage(groupId, { content, mediaUrl, mediaType })
+      const result = await sendGroupMessage(activeGroup.id, { content: text });
+      console.log("[GroupMessage] API result:", result);
+      
       const newMsg = {
-        id: result?.message?.id || Date.now().toString(),
+        id: result?.message?.id || result?.id || Date.now().toString(),
         content: text,
         sender: { id: me?.id, username: me?.username },
         created_at: new Date().toISOString(),
@@ -575,7 +586,8 @@ export default function ChatLayout({
       setGroupMessages((prev) => [...prev, newMsg]);
       setGroupComposer("");
     } catch (err) {
-      toast?.error?.(err.message || "Failed to send message");
+      console.error("[GroupMessage] Error:", err);
+      toast?.error?.(err?.message || "Failed to send message");
     }
   };
 
@@ -1131,18 +1143,27 @@ export default function ChatLayout({
           </form>
         )}
 
-        {/* Group Composer */}
-        {activeGroup && (
+        {/* Group Composer - DUZELTILDI: Button type="submit" eklendi */}
+        {activeGroup?.id && (
           <form
             className={`composer glass-composer ${inCall ? "composer-dimmed" : ""}`}
             onSubmit={handleSendGroupMessage}
           >
             <input
-              placeholder={`Message #${activeGroup.name}`}
-              value={groupComposer}
+              type="text"
+              placeholder={`Message #${activeGroup?.name || 'group'}`}
+              value={groupComposer || ""}
               onChange={(e) => setGroupComposer(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendGroupMessage(e);
+                }
+              }}
             />
-            <RippleButton type="submit">Send</RippleButton>
+            <RippleButton type="submit" title="Send message">
+              <Send size={18} />
+            </RippleButton>
           </form>
         )}
       </section>

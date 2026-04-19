@@ -14,7 +14,7 @@ function getUserSocketId(userId) {
   return null;
 }
 
-// Helper: User'in member oldugu gruplari getir
+// Helper: User'in member oldugu gruplari getir (member detaylari ile)
 async function getUserGroups(userId) {
   // once group_members tablosundan group_id'leri al
   const { data: memberships, error: membershipError } = await supabase
@@ -45,25 +45,49 @@ async function getUserGroups(userId) {
     return [];
   }
   
-  // Her grup icin member count al
-  const groupsWithCount = await Promise.all(
+  // Her grup icin member count ve member listesini al
+  const groupsWithDetails = await Promise.all(
     (groups || []).map(async (group) => {
-      const { count } = await supabase
+      // Grup uyelerini getir
+      const { data: groupMembers, error: membersError } = await supabase
         .from("group_members")
-        .select("*", { count: "exact", head: true })
+        .select("user_id, joined_at")
         .eq("group_id", group.id);
+      
+      if (membersError) {
+        console.error("[Groups] Members fetch error:", membersError);
+      }
+      
+      // User detaylarini getir
+      const memberIds = groupMembers?.map(m => m.user_id) || [];
+      let members = [];
+      
+      if (memberIds.length > 0) {
+        const { data: users, error: usersError } = await supabase
+          .from("users")
+          .select("id, username, avatar_url, status")
+          .in("id", memberIds);
+        
+        if (usersError) {
+          console.error("[Groups] Users fetch error:", usersError);
+        } else {
+          members = users || [];
+        }
+      }
       
       const membership = memberships.find(m => m.group_id === group.id);
       
       return {
         ...group,
-        memberCount: count || 0,
+        memberCount: groupMembers?.length || 0,
+        memberIds: memberIds, // Grup arama icin gerekli
+        members: members, // Grup detay icin
         joinedAt: membership?.joined_at,
       };
     })
   );
   
-  return groupsWithCount;
+  return groupsWithDetails;
 }
 
 // Get all groups where user is member
