@@ -108,24 +108,31 @@ function Lightbox({ url, onClose }) {
   );
 }
 
+function IncomingCallModal({ call }) {
+  if (!call || call.mode !== "incoming" || !call.peer) return null;
+  
+  return (
+    <div className="voice-modal-overlay" style={{ zIndex: 9999 }}>
+      <motion.div 
+        className="voice-modal" 
+        initial={{ scale: 0.9, opacity: 0 }} 
+        animate={{ scale: 1, opacity: 1 }}
+        style={{ zIndex: 10000 }}
+      >
+        <div className="voice-avatar">{call.peer.username?.charAt(0).toUpperCase()}</div>
+        <h3>{call.peer.username}</h3>
+        <p>Incoming {call.callType === "video" ? "video" : "voice"} call</p>
+        <div className="voice-modal-actions">
+          <RippleButton type="button" className="btn-decline" onClick={call.declineIncoming}>Decline</RippleButton>
+          <RippleButton type="button" className="btn-accept" onClick={call.acceptIncoming}>Accept</RippleButton>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function CallBar({ call, peerScreenSharing }) {
   if (!call || call.mode === null) return null;
-
-  if (call.mode === "incoming" && call.peer) {
-    return (
-      <div className="voice-modal-overlay">
-        <motion.div className="voice-modal" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-          <div className="voice-avatar">{call.peer.username?.charAt(0).toUpperCase()}</div>
-          <h3>{call.peer.username}</h3>
-          <p>Incoming {call.callType === "video" ? "video" : "voice"} call</p>
-          <div className="voice-modal-actions">
-            <RippleButton type="button" className="btn-decline" onClick={call.declineIncoming}>Decline</RippleButton>
-            <RippleButton type="button" className="btn-accept" onClick={call.acceptIncoming}>Accept</RippleButton>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   if ((call.mode === "active" || call.mode === "outgoing") && call.peer) {
     return (
@@ -1045,6 +1052,9 @@ export default function ChatLayout({
       </AnimatePresence>
 
       <audio ref={call?.remoteAudioRef} autoPlay playsInline className="hidden-audio" />
+
+      {/* Incoming Call Modal */}
+      <IncomingCallModal call={call} />
 
       <CallBar call={call} peerScreenSharing={peerScreenSharing} />
 
