@@ -377,6 +377,12 @@ export default function App() {
   };
 
   const handleOpenDm = (friend) => {
+    if (!friend || !friend.id) {
+      // DM'yi kapat (null friend)
+      setActiveDmUser(null);
+      socketRef.current?.emit("dm:set_active", { withUserId: null });
+      return;
+    }
     setActiveDmUser(friend);
     setDmUnread((u) => { const n = { ...u }; delete n[friend.id]; return n; });
     socketRef.current?.emit("dm:mark_read", { withUserId: friend.id });
