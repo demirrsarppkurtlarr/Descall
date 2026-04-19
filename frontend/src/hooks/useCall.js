@@ -114,32 +114,49 @@ export function useCall(socket) {
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
       const track = e.track;
-      console.log("[WebRTC] ontrack received:", track?.kind, "muted:", track?.muted, "id:", track?.id);
-      console.log("[WebRTC] Remote stream tracks:", remoteStream?.getTracks().map(t => `${t.kind}(${t.readyState})`));
+      console.log("[WebRTC] ontrack received:", track?.kind, "muted:", track?.muted, "enabled:", track?.enabled, "id:", track?.id);
+      console.log("[WebRTC] Remote stream tracks:", remoteStream?.getTracks().map(t => `${t.kind}(enabled:${t.enabled},muted:${t.muted},state:${t.readyState})`));
+      
+      // Store remote stream for later use
+      if (track.kind === "audio" && remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.muted = false; // Ensure not muted
+        remoteAudioRef.current.play().catch((err) => console.error("[WebRTC] Audio play error:", err));
+        console.log("[WebRTC] Audio stream attached to remoteAudioRef");
+      }
+      
+      if (track.kind === "video" && remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch((err) => console.error("[WebRTC] Video play error:", err));
+        console.log("[WebRTC] Video stream attached to remoteVideoRef");
+      }
       
       // Handle muted tracks - wait for unmute
       if (track?.muted) {
-        console.log("[WebRTC] Track is muted, waiting for unmute...");
+        console.log("[WebRTC] Track is initially muted, waiting for unmute...");
         track.onunmute = () => {
           console.log("[WebRTC] Track unmuted:", track.kind);
           if (track.kind === "video" && remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play().catch((err) => console.error("[WebRTC] Video play error:", err));
+            remoteVideoRef.current.play().catch((err) => console.error("[WebRTC] Video play error after unmute:", err));
           }
           if (track.kind === "audio" && remoteAudioRef.current) {
             remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.play().catch((err) => console.error("[WebRTC] Audio play error:", err));
+            remoteAudioRef.current.muted = false;
+            remoteAudioRef.current.play().catch((err) => console.error("[WebRTC] Audio play error after unmute:", err));
           }
         };
       }
       
-      if (remoteAudioRef.current) {
+      // Also attach combined stream to both refs for safety
+      if (remoteAudioRef.current && !remoteAudioRef.current.srcObject) {
         remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.play().catch((err) => console.error("[WebRTC] Audio play error:", err));
+        remoteAudioRef.current.muted = false;
+        remoteAudioRef.current.play().catch((err) => console.error("[WebRTC] Audio play error (fallback):", err));
       }
-      if (remoteVideoRef.current) {
+      if (remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
         remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play().catch((err) => console.error("[WebRTC] Video play error:", err));
+        remoteVideoRef.current.play().catch((err) => console.error("[WebRTC] Video play error (fallback):", err));
       }
     };
 
@@ -342,42 +359,66 @@ export function useCall(socket) {
     if (!pc) return;
 
     if (cameraOn) {
+      // Stop camera - disable track but don't remove
       const videoTrack = localStreamRef.current?.getVideoTracks()[0];
       if (videoTrack) {
-        const sender = pc.getSenders().find((s) => s.track === videoTrack);
-        if (sender) pc.removeTrack(sender);
-        videoTrack.stop();
-        localStreamRef.current.removeTrack(videoTrack);
+        videoTrack.enabled = false;
+        console.log("[Camera] Video track disabled");
       }
-      if (localVideoRef.current) localVideoRef.current.srcObject = null;
+      if (localVideoRef.current) localVideoRef.current.style.display = "none";
       setCameraOn(false);
-      setCallType("voice");
     } else {
       try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1280, height: 720, facingMode: "user" },
-        });
-        const videoTrack = videoStream.getVideoTracks()[0];
-        // Replace existing video track or add new one
-        const videoSender = pc.getSenders().find(s => s.track?.kind === "video");
-        console.log("[Camera] Found video sender:", !!videoSender, "senders count:", pc.getSenders().length);
-        if (videoSender) {
-          await videoSender.replaceTrack(videoTrack);
-          console.log("[Camera] Track replaced");
+        // Check if we already have a video track
+        let videoTrack = localStreamRef.current?.getVideoTracks()[0];
+        
+        if (videoTrack) {
+          // Re-enable existing track
+          videoTrack.enabled = true;
+          console.log("[Camera] Video track re-enabled");
         } else {
-          localStreamRef.current.addTrack(videoTrack);
-          pc.addTrack(videoTrack, localStreamRef.current);
-          console.log("[Camera] Track added");
+          // Get new video stream
+          const videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 1280, height: 720, facingMode: "user" },
+          });
+          videoTrack = videoStream.getVideoTracks()[0];
+          
+          // Add to local stream
+          if (localStreamRef.current) {
+            localStreamRef.current.addTrack(videoTrack);
+          }
+          
+          // Add to peer connection - use transceiver to ensure it's sent
+          const sender = pc.addTrack(videoTrack, localStreamRef.current);
+          console.log("[Camera] Track added to peer connection, sender:", !!sender);
         }
+        
         if (localVideoRef.current) {
+          localVideoRef.current.style.display = "block";
           localVideoRef.current.srcObject = localStreamRef.current;
           localVideoRef.current.play().catch((e) => console.error("[Camera] Local play error:", e));
         }
         setCameraOn(true);
         setCallType("video");
-      } catch (err) { console.error("[Camera] Error:", err); }
+        
+        // Trigger renegotiation for new track
+        if (pc.signalingState === "stable") {
+          console.log("[Camera] Triggering renegotiation...");
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          if (peerRef.current?.id && socket?.connected) {
+            socket.emit("call:offer", {
+              toUserId: peerRef.current.id,
+              offer: pc.localDescription,
+              callType: "video",
+            });
+          }
+        }
+      } catch (err) { 
+        console.error("[Camera] Error:", err); 
+      }
     }
-  }, [cameraOn]);
+  }, [cameraOn, socket]);
 
   const startScreenShare = useCallback(async () => {
     const pc = pcRef.current;
