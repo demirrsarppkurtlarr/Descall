@@ -27,7 +27,10 @@ export default function AdminPanel({ socket, onClose }) {
   const [snapshot, setSnapshot] = useState(null);
   const [errorLogs, setErrorLogs] = useState([]);
   const [errorQ, setErrorQ] = useState("");
-  const [errorFilter, setErrorFilter] = useState("all"); // all, unresolved, resolved
+  const [errorSourceFilter, setErrorSourceFilter] = useState("all");
+  const [errorUserFilter, setErrorUserFilter] = useState("all");
+  const [errorSources, setErrorSources] = useState([]);
+  const [errorUsers, setErrorUsers] = useState([]);
   const [expandedError, setExpandedError] = useState(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -65,9 +68,11 @@ export default function AdminPanel({ socket, onClose }) {
   }, []);
 
   const loadErrors = useCallback(async () => {
-    const d = await adminFetch("/api/errors");
+    const d = await adminFetch("/errors");
     const logs = Array.isArray(d) ? d : Array.isArray(d?.errors) ? d.errors : [];
     setErrorLogs(logs);
+    setErrorSources(d?.sources || []);
+    setErrorUsers(d?.usersWithErrors || []);
   }, []);
 
   useEffect(() => {
@@ -374,7 +379,7 @@ export default function AdminPanel({ socket, onClose }) {
         {tab === "errors" && (
           <section className="admin-section">
             <h2>Error Logs</h2>
-            <p className="muted">All frontend errors from all users</p>
+            <p className="muted">All server errors from all users with detailed information</p>
             
             <div className="admin-toolbar">
               <input
@@ -385,12 +390,23 @@ export default function AdminPanel({ socket, onClose }) {
               />
               <select
                 className="admin-select"
-                value={errorFilter}
-                onChange={(e) => setErrorFilter(e.target.value)}
+                value={errorSourceFilter}
+                onChange={(e) => setErrorSourceFilter(e.target.value)}
               >
-                <option value="all">All Errors</option>
-                <option value="unresolved">Unresolved</option>
-                <option value="resolved">Resolved</option>
+                <option value="all">All Sources</option>
+                {errorSources.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <select
+                className="admin-select"
+                value={errorUserFilter}
+                onChange={(e) => setErrorUserFilter(e.target.value)}
+              >
+                <option value="all">All Users</option>
+                {errorUsers.map((uid) => (
+                  <option key={uid} value={uid}>{uid.slice(0, 8)}…</option>
+                ))}
               </select>
               <RippleButton type="button" onClick={() => act(loadErrors)} disabled={busy}>
                 Refresh
@@ -399,93 +415,62 @@ export default function AdminPanel({ socket, onClose }) {
 
             <div className="error-stats">
               <span>Total: {(errorLogs || []).length}</span>
-              <span>Unresolved: {(errorLogs || []).filter((e) => !(e.resolved ?? e.is_resolved)).length}</span>
-              <span>Resolved: {(errorLogs || []).filter((e) => (e.resolved ?? e.is_resolved)).length}</span>
+              <span>Unique Sources: {errorSources.length}</span>
+              <span>Users with Errors: {errorUsers.length}</span>
             </div>
 
             <div className="error-list">
               {(errorLogs || [])
                 .filter(e => {
-                  const resolved = e.resolved ?? e.is_resolved ?? false;
-                  const message = e.message || e.error_message || "";
-                  const url = e.url || e.page_url || "";
-                  const matchesFilter = errorFilter === "all" || 
-                    (errorFilter === "unresolved" && !resolved) ||
-                    (errorFilter === "resolved" && resolved);
+                  const message = e.message || "";
+                  const source = e.source || "";
+                  const userId = e.userId || "";
+                  const matchesSource = errorSourceFilter === "all" || source === errorSourceFilter;
+                  const matchesUser = errorUserFilter === "all" || userId === errorUserFilter;
                   const matchesSearch = !errorQ || 
                     message.toLowerCase().includes(errorQ.toLowerCase()) ||
-                    url.toLowerCase().includes(errorQ.toLowerCase());
-                  return matchesFilter && matchesSearch;
+                    source.toLowerCase().includes(errorQ.toLowerCase()) ||
+                    (e.username || "").toLowerCase().includes(errorQ.toLowerCase());
+                  return matchesSource && matchesUser && matchesSearch;
                 })
                 .map((e) => (
-                  <div key={e.id} className="error-item" style={{ opacity: (e.resolved ?? e.is_resolved) ? 0.5 : 1 }}>
+                  <div key={e.id} className="error-item">
                     <div className="error-header" onClick={() => setExpandedError(expandedError === e.id ? null : e.id)}>
                       <div className="error-info">
-                        <span className="error-time">{e.timestamp ? new Date(e.timestamp).toLocaleString() : 'Invalid'}</span>
-                        <span className="error-user mono">{(e.user_id || e.userId || "anonymous").slice(0, 8)}…</span>
-                        <span className={`error-resolved ${(e.resolved ?? e.is_resolved) ? 'resolved' : 'unresolved'}`}>{(e.resolved ?? e.is_resolved) ? "✓ Resolved" : "⚠ Unresolved"}</span>
+                        <span className="error-time">{e.at ? new Date(e.at).toLocaleString() : 'Invalid'}</span>
+                        <span className="error-source mono">{e.source || "unknown"}</span>
+                        {e.username && <span className="error-user">{e.username}</span>}
+                        {e.userId && <span className="error-user-id mono">{e.userId.slice(0, 8)}…</span>}
                       </div>
-                      <span className="error-message">{e.message || e.error_message || "Unknown error"}</span>
+                      <span className="error-message">{e.message || "Unknown error"}</span>
                     </div>
                     
                     {expandedError === e.id && (
                       <div className="error-details">
-                        <div className="error-detail-section">
-                          <h4>URL</h4>
-                          <code className="error-url">{e.url || e.page_url || "N/A"}</code>
-                        </div>
-                        
-                        {(e.stack || e.error_stack) && (
+                        {e.userId && (
                           <div className="error-detail-section">
-                            <h4>Error Stack</h4>
-                            <pre className="error-stack">{e.stack || e.error_stack}</pre>
+                            <h4>User ID</h4>
+                            <code className="error-user-id">{e.userId}</code>
                           </div>
                         )}
-                        
-                        {(e.component_stack || e.componentStack) && (
+                        {e.username && (
                           <div className="error-detail-section">
-                            <h4>Component Stack</h4>
-                            <pre className="error-stack">{e.component_stack || e.componentStack}</pre>
+                            <h4>Username</h4>
+                            <span className="error-username">{e.username}</span>
                           </div>
                         )}
-                        
-                        {(e.user_agent || e.userAgent) && (
+                        {e.source && (
                           <div className="error-detail-section">
-                            <h4>User Agent</h4>
-                            <code className="error-user-agent">{e.user_agent || e.userAgent}</code>
+                            <h4>Source</h4>
+                            <code className="error-source">{e.source}</code>
                           </div>
                         )}
-                        
-                        <div className="error-actions">
-                          {!(e.resolved ?? e.is_resolved) && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                act(async () => {
-                                  await adminFetch(`/api/errors/${e.id}/resolve`, {
-                                    method: "PATCH",
-                                  });
-                                  await loadErrors();
-                                })
-                              }
-                            >
-                              Mark as Resolved
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              act(async () => {
-                                await adminFetch(`/api/errors/${e.id}`, {
-                                  method: "DELETE",
-                                });
-                                await loadErrors();
-                              })
-                            }
-                          >
-                            Delete
-                          </button>
-                        </div>
+                        {e.meta && Object.keys(e.meta).length > 0 && (
+                          <div className="error-detail-section">
+                            <h4>Meta Information</h4>
+                            <pre className="error-meta">{JSON.stringify(e.meta, null, 2)}</pre>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
