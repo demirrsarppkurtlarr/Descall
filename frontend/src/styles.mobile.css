@@ -57,14 +57,76 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    position: relative;
+  }
+
+  /* Mobile Panel Header - Fixed below mobile-header */
+  .main-panel .panel-header {
+    position: fixed;
+    top: var(--mobile-header-height);
+    left: 0;
+    right: 0;
+    height: auto;
+    min-height: 60px;
+    z-index: 500; /* Below mobile-header (1000) */
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* Panel title wrap - adjust for mobile */
+  .main-panel .panel-header .panel-title-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .main-panel .panel-header .panel-title-block {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .main-panel .panel-header .panel-title {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .main-panel .panel-header .panel-sub {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Adjust header actions for mobile */
+  .main-panel .panel-header .header-call-btns {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .main-panel .panel-header .header-group-actions {
+    display: none; /* Hide group actions on mobile header, show in menu instead */
   }
 
   .main-panel .messages-wrap {
     flex: 1;
     width: 100%;
-    padding-top: var(--mobile-header-height);
+    padding-top: calc(var(--mobile-header-height) + 60px); /* mobile-header + panel-header */
     padding-bottom: calc(var(--mobile-bottom-nav-height) + 80px);
     overflow-y: auto;
+    margin-top: 0;
   }
 
   /* Fix empty state text wrapping */
