@@ -468,6 +468,46 @@ export function useGroupCall(socket) {
       }
     };
 
+    // Handle when a new participant joins an existing call
+    const onParticipantJoined = async ({ groupId, fromUserId, fromUser }) => {
+      if (!fromUserId || fromUserId === myId) return;
+      
+      const stream = localStreamRef.current;
+      if (!stream) {
+        console.log("[GroupCall] No local stream for participant joined");
+        return;
+      }
+
+      // Check if we already have a connection with this user
+      if (pcMapRef.current.has(fromUserId)) {
+        console.log(`[GroupCall] Already connected to ${fromUserId}`);
+        return;
+      }
+
+      try {
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const peerData = { pc, pendingIce: [] };
+        pcMapRef.current.set(fromUserId, peerData);
+        
+        setupPeerConnection(pc, stream, fromUserId);
+
+        // Create and send offer to the new participant
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        socket.emit("group:call:offer", {
+          groupId,
+          toUserId: fromUserId,
+          offer: pc.localDescription,
+          callType: callType || "voice",
+        });
+
+        console.log(`[GroupCall] Offer sent to new participant ${fromUserId}`);
+      } catch (err) {
+        console.error("[GroupCall] Participant joined error:", err);
+      }
+    };
+
     const onAnswer = async ({ groupId, fromUserId, answer }) => {
       if (!fromUserId || !answer) return;
       
@@ -575,12 +615,15 @@ export function useGroupCall(socket) {
     };
 
     const onLeft = ({ groupId, userId }) => {
-      const peerData = pcMapRef.current.get(userId);
-      if (peerData?.pc) {
-        peerData.pc.close();
-      }
+      console.log(`[GroupCall] ${userId} left call in group ${groupId}`);
       pcMapRef.current.delete(userId);
       remoteStreamsRef.current.delete(userId);
+      const audioEl = remoteAudioRefs.current.get(userId);
+      if (audioEl) {
+        audioEl.srcObject = null;
+        audioEl.remove();
+        remoteAudioRefs.current.delete(userId);
+      }
       setParticipants((prev) => prev.filter((p) => p.id !== userId));
     };
 
@@ -624,6 +667,7 @@ export function useGroupCall(socket) {
     socket.on("group:call:declined", onDeclined);
     socket.on("group:screen:started", onScreenStarted);
     socket.on("group:screen:stopped", onScreenStopped);
+    socket.on("group:call:participant-joined", onParticipantJoined);
 
     return () => {
       socket.off("group:call:incoming", onIncoming);
@@ -636,6 +680,7 @@ export function useGroupCall(socket) {
       socket.off("group:call:declined", onDeclined);
       socket.off("group:screen:started", onScreenStarted);
       socket.off("group:screen:stopped", onScreenStopped);
+      socket.off("group:call:participant-joined", onParticipantJoined);
     };
   }, [socket, activeGroupId, isInCall, callType, cleanup, setupPeerConnection]);
 

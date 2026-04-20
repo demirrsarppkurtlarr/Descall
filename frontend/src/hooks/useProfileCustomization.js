@@ -32,6 +32,19 @@ const defaultCustomization = {
     bannerImage: null,
     showActivity: true,
     showStatusTo: "everyone", // everyone, friends, nobody
+    showOnlineStatus: true,
+    showUsername: true,
+  },
+  notifications: {
+    messageNotifications: true,
+    callNotifications: true,
+    groupNotifications: true,
+    friendRequestNotifications: true,
+  },
+  privacy: {
+    allowMessagesFromNonFriends: false,
+    onlineStatusFriendsOnly: false,
+    allowProfileViewing: true,
   },
 };
 
@@ -85,6 +98,26 @@ export function useProfileCustomization() {
     });
   }, []);
 
+  const updateNotifications = useCallback((updates) => {
+    setCustomization((prev) => {
+      const next = { ...prev, notifications: { ...prev.notifications, ...updates } };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const updatePrivacy = useCallback((updates) => {
+    setCustomization((prev) => {
+      const next = { ...prev, privacy: { ...prev.privacy, ...updates } };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
   const resetCustomization = useCallback(() => {
     setCustomization(defaultCustomization);
     try {
@@ -117,6 +150,8 @@ export function useProfileCustomization() {
     updateAnimations,
     updateLayout,
     updateProfile,
+    updateNotifications,
+    updatePrivacy,
     resetCustomization,
     applyThemeToCSS,
   };

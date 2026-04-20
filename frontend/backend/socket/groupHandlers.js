@@ -83,14 +83,15 @@ function registerGroupHandlers(io, socket, state) {
   });
 
   // Accept call and send offer
-  socket.on("group:call:accept", ({ groupId, toUserId, offer }) => {
-    if (!groupId || !toUserId || !offer) {
-      appendErrorLog("group:call:accept", "Missing required parameters", { groupId, toUserId, hasOffer: !!offer }, myId, socket.user?.username);
+  socket.on("group:call:accept", ({ groupId, toUserId }) => {
+    if (!groupId || !toUserId) {
+      appendErrorLog("group:call:accept", "Missing required parameters", { groupId, toUserId }, myId, socket.user?.username);
       return;
     }
 
-    console.log(`[GroupCall] ${myId} accepted call, sending offer to ${toUserId}`);
+    console.log(`[GroupCall] ${myId} accepted call, notifying initiator ${toUserId}`);
 
+    // Notify the initiator that someone accepted
     io.to(`user:${toUserId}`).emit("group:call:accepted", {
       groupId,
       fromUserId: myId,
@@ -99,7 +100,17 @@ function registerGroupHandlers(io, socket, state) {
         username: socket.user.username,
         avatar_url: socket.user.avatar_url,
       },
-      offer,
+    });
+
+    // Also notify other participants in the group that a new person joined
+    socket.to(`group:${groupId}`).emit("group:call:participant-joined", {
+      groupId,
+      fromUserId: myId,
+      fromUser: {
+        id: myId,
+        username: socket.user.username,
+        avatar_url: socket.user.avatar_url,
+      },
     });
   });
 

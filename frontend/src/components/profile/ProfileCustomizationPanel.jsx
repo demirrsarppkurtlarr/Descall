@@ -67,6 +67,8 @@ export default function ProfileCustomizationPanel({
   updateAnimations,
   updateLayout,
   updateProfile,
+  updateNotifications,
+  updatePrivacy,
   resetCustomization,
   onClose,
   me,
@@ -507,6 +509,162 @@ export default function ProfileCustomizationPanel({
                     />
                   </button>
                 </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Camera size={20} />
+                    <span>Show Online Status</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.profile.showOnlineStatus ? "on" : ""}`}
+                    onClick={() => updateProfile({ showOnlineStatus: !customization.profile.showOnlineStatus })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.profile.showOnlineStatus ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Hash size={20} />
+                    <span>Show Username</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.profile.showUsername ? "on" : ""}`}
+                    onClick={() => updateProfile({ showUsername: !customization.profile.showUsername })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.profile.showUsername ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="setting-card">
+                <div className="setting-header">
+                  <h3>Notification Settings</h3>
+                </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Bell size={20} />
+                    <span>Message Notifications</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.notifications?.messageNotifications ? "on" : ""}`}
+                    onClick={() => updateNotifications({ messageNotifications: !customization.notifications?.messageNotifications })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.notifications?.messageNotifications ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Bell size={20} />
+                    <span>Call Notifications</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.notifications?.callNotifications ? "on" : ""}`}
+                    onClick={() => updateNotifications({ callNotifications: !customization.notifications?.callNotifications })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.notifications?.callNotifications ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Bell size={20} />
+                    <span>Group Notifications</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.notifications?.groupNotifications ? "on" : ""}`}
+                    onClick={() => updateNotifications({ groupNotifications: !customization.notifications?.groupNotifications })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.notifications?.groupNotifications ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Bell size={20} />
+                    <span>Friend Request Notifications</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.notifications?.friendRequestNotifications ? "on" : ""}`}
+                    onClick={() => updateNotifications({ friendRequestNotifications: !customization.notifications?.friendRequestNotifications })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.notifications?.friendRequestNotifications ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="setting-card">
+                <div className="setting-header">
+                  <h3>Privacy Settings</h3>
+                </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Eye size={20} />
+                    <span>Allow Messages From Non-Friends</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.privacy?.allowMessagesFromNonFriends ? "on" : ""}`}
+                    onClick={() => updatePrivacy({ allowMessagesFromNonFriends: !customization.privacy?.allowMessagesFromNonFriends })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.privacy?.allowMessagesFromNonFriends ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Eye size={20} />
+                    <span>Show Online Status To Friends Only</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.privacy?.onlineStatusFriendsOnly ? "on" : ""}`}
+                    onClick={() => updatePrivacy({ onlineStatusFriendsOnly: !customization.privacy?.onlineStatusFriendsOnly })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.privacy?.onlineStatusFriendsOnly ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
+
+                <div className="setting-row">
+                  <div className="setting-info">
+                    <Eye size={20} />
+                    <span>Allow Profile Viewing</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${customization.privacy?.allowProfileViewing ? "on" : ""}`}
+                    onClick={() => updatePrivacy({ allowProfileViewing: !customization.privacy?.allowProfileViewing })}
+                  >
+                    <motion.div
+                      className="toggle-handle"
+                      animate={{ x: customization.privacy?.allowProfileViewing ? 24 : 0 }}
+                    />
+                  </button>
+                </div>
               </div>
 
               {/* Profile Preview */}
@@ -546,10 +704,16 @@ export default function ProfileCustomizationPanel({
           Reset
         </RippleButton>
         <RippleButton
-          onClick={onClose}
+          onClick={() => {
+            // Save settings to localStorage
+            localStorage.setItem('descall-customization', JSON.stringify(customization));
+            console.log('[Settings] Saved customization:', customization);
+            onClose();
+          }}
           className="btn-primary"
         >
-          Done
+          <Check size={16} />
+          Save Changes
         </RippleButton>
       </div>
     </motion.div>
