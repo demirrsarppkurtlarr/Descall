@@ -1005,6 +1005,29 @@
 
   /* Old mobile call styles removed - replaced by fullscreen modal */
 
+  /* Group Members Info - Mobile */
+  .group-members-info {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+  }
+
+  .member-avatars {
+    margin-left: 8px;
+  }
+
+  .member-avatar-sm {
+    width: 20px;
+    height: 20px;
+    margin-left: -6px;
+  }
+
+  .member-more {
+    width: 20px;
+    height: 20px;
+    margin-left: -6px;
+    font-size: 9px;
+  }
+
   .video-remote-wrap {
     flex: 1;
     position: relative;

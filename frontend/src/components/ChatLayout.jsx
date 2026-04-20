@@ -15,7 +15,7 @@ import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
 // Modern Group API
-import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGroup, renameGroup, inviteToGroup } from "../api/groups";
+import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGroup, renameGroup, inviteToGroup, getGroupMembers } from "../api/groups";
 import {
   MessageSquare, Users, UserPlus, Bell, Circle,
   PanelLeftClose, Settings, Send, Paperclip,
@@ -380,6 +380,7 @@ export default function ChatLayout({
     list: [],
     active: null,
     messages: [],
+    members: [],
     call: {
       minimized: false,
     },
@@ -503,6 +504,14 @@ export default function ChatLayout({
       } catch (err) {
         console.error("[ChatLayout] Failed to load group messages:", err);
         setGroups(g => ({ ...g, messages: [] }));
+      }
+      // Fetch group members
+      try {
+        const members = await getGroupMembers(group.id);
+        setGroups(g => ({ ...g, members: members || [] }));
+      } catch (err) {
+        console.error("[ChatLayout] Failed to load group members:", err);
+        setGroups(g => ({ ...g, members: [] }));
       }
       // Socket join handled by useGroupCall hook
     },
@@ -940,6 +949,26 @@ export default function ChatLayout({
                 <span className="panel-sub">
                   {activeDmUser ? "Direct message" : groups.active ? "Group chat" : "Select a conversation"}
                 </span>
+                {groups.active && (
+                  <div className="group-members-info">
+                    <Users size={14} />
+                    <span className="member-count">{groups.members?.length || 0} members</span>
+                    <div className="member-avatars">
+                      {(groups.members || []).slice(0, 5).map((member) => (
+                        <Avatar 
+                          key={member.id} 
+                          name={member.username} 
+                          size={24} 
+                          imageUrl={member.avatar_url} 
+                          className="member-avatar-sm"
+                        />
+                      ))}
+                      {(groups.members?.length || 0) > 5 && (
+                        <span className="member-more">+{groups.members.length - 5}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
             {activeDmUser && (
