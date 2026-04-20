@@ -96,12 +96,15 @@ export function useGroupCall(socket) {
   }, []);
 
   const setupPeerConnection = useCallback((pc, stream, userId) => {
-    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    stream.getTracks().forEach((t) => {
+      t.enabled = true;
+      pc.addTrack(t, stream);
+    });
 
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
       const track = e.track;
-      console.log(`[GroupCall] Track from ${userId}:`, track.kind, "muted:", track.muted);
+      console.log(`[GroupCall] Track from ${userId}:`, track.kind, "muted:", track.muted, "enabled:", track.enabled);
       
       remoteStreamsRef.current.set(userId, remoteStream);
       
@@ -142,15 +145,15 @@ export function useGroupCall(socket) {
           return prev.map((p) => p.id === userId ? { 
             ...p, 
             stream: remoteStream,
-            hasVideo: e.track.kind === "video" ? true : p.hasVideo,
-            hasAudio: e.track.kind === "audio" ? true : p.hasAudio
+            hasVideo: track.kind === "video" ? true : p.hasVideo,
+            hasAudio: track.kind === "audio" ? true : p.hasAudio
           } : p);
         }
         return [...prev, { 
           id: userId, 
           stream: remoteStream, 
-          hasVideo: e.track.kind === "video", 
-          hasAudio: e.track.kind === "audio",
+          hasVideo: track.kind === "video", 
+          hasAudio: track.kind === "audio",
           username: "Member" 
         }];
       });
@@ -246,7 +249,7 @@ export function useGroupCall(socket) {
       console.error("[GroupCall] Start failed:", err);
       cleanup();
     }
-  }, [cleanup]);
+  }, [cleanup, activeGroupId]);
 
   const acceptGroupCall = useCallback(async (groupId, type, fromUser) => {
     if (!groupId || !fromUser?.id || !socketRef.current) return;
@@ -296,7 +299,7 @@ export function useGroupCall(socket) {
       console.error("[GroupCall] Accept failed:", err);
       cleanup();
     }
-  }, [cleanup, setupPeerConnection]);
+  }, [cleanup, setupPeerConnection, activeGroupId]);
 
   const declineCall = useCallback((groupId, fromUserId) => {
     if (socketRef.current?.connected) {
@@ -316,13 +319,31 @@ export function useGroupCall(socket) {
     cleanup();
   }, [activeGroupId, isInitiator, cleanup]);
 
-  const toggleMute = useCallback(() => {
+  const toggleMute = useCallback(async () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (track) {
       track.enabled = !track.enabled;
       setIsMuted(!track.enabled);
+
+      // Trigger renegotiation for all peers to send audio state
+      pcMapRef.current.forEach(async (peerData, userId) => {
+        try {
+          const offer = await peerData.pc.createOffer();
+          await peerData.pc.setLocalDescription(offer);
+          if (socketRef.current?.connected) {
+            socketRef.current.emit("group:call:offer", {
+              groupId: activeGroupId,
+              toUserId: userId,
+              offer: peerData.pc.localDescription,
+              callType: callType || "voice",
+            });
+          }
+        } catch (err) {
+          console.error(`[GroupCall] Mute renegotiation error for ${userId}:`, err);
+        }
+      });
     }
-  }, []);
+  }, [activeGroupId, callType]);
 
   const toggleCamera = useCallback(async () => {
     if (isCameraOn) {
@@ -364,11 +385,29 @@ export function useGroupCall(socket) {
         }
         setIsCameraOn(true);
         setCallType("video");
+
+        // Trigger renegotiation for all peers to send video track
+        pcMapRef.current.forEach(async (peerData, userId) => {
+          try {
+            const offer = await peerData.pc.createOffer();
+            await peerData.pc.setLocalDescription(offer);
+            if (socketRef.current?.connected) {
+              socketRef.current.emit("group:call:offer", {
+                groupId: activeGroupId,
+                toUserId: userId,
+                offer: peerData.pc.localDescription,
+                callType: "video",
+              });
+            }
+          } catch (err) {
+            console.error(`[GroupCall] Renegotiation error for ${userId}:`, err);
+          }
+        });
       } catch (err) {
         console.error("[GroupCall] Camera error:", err);
       }
     }
-  }, [isCameraOn]);
+  }, [isCameraOn, activeGroupId]);
 
   const startScreenShare = useCallback(async () => {
     if (isScreenSharing) return;
@@ -408,15 +447,33 @@ export function useGroupCall(socket) {
 
       setIsScreenSharing(true);
       
+      // Trigger renegotiation for all peers to send screen track
+      pcMapRef.current.forEach(async (peerData, userId) => {
+        try {
+          const offer = await peerData.pc.createOffer();
+          await peerData.pc.setLocalDescription(offer);
+          if (socketRef.current?.connected) {
+            socketRef.current.emit("group:call:offer", {
+              groupId: activeGroupId,
+              toUserId: userId,
+              offer: peerData.pc.localDescription,
+              callType: callType || "video",
+            });
+          }
+        } catch (err) {
+          console.error(`[GroupCall] Screen share renegotiation error for ${userId}:`, err);
+        }
+      });
+      
       if (socketRef.current?.connected) {
         socketRef.current.emit("group:screen:start", { groupId: activeGroupId });
       }
     } catch (err) {
       console.error("[GroupCall] Screen share error:", err);
     }
-  }, [isScreenSharing, activeGroupId]);
+  }, [isScreenSharing, activeGroupId, callType]);
 
-  const stopScreenShare = useCallback(() => {
+  const stopScreenShare = useCallback(async () => {
     if (!isScreenSharing) return;
 
     if (screenSenderRef.current) {
@@ -436,10 +493,28 @@ export function useGroupCall(socket) {
     if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
     setIsScreenSharing(false);
     
+    // Trigger renegotiation for all peers to remove screen track
+    pcMapRef.current.forEach(async (peerData, userId) => {
+      try {
+        const offer = await peerData.pc.createOffer();
+        await peerData.pc.setLocalDescription(offer);
+        if (socketRef.current?.connected) {
+          socketRef.current.emit("group:call:offer", {
+            groupId: activeGroupId,
+            toUserId: userId,
+            offer: peerData.pc.localDescription,
+            callType: callType || "voice",
+          });
+        }
+      } catch (err) {
+        console.error(`[GroupCall] Screen stop renegotiation error for ${userId}:`, err);
+      }
+    });
+    
     if (socketRef.current?.connected) {
       socketRef.current.emit("group:screen:stop", { groupId: activeGroupId });
     }
-  }, [isScreenSharing, activeGroupId]);
+  }, [isScreenSharing, activeGroupId, callType]);
 
   useEffect(() => {
     if (!socket) return;
