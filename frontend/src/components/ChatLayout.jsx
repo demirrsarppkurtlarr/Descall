@@ -118,7 +118,9 @@ function Lightbox({ url, onClose }) {
   );
 }
 
-function CallBar({ call, peerScreenSharing }) {
+function CallBar({ call, peerScreenSharing, onMinimize }) {
+  const [minimized, setMinimized] = useState(false);
+
   if (!call || call.mode === null) return null;
 
   if (call.mode === "incoming" && call.peer) {
@@ -138,99 +140,156 @@ function CallBar({ call, peerScreenSharing }) {
   }
 
   if ((call.mode === "active" || call.mode === "outgoing") && call.peer) {
-    return (
-      <motion.div className={`call-bar ${call.mode === "outgoing" ? "calling" : ""}`} initial={{ y: 80 }} animate={{ y: 0 }}>
-        <div className="call-bar-left">
-          <Avatar name={call.peer.username} size={32} imageUrl={call.peer.avatarUrl} />
-          <div className="call-bar-text">
-            <strong>{call.peer.username}</strong>
-            <span>
-              {call.mode === "active"
-                ? call.formatDuration(call.duration)
-                : "Ringing…"}
-            </span>
-            {peerScreenSharing && <span className="screen-indicator">🖥 Sharing screen</span>}
-            {call.connectionQuality === "poor" && <span className="quality-warn">⚠ Weak</span>}
+    if (minimized) {
+      // Minimized floating button
+      return (
+        <motion.div 
+          className="call-minimized-btn" 
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setMinimized(false)}
+        >
+          <div className="minimized-avatar">
+            <Avatar name={call.peer.username} size={40} imageUrl={call.peer.avatarUrl} />
+            <span className="minimized-pulse" />
           </div>
-        </div>
-        <div className="call-bar-actions">
-          <RippleButton type="button" className={`call-btn ${call.muted ? "active" : ""}`} onClick={call.toggleMute} title={call.muted ? "Unmute" : "Mute"}>
-            {call.muted ? "🔇" : "🎙"}
-          </RippleButton>
-          <RippleButton type="button" className={`call-btn ${call.cameraOn ? "active" : ""}`} onClick={call.toggleCamera} title={call.cameraOn ? "Turn off camera" : "Turn on camera"}>
-            {call.cameraOn ? "📹" : "📷"}
-          </RippleButton>
-          <RippleButton type="button" className={`call-btn ${call.screenSharing ? "active" : ""}`} onClick={call.screenSharing ? call.stopScreenShare : call.startScreenShare} title={call.screenSharing ? "Stop sharing" : "Share screen"}>
-            🖥
-          </RippleButton>
-          <RippleButton type="button" className="call-btn hangup" onClick={() => call.endCall(call.peer.id)} title="End call">
-            📞
-          </RippleButton>
-        </div>
-      </motion.div>
+          <span className="minimized-duration">{call.formatDuration(call.duration)}</span>
+          <span className="minimized-expand">↗</span>
+        </motion.div>
+      );
+    }
+
+    // Fullscreen call modal
+    return (
+      <div className="call-fullscreen-overlay">
+        <motion.div 
+          className="call-fullscreen"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+        >
+          {/* Header */}
+          <div className="call-fullscreen-header">
+            <div className="call-header-info">
+              <Avatar name={call.peer.username} size={48} imageUrl={call.peer.avatarUrl} />
+              <div>
+                <h3>{call.peer.username}</h3>
+                <span className="call-status">
+                  {call.mode === "active"
+                    ? call.formatDuration(call.duration)
+                    : "Ringing…"}
+                </span>
+                {peerScreenSharing && <span className="screen-indicator">🖥 Sharing screen</span>}
+                {call.connectionQuality === "poor" && <span className="quality-warn">⚠ Weak connection</span>}
+              </div>
+            </div>
+            <button 
+              className="call-minimize-btn" 
+              onClick={() => setMinimized(true)}
+              title="Minimize call"
+            >
+              <Minimize2 size={20} />
+            </button>
+          </div>
+
+          {/* Video area */}
+          {call.callType === "video" && (
+            <div className="call-fullscreen-video">
+              <video 
+                ref={call.remoteVideoRef} 
+                autoPlay 
+                playsInline 
+                className="call-remote-video"
+              />
+              {call.cameraOn && (
+                <div className="call-pip-video">
+                  <video 
+                    ref={call.localVideoRef} 
+                    autoPlay 
+                    playsInline 
+                    muted 
+                    className="call-local-video"
+                  />
+                </div>
+              )}
+              {peerScreenSharing && (
+                <div className="call-screen-share">
+                  <video 
+                    ref={call.screenVideoRef} 
+                    autoPlay 
+                    playsInline 
+                    muted 
+                    className="call-screen-video"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Voice-only visualization */}
+          {call.callType === "voice" && (
+            <div className="call-fullscreen-voice">
+              <div className="voice-visualizer">
+                <div className="voice-avatar-large">
+                  <Avatar name={call.peer.username} size={120} imageUrl={call.peer.avatarUrl} />
+                </div>
+                <div className="voice-waves">
+                  <span className="wave" />
+                  <span className="wave" />
+                  <span className="wave" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Controls */}
+          <div className="call-fullscreen-controls">
+            <RippleButton 
+              type="button" 
+              className={`call-control-btn ${call.muted ? "muted" : ""}`} 
+              onClick={call.toggleMute}
+            >
+              {call.muted ? <MicOff size={24} /> : <Mic size={24} />}
+              <span>{call.muted ? "Unmute" : "Mute"}</span>
+            </RippleButton>
+            
+            {call.callType === "video" && (
+              <RippleButton 
+                type="button" 
+                className={`call-control-btn ${call.cameraOn ? "active" : ""}`} 
+                onClick={call.toggleCamera}
+              >
+                {call.cameraOn ? <CameraOff size={24} /> : <Camera size={24} />}
+                <span>{call.cameraOn ? "Camera off" : "Camera on"}</span>
+              </RippleButton>
+            )}
+            
+            <RippleButton 
+              type="button" 
+              className={`call-control-btn ${call.screenSharing ? "active" : ""}`} 
+              onClick={call.screenSharing ? call.stopScreenShare : call.startScreenShare}
+            >
+              <Monitor size={24} />
+              <span>{call.screenSharing ? "Stop sharing" : "Share screen"}</span>
+            </RippleButton>
+            
+            <RippleButton 
+              type="button" 
+              className="call-control-btn hangup" 
+              onClick={() => call.endCall(call.peer.id)}
+            >
+              <PhoneOff size={24} />
+              <span>End call</span>
+            </RippleButton>
+          </div>
+        </motion.div>
+      </div>
     );
   }
 
   return null;
-}
-
-function VideoPanel({ call, peerScreenSharing }) {
-  if (!call || call.mode !== "active") return null;
-  
-  // Always show panel during active call - video will render when stream available
-  const hasVideo = call.callType === "video" || peerScreenSharing || call.cameraOn;
-  
-  return (
-    <div className={`video-panel ${hasVideo ? "has-video" : "voice-only"}`}>
-      {hasVideo && (
-        <div className="video-remote-wrap">
-          <video 
-            ref={call.remoteVideoRef} 
-            autoPlay 
-            playsInline 
-            className="video-remote"
-            style={{ objectFit: "cover" }}
-          />
-          {peerScreenSharing && <div className="screen-share-label">🖥 Peer screen sharing</div>}
-        </div>
-      )}
-      
-      {/* Local video PIP - show when camera on or screen sharing */}
-      {(call.cameraOn || call.screenSharing) && (
-        <div className="video-pip-wrap">
-          <video 
-            ref={call.localVideoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            className="video-pip"
-          />
-        </div>
-      )}
-      
-      {/* Screen share preview (local) */}
-      {call.screenSharing && (
-        <div className="video-screen-preview">
-          <video 
-            ref={call.screenVideoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            className="video-screen"
-          />
-          <div className="screen-share-label local">🖥 You are sharing</div>
-        </div>
-      )}
-      
-      {/* Voice-only indicator */}
-      {!hasVideo && (
-        <div className="voice-indicator">
-          <span className="voice-icon">🎤</span>
-          <span>Voice call active</span>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // Add subtle animations
@@ -465,11 +524,15 @@ export default function ChatLayout({
     create: async (e) => {
       e?.preventDefault();
       const { newGroupName, selectedMembers } = groups.ui;
-      if (!newGroupName?.trim() || selectedMembers.length === 0) return;
+      const members = asArray(selectedMembers);
+      if (!newGroupName?.trim() || members.length === 0) {
+        toast?.error?.("Please enter a group name and select at least one member");
+        return;
+      }
       try {
         const result = await createGroup({
           name: newGroupName.trim(),
-          memberIds: selectedMembers,
+          memberIds: members,
         });
         setGroups(g => ({
           ...g,
@@ -1273,14 +1336,13 @@ export default function ChatLayout({
       {/* Right Rail - Desktop Only */}
       {!isMobile && (
         <aside className="right-rail custom-scroll">
-          <VideoPanel call={call} peerScreenSharing={peerScreenSharing} />
           <div className="voice-activity glass">
             <h4>Call</h4>
             {call?.mode === "incoming" && call.peer && <p className="voice-hint">Incoming {call.callType} call from {call.peer.username}</p>}
             {(call?.mode === "active" || call?.mode === "outgoing") && call.peer && (
               <p className="voice-hint">{call.mode === "outgoing" ? "Calling" : "In call with"} {call.peer.username} ({call.callType})</p>
             )}
-            {(!call || call.mode === null) && <p className="voice-hint muted">No active call. Use Call in a DM to start WebRTC.</p>}
+            {call?.mode === null && <p className="voice-hint">No active call</p>}
           </div>
           <div className="tips-card glass">
             <h4>Shortcuts</h4>
@@ -1336,11 +1398,8 @@ export default function ChatLayout({
 
       <audio ref={call?.remoteAudioRef} autoPlay playsInline className="hidden-audio" />
 
-      {/* Call UI - Shows on both desktop and mobile */}
+      {/* Call UI - Fullscreen modal on both desktop and mobile */}
       <CallBar call={call} peerScreenSharing={peerScreenSharing} />
-      
-      {/* Video Panel - Mobile optimized */}
-      {isMobile && <VideoPanel call={call} peerScreenSharing={peerScreenSharing} />}
 
       <AnimatePresence>
         {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
