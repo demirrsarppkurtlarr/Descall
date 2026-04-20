@@ -32,9 +32,10 @@ export default function VideoConference({
   focusedParticipant,
   setFocusedParticipant,
   duration = 0,
+  remoteStreams,
 }) {
   const safeParticipants = Array.isArray(participants) ? participants : [];
-  const remoteStreamMap = call?.remoteStreams?.current instanceof Map ? call.remoteStreams.current : new Map();
+  const remoteStreamMap = remoteStreams?.current instanceof Map ? remoteStreams.current : new Map();
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "focus"
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef(null);

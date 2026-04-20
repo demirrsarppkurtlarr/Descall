@@ -1688,7 +1688,8 @@ export default function ChatLayout({
         callType={groupCall?.callType}
         dominantSpeaker={groupCall?.dominantSpeaker}
         focusedParticipant={groupCall?.focusedParticipant}
-        setFocusedParticipant={groupCall?.setFocusedParticipant || (() => {})}
+        setFocusedParticipant={groupCall?.setFocusedParticipant}
+        remoteStreams={groupCall?.remoteStreams}
         duration={groupCall?.duration || 0}
       />
 

@@ -114,6 +114,18 @@ function registerGroupHandlers(io, socket, state) {
     });
   });
 
+  // Send offer (for renegotiation or camera toggle)
+  socket.on("group:call:offer", ({ groupId, toUserId, offer, callType }) => {
+    if (!groupId || !toUserId || !offer) return;
+
+    io.to(`user:${toUserId}`).emit("group:call:offer", {
+      groupId,
+      fromUserId: myId,
+      offer,
+      callType,
+    });
+  });
+
   // Decline call
   socket.on("group:call:decline", ({ groupId, toUserId }) => {
     if (!groupId || !toUserId) return;
