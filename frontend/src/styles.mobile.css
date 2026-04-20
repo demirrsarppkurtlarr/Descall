@@ -1028,6 +1028,74 @@
     font-size: 9px;
   }
 
+  /* Fullscreen Call Modal - Mobile */
+  .call-fullscreen-overlay {
+    z-index: 1001;
+  }
+
+  .call-fullscreen-header {
+    padding: 16px 20px;
+  }
+
+  .call-header-info h3 {
+    font-size: 18px;
+  }
+
+  .call-status {
+    font-size: 12px;
+  }
+
+  .call-fullscreen-video {
+    flex: 1;
+  }
+
+  .call-pip-video {
+    width: 120px;
+    height: 68px;
+    bottom: 80px;
+    right: 16px;
+  }
+
+  .call-screen-share {
+    width: 90%;
+    top: 80px;
+  }
+
+  .voice-avatar-large {
+    width: 120px;
+    height: 120px;
+  }
+
+  .call-fullscreen-controls {
+    padding: 20px;
+    gap: 12px;
+  }
+
+  .call-control-btn {
+    padding: 12px 16px;
+    min-width: 60px;
+    font-size: 12px;
+  }
+
+  .call-control-btn span {
+    display: none;
+  }
+
+  /* Minimized Button - Mobile */
+  .call-minimized-btn {
+    bottom: 16px;
+    right: 16px;
+    padding: 10px 14px;
+  }
+
+  .minimized-duration {
+    font-size: 12px;
+  }
+
+  .minimized-expand {
+    font-size: 16px;
+  }
+
   .video-remote-wrap {
     flex: 1;
     position: relative;
