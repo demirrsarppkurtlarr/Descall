@@ -1096,6 +1096,84 @@
     font-size: 16px;
   }
 
+  /* Video Conference - Mobile */
+  .video-conference-overlay {
+    z-index: 1001;
+  }
+
+  .vc-header {
+    padding: 12px 16px;
+  }
+
+  .vc-title span {
+    font-size: 14px;
+  }
+
+  .vc-view-toggle button {
+    padding: 8px;
+  }
+
+  .vc-controls {
+    padding: 16px;
+  }
+
+  .vc-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .vc-end-call span {
+    display: none;
+  }
+
+  .vc-pip-container {
+    width: 260px;
+  }
+
+  .vc-pip-video-area {
+    aspect-ratio: 16/9;
+  }
+
+  .vc-pip-controls {
+    padding: 8px 10px;
+  }
+
+  .vc-pip-control {
+    width: 32px;
+    height: 32px;
+  }
+
+  .vc-grid {
+    gap: 4px;
+  }
+
+  .vc-video-cell {
+    min-height: 120px;
+  }
+
+  .vc-name {
+    font-size: 11px;
+  }
+
+  .vc-focus-main {
+    height: 60%;
+  }
+
+  .vc-thumbnails {
+    height: 40%;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .vc-thumb {
+    width: 80px;
+    height: 60px;
+  }
+
+  .vc-thumb-name {
+    font-size: 10px;
+  }
+
   .video-remote-wrap {
     flex: 1;
     position: relative;
