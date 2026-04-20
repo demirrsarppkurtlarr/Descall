@@ -1223,6 +1223,18 @@ export default function ChatLayout({
                 </motion.div>
               )}
 
+              {isMobile && activeMobileView === "profile" && (
+                <motion.div className="mobile-view-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div className="mobile-section">
+                    <div className="empty-state glass">
+                      <User size={48} className="mobile-icon-muted" />
+                      <h4>Profile</h4>
+                      <p>Profile customization coming soon</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {!isMobile && !activeDmUser && !groups.active && (
                 <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Welcome to Descall</h4>
@@ -1856,16 +1868,6 @@ export default function ChatLayout({
               <span className="mobile-nav-badge">{groupsList.length}</span>
             </button>
             <button
-              className={`mobile-nav-item ${activeMobileView === "calls" ? "active" : ""}`}
-              onClick={() => {
-                vibrate(10);
-                setActiveMobileView("calls");
-              }}
-            >
-              <Phone className="mobile-nav-icon" size={24} />
-              <span>Calls</span>
-            </button>
-            <button
               className={`mobile-nav-item ${activeMobileView === "friends" ? "active" : ""}`}
               onClick={() => {
                 vibrate(10);
@@ -1874,6 +1876,16 @@ export default function ChatLayout({
             >
               <UserPlus className="mobile-nav-icon" size={24} />
               <span>Friends</span>
+            </button>
+            <button
+              className={`mobile-nav-item ${activeMobileView === "profile" ? "active" : ""}`}
+              onClick={() => {
+                vibrate(10);
+                setActiveMobileView("profile");
+              }}
+            >
+              <User className="mobile-nav-icon" size={24} />
+              <span>Profile</span>
             </button>
           </nav>
         </>

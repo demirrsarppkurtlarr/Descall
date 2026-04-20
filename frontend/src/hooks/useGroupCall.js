@@ -73,6 +73,7 @@ export function useGroupCall(socket) {
     
     remoteAudioRefs.current.forEach((audioEl) => {
       audioEl.srcObject = null;
+      audioEl.remove();
     });
     remoteAudioRefs.current.clear();
 
@@ -112,6 +113,8 @@ export function useGroupCall(socket) {
           audioEl.autoplay = true;
           audioEl.muted = false;
           audioEl.playsInline = true;
+          audioEl.style.display = "none";
+          document.body.appendChild(audioEl);
           remoteAudioRefs.current.set(userId, audioEl);
         }
         audioEl.srcObject = remoteStream;
