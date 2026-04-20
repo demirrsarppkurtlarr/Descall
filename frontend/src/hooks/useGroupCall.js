@@ -399,11 +399,24 @@ export function useGroupCall(socket) {
       screenStreamRef.current = stream;
       setScreenStream(stream);
       
-      pcMapRef.current.forEach((peerData, userId) => {
+      pcMapRef.current.forEach(async (peerData, userId) => {
         try {
           const sender = peerData.pc.addTrack(screenTrack, stream);
           if (!screenSenderRef.current) {
             screenSenderRef.current = sender;
+          }
+          
+          // Renegotiate to add screen track
+          const offer = await peerData.pc.createOffer();
+          await peerData.pc.setLocalDescription(offer);
+          
+          if (socketRef.current?.connected) {
+            socketRef.current.emit("group:call:offer", {
+              groupId: activeGroupId,
+              toUserId: userId,
+              offer: peerData.pc.localDescription,
+              callType: callType || "video",
+            });
           }
         } catch (err) {
           console.error(`[GroupCall] Failed to add screen track for ${userId}:`, err);
@@ -428,16 +441,31 @@ export function useGroupCall(socket) {
     } catch (err) {
       console.error("[GroupCall] Screen share error:", err);
     }
-  }, [isScreenSharing, activeGroupId]);
+  }, [isScreenSharing, activeGroupId, callType]);
 
-  const stopScreenShare = useCallback(() => {
+  const stopScreenShare = useCallback(async () => {
     if (!isScreenSharing) return;
 
     if (screenSenderRef.current) {
-      pcMapRef.current.forEach((peerData) => {
+      pcMapRef.current.forEach(async (peerData, userId) => {
         try {
           peerData.pc.removeTrack(screenSenderRef.current);
-        } catch {}
+          
+          // Renegotiate to remove screen track
+          const offer = await peerData.pc.createOffer();
+          await peerData.pc.setLocalDescription(offer);
+          
+          if (socketRef.current?.connected) {
+            socketRef.current.emit("group:call:offer", {
+              groupId: activeGroupId,
+              toUserId: userId,
+              offer: peerData.pc.localDescription,
+              callType: callType || "video",
+            });
+          }
+        } catch (err) {
+          console.error(`[GroupCall] Failed to remove screen track for ${userId}:`, err);
+        }
       });
       screenSenderRef.current = null;
     }
@@ -453,7 +481,7 @@ export function useGroupCall(socket) {
     if (socketRef.current?.connected) {
       socketRef.current.emit("group:screen:stop", { groupId: activeGroupId });
     }
-  }, [isScreenSharing, activeGroupId]);
+  }, [isScreenSharing, activeGroupId, callType]);
 
   useEffect(() => {
     if (!socket) return;
