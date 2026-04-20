@@ -15,7 +15,7 @@ import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
 // Modern Group API
-import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGroup, renameGroup, inviteToGroup } from "../api/groups";
+import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGroup, renameGroup, inviteToGroup } from "../../api/groups";
 import {
   MessageSquare, Users, UserPlus, Bell, Circle,
   PanelLeftClose, Settings, Send, Paperclip,
@@ -530,6 +530,23 @@ export default function ChatLayout({
         toast?.success?.("Friend invited!");
       } catch (err) {
         toast?.error?.(err.message || "Failed to invite");
+      }
+    },
+
+    // Leave group
+    leave: async (groupId) => {
+      if (!groupId) return;
+      try {
+        await leaveGroup(groupId);
+        setGroups(g => ({
+          ...g,
+          list: g.list.filter(grp => grp.id !== groupId),
+          active: g.active?.id === groupId ? null : g.active,
+          messages: g.active?.id === groupId ? [] : g.messages
+        }));
+        toast?.success?.("Left group!");
+      } catch (err) {
+        toast?.error?.(err.message || "Failed to leave group");
       }
     },
 

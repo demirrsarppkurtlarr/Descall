@@ -1116,6 +1116,126 @@
   }
 }
 
+/* Speaking indicator animation */
+@keyframes soundWave {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Pulse ring animation for active call */
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* Slide up animation */
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Fade scale animation */
+@keyframes fadeScale {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ========================================
+   ENHANCED ANIMATIONS & EFFECTS
+   ======================================== */
+
+/* Message animations */
+.dm-row {
+  animation: slideUp 0.3s ease-out;
+}
+
+.dm-row.own {
+  animation: slideUp 0.3s ease-out, fadeScale 0.2s ease-out;
+}
+
+/* Speaking indicator */
+.speaking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+}
+
+.speaking-indicator span {
+  width: 3px;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: soundWave 0.5s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.1s);
+}
+
+.speaking-indicator span:nth-child(1) { --i: 0; }
+.speaking-indicator span:nth-child(2) { --i: 1; }
+.speaking-indicator span:nth-child(3) { --i: 2; }
+.speaking-indicator span:nth-child(4) { --i: 3; }
+
+/* Shimmer loading for group items */
+.shimmer {
+  background: linear-gradient(90deg, var(--panel) 25%, var(--panel-2) 50%, var(--panel) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Active call pulse effect */
+.call-pulse {
+  position: relative;
+}
+
+.call-pulse::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: pulseRing 2s ease-out infinite;
+}
+
+/* Enhanced button hover effects */
+.mobile-list-item,
+.dm-item,
+.friend-item {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-list-item:hover,
+.dm-item:hover,
+.friend-item:hover {
+  transform: translateX(4px);
+  background: var(--panel-2);
+}
+
+.mobile-list-item:active,
+.dm-item:active,
+.friend-item:active {
+  transform: scale(0.98);
+}
+
+/* Smooth panel transitions */
+.panel {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+/* Glass effect enhancement */
+.glass-header,
+.glass-composer,
+.glass {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
 /* ========================================
    TABLET RESPONSIVE
    ======================================== */

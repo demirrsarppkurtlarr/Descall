@@ -69,12 +69,14 @@ export function useGroupCall(socket) {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     const peerData = { pc, pendingIce: [], remoteStream: null };
     
-    // Add local tracks
+    // Add local tracks with proper enabled state
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => {
         try {
-          pc.addTrack(track, localStreamRef.current);
-          console.log(`[GroupCall] Added ${track.kind} track for ${userId}`);
+          // Ensure track is enabled before adding
+          track.enabled = true;
+          const sender = pc.addTrack(track, localStreamRef.current);
+          console.log(`[GroupCall] Added ${track.kind} track for ${userId}, enabled=${track.enabled}`);
         } catch (err) {
           console.error(`[GroupCall] Failed to add track for ${userId}:`, err);
         }
@@ -86,16 +88,27 @@ export function useGroupCall(socket) {
       const stream = e.streams?.[0];
       if (!stream) return;
       
-      peerData.remoteStream = stream;
-      console.log(`[GroupCall] Got remote stream from ${userId}: audio=${stream.getAudioTracks().length}, video=${stream.getVideoTracks().length}`);
+      // Ensure all tracks are enabled (prevent black video)
+      stream.getTracks().forEach(track => {
+        if (!track.enabled) {
+          track.enabled = true;
+        }
+      });
       
-      // Update participants
+      peerData.remoteStream = stream;
+      const audioCount = stream.getAudioTracks().length;
+      const videoCount = stream.getVideoTracks().length;
+      console.log(`[GroupCall] Got remote stream from ${userId}: audio=${audioCount}, video=${videoCount}`);
+      
+      // Update participants with slight delay to prevent rapid re-renders
       setParticipants((prev) => {
         const exists = prev.find((p) => p.id === userId);
         if (exists) {
-          return prev.map((p) => p.id === userId ? { ...p, stream, hasVideo: stream.getVideoTracks().length > 0, hasAudio: stream.getAudioTracks().length > 0 } : p);
+          // Only update if stream actually changed
+          if (exists.stream === stream) return prev;
+          return prev.map((p) => p.id === userId ? { ...p, stream, hasVideo: videoCount > 0, hasAudio: audioCount > 0 } : p);
         }
-        return [...prev, { id: userId, stream, hasVideo: stream.getVideoTracks().length > 0, hasAudio: stream.getAudioTracks().length > 0, username: "Member" }];
+        return [...prev, { id: userId, stream, hasVideo: videoCount > 0, hasAudio: audioCount > 0, username: "Member" }];
       });
     };
 
@@ -326,11 +339,22 @@ export function useGroupCall(socket) {
 
     // Someone accepted our call (initiator receives this)
     const handleAccepted = async ({ groupId, fromUserId, fromUser, offer }) => {
-      if (!isInitiatorRef.current || groupId !== activeGroupIdRef.current) return;
+      console.log(`[GroupCall] handleAccepted called: groupId=${groupId}, fromUserId=${fromUserId}, myId=${myId}, isInitiator=${isInitiatorRef.current}, activeGroup=${activeGroupIdRef.current}`);
+      
+      if (!isInitiatorRef.current || groupId !== activeGroupIdRef.current) {
+        console.log(`[GroupCall] Ignoring accept - not initiator or wrong group`);
+        return;
+      }
       if (fromUserId === myId) return;
       
       try {
         console.log(`[GroupCall] ${fromUserId} accepted, creating answer`);
+        
+        // Ensure we have local stream first
+        if (!localStreamRef.current) {
+          console.log(`[GroupCall] Waiting for local stream before creating peer connection...`);
+          await getLocalMedia(callTypeRef.current || "voice");
+        }
         
         // Create peer connection for this user
         const peerData = createPeerConnection(fromUserId, groupId, true);
