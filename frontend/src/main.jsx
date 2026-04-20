@@ -4,6 +4,7 @@ import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ToastProvider } from "./context/ToastContext";
 import "./styles.css";
+import "./styles.animations.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
