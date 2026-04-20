@@ -21,7 +21,7 @@ import {
   PanelLeftClose, Settings, Send, Paperclip,
   Phone, Video, X, Plus, Clock, Check, CheckCheck,
   Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
-  Search, LogOut, Volume2, VolumeX, Maximize2, Grid,
+  Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid,
   ChevronLeft, ChevronRight, MoreVertical, Trash2,
   Menu, Palette, Sparkles, User
 } from "lucide-react";
