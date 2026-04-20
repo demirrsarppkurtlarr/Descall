@@ -3,6 +3,8 @@
  * Simple, reliable, works with 2-15 people
  */
 
+const { appendErrorLog } = require("../runtime/sharedState");
+
 function registerGroupHandlers(io, socket, state) {
   const myId = socket.user?.id;
   if (!myId) return;
@@ -23,7 +25,10 @@ function registerGroupHandlers(io, socket, state) {
 
   // Group message
   socket.on("group:message", ({ groupId, content, mediaUrl, mediaType }) => {
-    if (!groupId || (!content?.trim() && !mediaUrl)) return;
+    if (!groupId || (!content?.trim() && !mediaUrl)) {
+      appendErrorLog("group:message", "Missing required parameters", { groupId, hasContent: !!content, hasMedia: !!mediaUrl }, myId, socket.user?.username);
+      return;
+    }
 
     const message = {
       id: crypto.randomUUID(),
@@ -47,7 +52,10 @@ function registerGroupHandlers(io, socket, state) {
 
   // Start group call
   socket.on("group:call:start", ({ groupId, callType, memberIds = [] }) => {
-    if (!groupId || !callType) return;
+    if (!groupId || !callType) {
+      appendErrorLog("group:call:start", "Missing required parameters", { groupId, callType }, myId, socket.user?.username);
+      return;
+    }
 
     console.log(`[GroupCall] ${myId} started ${callType} call in group ${groupId}`);
 
@@ -76,7 +84,10 @@ function registerGroupHandlers(io, socket, state) {
 
   // Accept call and send offer
   socket.on("group:call:accept", ({ groupId, toUserId, offer }) => {
-    if (!groupId || !toUserId || !offer) return;
+    if (!groupId || !toUserId || !offer) {
+      appendErrorLog("group:call:accept", "Missing required parameters", { groupId, toUserId, hasOffer: !!offer }, myId, socket.user?.username);
+      return;
+    }
 
     console.log(`[GroupCall] ${myId} accepted call, sending offer to ${toUserId}`);
 

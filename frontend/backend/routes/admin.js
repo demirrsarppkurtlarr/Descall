@@ -502,8 +502,49 @@ router.get("/audit", (req, res) => {
   res.json({ entries: state.auditLog.slice(0, limit) });
 });
 
-router.get("/errors", (_req, res) => {
-  res.json({ errors: state.serverErrorLog.slice(0, 200) });
+router.get("/errors", (req, res) => {
+  try {
+    const limit = Math.min(500, parseInt(req.query.limit || "200", 10) || 200);
+    const userId = req.query.userId;
+    const source = req.query.source;
+    const search = String(req.query.search || "").trim().toLowerCase();
+    
+    let errors = [...state.serverErrorLog];
+    
+    // Filter by userId if provided
+    if (userId) {
+      errors = errors.filter((e) => e.userId === userId);
+    }
+    
+    // Filter by source if provided
+    if (source) {
+      errors = errors.filter((e) => e.source === source);
+    }
+    
+    // Search in message if provided
+    if (search) {
+      errors = errors.filter((e) => 
+        (e.message || "").toLowerCase().includes(search) ||
+        (e.source || "").toLowerCase().includes(search) ||
+        (e.username || "").toLowerCase().includes(search)
+      );
+    }
+    
+    // Get unique sources for filtering
+    const sources = [...new Set(state.serverErrorLog.map((e) => e.source).filter(Boolean))];
+    
+    // Get unique users with errors for filtering
+    const usersWithErrors = [...new Set(state.serverErrorLog.map((e) => e.userId).filter(Boolean))];
+    
+    res.json({ 
+      errors: errors.slice(0, limit),
+      total: errors.length,
+      sources,
+      usersWithErrors,
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to load errors." });
+  }
 });
 
 router.post("/cleanup", (_req, res) => {

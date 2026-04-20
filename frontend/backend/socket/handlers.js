@@ -22,6 +22,7 @@ const {
   userOnlineAccumMs,
   dmBlockPairs,
   appendAudit,
+  appendErrorLog,
 } = require("../runtime/sharedState");
 const { setupAdminSocket, notifyAdminRoom } = require("./adminHandlers");
 const { registerGroupHandlers } = require("./groupHandlers");
@@ -195,17 +196,21 @@ function registerSocketHandlers(io) {
       try {
         const target = await findUserByUsername(toUsername);
         if (!target) {
+          appendErrorLog("friend:request", "User not found", { toUsername }, myId, me.username);
           return socket.emit("friend:error", { message: "User not found." });
         }
         if (target.id === myId) {
+          appendErrorLog("friend:request", "Cannot add self", {}, myId, me.username);
           return socket.emit("friend:error", { message: "You cannot add yourself." });
         }
         const myFriends = ensureSet(friends, myId);
         if (myFriends.has(target.id)) {
+          appendErrorLog("friend:request", "Already friends", { targetId: target.id, targetUsername: target.username }, myId, me.username);
           return socket.emit("friend:error", { message: "Already friends." });
         }
         const theirPending = ensurePending(target.id);
         if (theirPending.has(myId)) {
+          appendErrorLog("friend:request", "Request already pending", { targetId: target.id }, myId, me.username);
           return socket.emit("friend:error", { message: "Request already pending." });
         }
 
@@ -304,59 +309,51 @@ function registerSocketHandlers(io) {
       }
     });
 
-    socket.on("dm:send", ({ toUserId, text, media } = {}) => {
-      if (!systemConfig.featureFlags.dm) {
-        return socket.emit("friend:error", { message: "Direct messages are disabled." });
+    socket.on("dm:send", async ({ toUserId, text, mediaUrl, mediaType, mimeType, size, originalName } = {}) => {
+      if (bannedUserIds.has(myId)) {
+        appendErrorLog("dm:send", "User is banned", { toUserId }, myId, me.username);
+        return socket.emit("dm:error", { message: "You are banned." });
       }
-      if (typeof toUserId !== "string") return;
-      const trimmed = (typeof text === "string" ? text.trim() : "") || "";
-      if (!trimmed && !media) return;
-      const blockKey = [myId, toUserId].sort().join("::");
-      if (dmBlockPairs.has(blockKey)) {
-        return socket.emit("friend:error", { message: "This DM conversation is blocked." });
+      if (dmBlockPairs.has(convKey(myId, toUserId))) {
+        appendErrorLog("dm:send", "Conversation blocked", { toUserId }, myId, me.username);
+        return socket.emit("dm:error", { message: "Conversation blocked." });
       }
-      const dmNow = Date.now();
-      const lastDm = rateLimitDm.get(myId) || 0;
-      if (dmNow - lastDm < (systemConfig.dmRateLimitMs || 200)) {
-        return socket.emit("friend:error", { message: "DM rate limit — slow down." });
+      const now = Date.now();
+      const last = rateLimitDm.get(myId) || 0;
+      if (now - last < systemConfig.dmRateLimitMs) {
+        appendErrorLog("dm:send", "Rate limited", { toUserId }, myId, me.username);
+        return socket.emit("dm:error", { message: "Rate limited." });
       }
-      rateLimitDm.set(myId, dmNow);
-      if (!friends.get(myId)?.has(toUserId)) {
-        return socket.emit("friend:error", { message: "Not friends with this user." });
-      }
-      const key = convKey(myId, toUserId);
-      const msg = {
+      rateLimitDm.set(myId, now);
+      socket.data.activeDmPeer = toUserId;
+      const arr = dmHistory.get(convKey(myId, toUserId)) || [];
+      arr.push({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        from: { id: myId, username: me.username },
-        to: { id: toUserId },
-        text: trimmed || "",
-        media: media || null,
+        from: myId,
+        to: toUserId,
+        text: text || "",
+        mediaUrl,
+        mediaType,
+        mimeType,
+        size,
+        originalName,
         timestamp: new Date().toISOString(),
-        convWith: toUserId,
-        deliveredAt: null,
-        readAt: null,
-      };
-      if (!dmHistory.has(key)) dmHistory.set(key, []);
-      const arr = dmHistory.get(key);
-      arr.push(msg);
-      if (arr.length > MAX_DM_PER_CONV) arr.splice(0, arr.length - MAX_DM_PER_CONV);
-
-      socket.emit("dm:message", { ...msg, convWith: toUserId });
-      emitToUser(io, toUserId, "dm:message", { ...msg, convWith: myId });
-
-      const peerSock = getSocketForUser(io, toUserId);
-      const viewing = peerSock?.data?.activeDmPeer === myId;
-      if (!viewing) {
-        const umap = ensureDmUnreadMap(toUserId);
-        umap.set(myId, (umap.get(myId) || 0) + 1);
-        emitToUser(io, toUserId, "dm:unread:sync", { peerId: myId, count: umap.get(myId) });
-        pushNotification(io, toUserId, {
-          type: "dm_message",
-          title: "Direct message",
-          body: `${me.username}: ${trimmed.slice(0, 120)}`,
-          meta: { fromUserId: myId, msgId: msg.id },
-        });
-      }
+      });
+      if (arr.length > MAX_DM_PER_CONV) arr.length = MAX_DM_PER_CONV;
+      dmHistory.set(convKey(myId, toUserId), arr);
+      const unreadMap = ensureDmUnreadMap(toUserId);
+      unreadMap.set(myId, (unreadMap.get(myId) || 0) + 1);
+      emitToUser(io, toUserId, "dm:message", {
+        from: myId,
+        text,
+        mediaUrl,
+        mediaType,
+        mimeType,
+        size,
+        originalName,
+        timestamp: new Date().toISOString(),
+      });
+      socket.emit("dm:sent", { to: toUserId });
     });
 
     socket.on("dm:delivered", ({ msgId, fromUserId } = {}) => {

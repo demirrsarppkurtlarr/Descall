@@ -53,8 +53,16 @@ function appendAudit(actorId, actorUsername, action, target, meta = {}) {
   return entry;
 }
 
-function appendErrorLog(source, message, meta = {}) {
-  const entry = { at: new Date().toISOString(), source, message, meta };
+function appendErrorLog(source, message, meta = {}, userId = null, username = null) {
+  const entry = { 
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    at: new Date().toISOString(), 
+    source, 
+    message, 
+    meta,
+    userId,
+    username
+  };
   serverErrorLog.unshift(entry);
   if (serverErrorLog.length > MAX_ERROR_LOG) serverErrorLog.length = MAX_ERROR_LOG;
 }
