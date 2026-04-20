@@ -26,13 +26,23 @@
   50% { transform: translateY(-5px); }
 }
 
-@keyframes wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-3deg); }
-  75% { transform: rotate(3deg); }
+@keyframes smooth-scale {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1.05); }
 }
 
-@keyframes bounce-soft {
+@keyframes smooth-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(102, 120, 255, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(102, 120, 255, 0.6), 0 0 40px rgba(140, 100, 255, 0.3); }
+}
+
+@keyframes gentle-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.02); }
+}
+
+@keyframes smooth-bounce {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
 }
@@ -70,12 +80,9 @@
   70% { transform: scale(1); }
 }
 
-@keyframes magnetic-pull {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(2px, 2px); }
-  50% { transform: translate(-2px, 2px); }
-  75% { transform: translate(-2px, -2px); }
-  100% { transform: translate(2px, -2px); }
+@keyframes hover-float {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-3px) translateX(0); }
 }
 
 @keyframes elastic-pop {
@@ -101,12 +108,12 @@ button,
 .call-btn,
 .composer-btn,
 .mobile-fab {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   position: relative;
   overflow: hidden;
 }
 
-/* Hover lift effect */
+/* Hover lift effect - smooth */
 button:hover,
 [role="button"]:hover,
 .rail-btn:hover,
@@ -114,8 +121,9 @@ button:hover,
 .friend-item:hover,
 .group-item:hover,
 .mobile-list-item:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  filter: brightness(1.05);
 }
 
 /* Active/click press effect */
@@ -386,7 +394,7 @@ textarea:focus,
 
 .badge:hover,
 .unread-badge:hover {
-  animation: wiggle 0.3s ease;
+  animation: smooth-scale 0.4s ease forwards, smooth-glow 1.5s ease-in-out infinite;
 }
 
 /* ========================================
@@ -479,11 +487,11 @@ textarea:focus,
    ======================================== */
 
 @media (hover: hover) {
-  /* Magnetic button effect */
+  /* Smooth hover float effect */
   button:hover,
   .rail-btn:hover,
   .icon-btn:hover {
-    animation: magnetic-pull 0.3s ease;
+    animation: hover-float 0.6s ease infinite;
   }
   
   /* Glow effect on hover */
@@ -541,13 +549,15 @@ a:focus-visible {
   animation: elastic-pop 0.5s ease, glow-pulse 1s ease-in-out;
 }
 
-/* Error shake animation */
-.error-shake {
-  animation: shake 0.5s ease-in-out;
+/* Smooth error indication */
+.error-indication {
+  animation: smooth-vibrate 0.5s ease-in-out, glow-pulse 1s ease-in-out;
 }
 
-@keyframes shake {
+@keyframes smooth-vibrate {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  20% { transform: translateX(-2px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-1px); }
+  80% { transform: translateX(1px); }
 }
