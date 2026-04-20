@@ -1599,6 +1599,7 @@
 .glass-header,
 .glass-composer,
 .glass {
+  background: rgba(24, 27, 34, 0.4);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
