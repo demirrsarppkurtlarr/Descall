@@ -29,6 +29,7 @@ export function useGroupCall(socket) {
   const screenStreamRef = useRef(null);
   const pcMapRef = useRef(new Map());
   const remoteStreamsRef = useRef(new Map());
+  const remoteAudioRefs = useRef(new Map());
   const localVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
   const myIdRef = useRef(null);
@@ -69,6 +70,11 @@ export function useGroupCall(socket) {
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
     remoteStreamsRef.current.clear();
+    
+    remoteAudioRefs.current.forEach((audioEl) => {
+      audioEl.srcObject = null;
+    });
+    remoteAudioRefs.current.clear();
 
     screenSenderRef.current = null;
 
@@ -93,9 +99,39 @@ export function useGroupCall(socket) {
 
     pc.ontrack = (e) => {
       const remoteStream = e.streams[0];
-      console.log(`[GroupCall] Track from ${userId}:`, e.track.kind);
+      const track = e.track;
+      console.log(`[GroupCall] Track from ${userId}:`, track.kind, "muted:", track.muted);
       
       remoteStreamsRef.current.set(userId, remoteStream);
+      
+      // Create audio element for this user if it doesn't exist
+      if (track.kind === "audio") {
+        let audioEl = remoteAudioRefs.current.get(userId);
+        if (!audioEl) {
+          audioEl = document.createElement("audio");
+          audioEl.autoplay = true;
+          audioEl.muted = false;
+          audioEl.playsInline = true;
+          remoteAudioRefs.current.set(userId, audioEl);
+        }
+        audioEl.srcObject = remoteStream;
+        audioEl.play().catch((err) => console.error(`[GroupCall] Audio play error for ${userId}:`, err));
+      }
+      
+      // Handle muted tracks
+      if (track?.muted) {
+        console.log(`[GroupCall] Track muted from ${userId}, waiting for unmute...`);
+        track.onunmute = () => {
+          console.log(`[GroupCall] Track unmuted from ${userId}:`, track.kind);
+          if (track.kind === "audio") {
+            const audioEl = remoteAudioRefs.current.get(userId);
+            if (audioEl) {
+              audioEl.srcObject = remoteStream;
+              audioEl.play().catch((err) => console.error(`[GroupCall] Audio play error after unmute for ${userId}:`, err));
+            }
+          }
+        };
+      }
       
       setParticipants((prev) => {
         const exists = prev.find((p) => p.id === userId);
@@ -347,9 +383,13 @@ export function useGroupCall(socket) {
       setScreenStream(stream);
       
       pcMapRef.current.forEach((peerData, userId) => {
-        const sender = peerData.pc.addTrack(screenTrack, stream);
-        if (userId === Array.from(pcMapRef.current.keys())[0]) {
-          screenSenderRef.current = sender;
+        try {
+          const sender = peerData.pc.addTrack(screenTrack, stream);
+          if (!screenSenderRef.current) {
+            screenSenderRef.current = sender;
+          }
+        } catch (err) {
+          console.error(`[GroupCall] Failed to add screen track for ${userId}:`, err);
         }
       });
 
@@ -441,11 +481,6 @@ export function useGroupCall(socket) {
           groupId,
           toUserId: fromUserId,
           answer: pc.localDescription,
-        });
-
-        setParticipants((prev) => {
-          if (prev.find((p) => p.id === fromUserId)) return prev;
-          return [...prev, { id: fromUserId, username: fromUser?.username || "Member", hasVideo: callType === "video" }];
         });
 
         console.log(`[GroupCall] Answer sent to ${fromUserId}`);
@@ -541,6 +576,20 @@ export function useGroupCall(socket) {
       setParticipants((prev) => prev.filter((p) => p.id !== fromUserId));
     };
 
+    const onScreenStarted = ({ groupId, fromUserId }) => {
+      console.log(`[GroupCall] Screen share started by ${fromUserId}`);
+      setParticipants((prev) => prev.map((p) => 
+        p.id === fromUserId ? { ...p, isScreenSharing: true } : p
+      ));
+    };
+
+    const onScreenStopped = ({ groupId, fromUserId }) => {
+      console.log(`[GroupCall] Screen share stopped by ${fromUserId}`);
+      setParticipants((prev) => prev.map((p) => 
+        p.id === fromUserId ? { ...p, isScreenSharing: false } : p
+      ));
+    };
+
     socket.on("group:call:incoming", onIncoming);
     socket.on("group:call:accepted", onAccept);
     socket.on("group:call:answer", onAnswer);
@@ -549,6 +598,8 @@ export function useGroupCall(socket) {
     socket.on("group:call:left", onLeft);
     socket.on("group:call:ended", onEnded);
     socket.on("group:call:declined", onDeclined);
+    socket.on("group:screen:started", onScreenStarted);
+    socket.on("group:screen:stopped", onScreenStopped);
 
     return () => {
       socket.off("group:call:incoming", onIncoming);
@@ -559,6 +610,8 @@ export function useGroupCall(socket) {
       socket.off("group:call:left", onLeft);
       socket.off("group:call:ended", onEnded);
       socket.off("group:call:declined", onDeclined);
+      socket.off("group:screen:started", onScreenStarted);
+      socket.off("group:screen:stopped", onScreenStopped);
     };
   }, [socket, activeGroupId, isInCall, callType, cleanup, setupPeerConnection]);
 
