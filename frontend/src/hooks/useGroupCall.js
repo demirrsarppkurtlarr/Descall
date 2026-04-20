@@ -139,23 +139,31 @@ export function useGroupCall(socket) {
         };
       }
       
+      // Check if this is a screen share track (screen shares have no audio and are video)
+      const isScreenTrack = track.kind === "video" && track.label?.toLowerCase().includes("screen") || 
+                            (remoteStream.getVideoTracks().length > 0 && remoteStream.getAudioTracks().length === 0);
+      
       setParticipants((prev) => {
         const exists = prev.find((p) => p.id === userId);
         if (exists) {
-          console.log(`[GroupCall] Updating existing participant ${userId}`);
+          console.log(`[GroupCall] Updating existing participant ${userId}, isScreen: ${isScreenTrack}`);
           return prev.map((p) => p.id === userId ? { 
             ...p, 
             stream: remoteStream,
+            screenStream: isScreenTrack ? remoteStream : p.screenStream,
             hasVideo: e.track.kind === "video" ? true : p.hasVideo,
-            hasAudio: e.track.kind === "audio" ? true : p.hasAudio
+            hasAudio: e.track.kind === "audio" ? true : p.hasAudio,
+            isScreenSharing: isScreenTrack ? true : p.isScreenSharing
           } : p);
         }
-        console.log(`[GroupCall] Adding new participant ${userId}`);
+        console.log(`[GroupCall] Adding new participant ${userId}, isScreen: ${isScreenTrack}`);
         return [...prev, { 
           id: userId, 
           stream: remoteStream, 
+          screenStream: isScreenTrack ? remoteStream : null,
           hasVideo: e.track.kind === "video", 
           hasAudio: e.track.kind === "audio",
+          isScreenSharing: isScreenTrack,
           username: "Member" 
         }];
       });
