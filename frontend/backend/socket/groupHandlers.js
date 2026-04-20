@@ -75,6 +75,19 @@ function registerGroupHandlers(io, socket, state) {
       uniqueTargets.forEach((targetUserId) => {
         io.to(`user:${targetUserId}`).emit("group:call:incoming", payload);
       });
+      
+      // Also broadcast to the group room for participant sync
+      io.to(`group:${groupId}`).emit("group:call:started", {
+        groupId,
+        fromUserId: myId,
+        fromUser: {
+          id: myId,
+          username: socket.user.username,
+          avatar_url: socket.user.avatar_url,
+        },
+        callType,
+      });
+      
       return;
     }
 

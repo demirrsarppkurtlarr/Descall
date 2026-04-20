@@ -142,18 +142,20 @@ export function useGroupCall(socket) {
       setParticipants((prev) => {
         const exists = prev.find((p) => p.id === userId);
         if (exists) {
+          console.log(`[GroupCall] Updating existing participant ${userId}`);
           return prev.map((p) => p.id === userId ? { 
             ...p, 
             stream: remoteStream,
-            hasVideo: track.kind === "video" ? true : p.hasVideo,
-            hasAudio: track.kind === "audio" ? true : p.hasAudio
+            hasVideo: e.track.kind === "video" ? true : p.hasVideo,
+            hasAudio: e.track.kind === "audio" ? true : p.hasAudio
           } : p);
         }
+        console.log(`[GroupCall] Adding new participant ${userId}`);
         return [...prev, { 
           id: userId, 
           stream: remoteStream, 
-          hasVideo: track.kind === "video", 
-          hasAudio: track.kind === "audio",
+          hasVideo: e.track.kind === "video", 
+          hasAudio: e.track.kind === "audio",
           username: "Member" 
         }];
       });
@@ -173,7 +175,20 @@ export function useGroupCall(socket) {
       console.log(`[GroupCall] Connection with ${userId}:`, pc.connectionState);
       if (pc.connectionState === "connected") {
         console.log(`[GroupCall] Connected to ${userId}`);
-      } else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+      } else if (pc.connectionState === "disconnected") {
+        console.log(`[GroupCall] Disconnected from ${userId}, keeping participant for potential reconnection`);
+        // Don't delete participant on disconnected - they might reconnect
+      } else if (pc.connectionState === "failed") {
+        console.log(`[GroupCall] Connection failed with ${userId}, but keeping for retry`);
+        // Don't immediately delete on failed - might recover
+        // Only delete if no tracks are working
+        const remoteStream = remoteStreamsRef.current.get(userId);
+        if (!remoteStream || remoteStream.getTracks().length === 0) {
+          pcMapRef.current.delete(userId);
+          remoteStreamsRef.current.delete(userId);
+          setParticipants((prev) => prev.filter((p) => p.id !== userId));
+        }
+      } else if (pc.connectionState === "closed") {
         pcMapRef.current.delete(userId);
         remoteStreamsRef.current.delete(userId);
         setParticipants((prev) => prev.filter((p) => p.id !== userId));
@@ -192,7 +207,7 @@ export function useGroupCall(socket) {
   };
 
   const startGroupCall = useCallback(async (groupId, type, memberIds = []) => {
-    if (!groupId || !socketRef.current) return;
+    if (!groupId || !type || !socketRef.current) return;
     
     try {
       console.log(`[GroupCall] Starting ${type} call in group ${groupId}`);
@@ -205,12 +220,17 @@ export function useGroupCall(socket) {
       localStreamRef.current = stream;
       setLocalStream(stream);
       
+      // Ensure audio track is enabled for voice calls
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+        console.log(`[GroupCall] Audio track enabled: ${track.kind}, enabled: ${track.enabled}`);
+      });
+      
       setIsInCall(true);
       setIsInitiator(true);
       setCallType(type);
       setActiveGroupId(groupId);
       setIsCameraOn(type === "video");
-      setParticipants([]);
       setIncomingCall(null);
 
       if (localVideoRef.current && type === "video") {
@@ -218,21 +238,32 @@ export function useGroupCall(socket) {
         localVideoRef.current.play().catch(() => {});
       }
 
+      // Set up peer connections for all group members
+      memberIds.forEach((userId) => {
+        if (userId === myIdRef.current) return;
+        
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const peerData = { pc, pendingIce: [] };
+        pcMapRef.current.set(userId, peerData);
+        
+        setupPeerConnection(pc, stream, userId);
+        
+        console.log(`[GroupCall] Set up peer connection for ${userId}, added ${stream.getTracks().length} tracks`);
+      });
+
+      // Emit start event
       socketRef.current.emit("group:call:start", {
         groupId,
         callType: type,
-        memberIds: Array.isArray(memberIds) ? memberIds : [],
+        memberIds,
       });
 
-      audioManager.stop("incomingCall");
-      audioManager.stop("outgoingCall");
-      
       console.log("[GroupCall] Call started");
     } catch (err) {
       console.error("[GroupCall] Start failed:", err);
       cleanup();
     }
-  }, [cleanup, activeGroupId]);
+  }, [cleanup, setupPeerConnection]);
 
   const acceptGroupCall = useCallback(async (groupId, type, fromUser) => {
     if (!groupId || !fromUser?.id || !socketRef.current) return;
@@ -249,6 +280,12 @@ export function useGroupCall(socket) {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
       setLocalStream(stream);
+      
+      // Ensure audio track is enabled for voice calls
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+        console.log(`[GroupCall] Audio track enabled on accept: ${track.kind}, enabled: ${track.enabled}`);
+      });
       
       setIsInCall(true);
       setIsInitiator(false);
@@ -657,6 +694,26 @@ export function useGroupCall(socket) {
       ));
     };
 
+    const onCallStarted = ({ groupId, fromUserId, fromUser, callType }) => {
+      if (!fromUserId || fromUserId === myId) return;
+      console.log(`[GroupCall] Call started by ${fromUserId}, syncing participant`);
+      
+      // Add participant to list if not already there
+      setParticipants((prev) => {
+        const exists = prev.find((p) => p.id === fromUserId);
+        if (!exists) {
+          return [...prev, {
+            id: fromUserId,
+            username: fromUser?.username || "Member",
+            avatar_url: fromUser?.avatar_url,
+            hasVideo: callType === "video",
+            hasAudio: true,
+          }];
+        }
+        return prev;
+      });
+    };
+
     socket.on("group:call:incoming", onIncoming);
     socket.on("group:call:accepted", onAccept);
     socket.on("group:call:answer", onAnswer);
@@ -668,6 +725,7 @@ export function useGroupCall(socket) {
     socket.on("group:screen:started", onScreenStarted);
     socket.on("group:screen:stopped", onScreenStopped);
     socket.on("group:call:participant-joined", onParticipantJoined);
+    socket.on("group:call:started", onCallStarted);
 
     return () => {
       socket.off("group:call:incoming", onIncoming);
@@ -681,6 +739,7 @@ export function useGroupCall(socket) {
       socket.off("group:screen:started", onScreenStarted);
       socket.off("group:screen:stopped", onScreenStopped);
       socket.off("group:call:participant-joined", onParticipantJoined);
+      socket.off("group:call:started", onCallStarted);
     };
   }, [socket, activeGroupId, isInCall, callType, cleanup, setupPeerConnection]);
 
