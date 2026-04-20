@@ -1353,7 +1353,11 @@ export default function ChatLayout({
 
       <audio ref={call?.remoteAudioRef} autoPlay playsInline className="hidden-audio" />
 
+      {/* Call UI - Shows on both desktop and mobile */}
       <CallBar call={call} peerScreenSharing={peerScreenSharing} />
+      
+      {/* Video Panel - Mobile optimized */}
+      {isMobile && <VideoPanel call={call} peerScreenSharing={peerScreenSharing} />}
 
       <AnimatePresence>
         {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
