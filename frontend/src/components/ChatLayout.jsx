@@ -507,8 +507,8 @@ export default function ChatLayout({
       }
       // Fetch group members
       try {
-        const members = await getGroupMembers(group.id);
-        setGroups(g => ({ ...g, members: asArray(members) }));
+        const result = await getGroupMembers(group.id);
+        setGroups(g => ({ ...g, members: asArray(result?.members) }));
       } catch (err) {
         console.error("[ChatLayout] Failed to load group members:", err);
         setGroups(g => ({ ...g, members: [] }));
