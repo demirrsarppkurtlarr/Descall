@@ -115,10 +115,17 @@ router.delete("/:id", async (req, res) => {
 
 // ========== USER FEEDBACK ENDPOINTS ==========
 
-// Simple GET test - does this route even work?
+// GET test - çalışıyor mu kontrol
 router.get("/feedback-test", (_req, res) => {
   console.log("[ROUTE-TEST] GET /api/errors/feedback-test - WORKING!");
-  res.json({ message: "Feedback route is working", time: Date.now() });
+  res.json({ message: "GET working", time: Date.now() });
+});
+
+// POST test - aynı route üzerine
+router.post("/feedback-test", (req, res) => {
+  console.log("[ROUTE-TEST] POST /api/errors/feedback-test - HIT!");
+  console.log("[ROUTE-TEST] Body received:", JSON.stringify(req.body));
+  res.json({ success: true, received: req.body, time: Date.now() });
 });
 
 // SUPER SIMPLE POST TEST - No auth, no supabase, just test if POST works
