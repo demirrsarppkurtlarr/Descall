@@ -152,31 +152,65 @@ router.post("/feedback", requireAuth, async (req, res) => {
       }
     }
     
+    // JSONB için attachments'ı doğru formatta hazırla
+    const attachmentsForDb = Array.isArray(attachmentsJson) ? attachmentsJson : [];
+    
     const insertData = {
       user_id: userId,
       username: user.username || 'anonymous',
       category,
       priority,
       message,
-      attachments: attachmentsJson,
+      attachments: attachmentsForDb,  // Supabase JS client JSONB'yi otomatik handle eder
       status: "new",
       created_at: new Date().toISOString(),
     };
     
-    console.log("[Feedback] Step 6: Insert data prepared:", JSON.stringify(insertData));
+    console.log("[Feedback] Step 6: Insert data prepared:");
+    console.log("  - user_id:", insertData.user_id);
+    console.log("  - username:", insertData.username);
+    console.log("  - category:", insertData.category);
+    console.log("  - priority:", insertData.priority);
+    console.log("  - message length:", insertData.message?.length);
+    console.log("  - attachments:", JSON.stringify(insertData.attachments));
+    console.log("  - status:", insertData.status);
     console.log("[Feedback] Step 7: Supabase client check - supabase is:", typeof supabase);
 
     console.log("[Feedback] Step 8: Calling supabase insert...");
-    const { data, error } = await supabase
-      .from("user_feedback")
-      .insert(insertData)
-      .select();
+    console.log("[Feedback] Step 8a: Table name: user_feedback");
+    console.log("[Feedback] Step 8b: Insert data keys:", Object.keys(insertData));
+    
+    let data, error;
+    try {
+      const result = await supabase
+        .from("user_feedback")
+        .insert(insertData)
+        .select();
+      
+      data = result.data;
+      error = result.error;
+    } catch (supabaseErr) {
+      console.error("[Feedback] Step 8c: Supabase threw exception:", supabaseErr);
+      console.error("[Feedback] Step 8d: Exception message:", supabaseErr.message);
+      throw supabaseErr;
+    }
 
     console.log("[Feedback] Step 9: Supabase response received");
+    console.log("[Feedback] Step 9a: Error object:", JSON.stringify(error));
+    console.log("[Feedback] Step 9b: Data object:", JSON.stringify(data));
     
     if (error) {
-      console.error("[Feedback] Step 9a: Supabase ERROR:", JSON.stringify(error));
-      throw error;
+      console.error("[Feedback] Step 9c: Supabase ERROR details:");
+      console.error("  - message:", error.message);
+      console.error("  - code:", error.code);
+      console.error("  - details:", error.details);
+      console.error("  - hint:", error.hint);
+      throw new Error(`Supabase error: ${error.message} (code: ${error.code})`);
+    }
+
+    if (!data || data.length === 0) {
+      console.log("[Feedback] Step 9d: WARNING - No error but data is empty!");
+      console.log("[Feedback] This usually means RLS blocked the insert or trigger failed silently");
     }
 
     console.log("[Feedback] Step 10: Supabase success, data:", JSON.stringify(data));
