@@ -584,15 +584,15 @@ export default function AdminPanel({ socket, onClose }) {
                 <h3>User Activity</h3>
                 <div className="stat-row">
                   <span>Online Now:</span>
-                  <strong>{snapshot?.online || 0}</strong>
+                  <strong>{snapshot?.onlineCount || 0}</strong>
                 </div>
                 <div className="stat-row">
                   <span>Total Connections:</span>
-                  <strong>{snapshot?.sockets || 0}</strong>
+                  <strong>{snapshot?.sockets?.length || 0}</strong>
                 </div>
                 <div className="stat-row">
-                  <span>Active Users (1h):</span>
-                  <strong>{stats?.activeUsersLastHour || 0}</strong>
+                  <span>Banned Users:</span>
+                  <strong>{snapshot?.bannedCount || 0}</strong>
                 </div>
               </div>
               
