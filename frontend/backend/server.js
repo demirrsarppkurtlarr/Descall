@@ -84,9 +84,9 @@ app.post("/", express.json(), (req, res) => {
   res.json({ success: true, received: req.body, endpoint: "root-post" });
 });
 
-// DIRECT FEEDBACK ENDPOINT - MUST be defined BEFORE any app.use("/api/errors", ...)
-app.post("/api/errors/feedback", requireAuth, async (req, res) => {
-  console.log("[DIRECT-FEEDBACK] POST /api/errors/feedback - HIT!");
+// DIRECT FEEDBACK ENDPOINT - Use different path to avoid router conflicts
+app.post("/api/feedback/submit", requireAuth, async (req, res) => {
+  console.log("[DIRECT-FEEDBACK] POST /api/feedback/submit - HIT!");
   console.log("[DIRECT-FEEDBACK] User:", req.user);
   console.log("[DIRECT-FEEDBACK] Body:", req.body);
   
