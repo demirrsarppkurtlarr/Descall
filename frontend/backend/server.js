@@ -98,7 +98,15 @@ if (require("fs").existsSync(distPath)) {
   });
 }
 
+// Global error handler - MUST have 4 parameters
+app.use((err, _req, res, _next) => {
+  console.error("[GLOBAL-ERROR] Unhandled error:", err);
+  console.error("[GLOBAL-ERROR] Stack:", err.stack);
+  res.status(500).json({ error: err.message || "Internal server error", stack: err.stack });
+});
+
 app.use((_req, res) => {
+  console.log("[404] Route not found:", _req.method, _req.path);
   res.status(404).json({ error: "Route not found." });
 });
 
