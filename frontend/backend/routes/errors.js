@@ -4,6 +4,8 @@ const supabase = require("../db/supabase");
 const state = require("../runtime/sharedState");
 const { requireAuth } = require("../middleware/auth");
 
+console.log("[ERRORS-JS] File loaded! Routes being registered...");
+
 // Store error from frontend
 router.post("/", async (req, res) => {
   try {
@@ -120,7 +122,12 @@ router.get("/feedback-test", (_req, res) => {
 });
 
 // Submit feedback (authenticated users)
-router.post("/feedback", requireAuth, async (req, res) => {
+console.log("[ERRORS-JS] Registering POST /feedback route...");
+router.post("/feedback", (req, res, next) => {
+  console.log("[ROUTE-MATCH] POST /api/errors/feedback - Route matched!");
+  console.log("[ROUTE-MATCH] Body:", JSON.stringify(req.body));
+  next();
+}, requireAuth, async (req, res) => {
   console.log("[Feedback] ========== START ==========");
   
   try {
@@ -279,4 +286,5 @@ router.get("/feedback/my", requireAuth, async (req, res) => {
   }
 });
 
+console.log("[ERRORS-JS] All routes registered. Exporting router...");
 module.exports = router;
