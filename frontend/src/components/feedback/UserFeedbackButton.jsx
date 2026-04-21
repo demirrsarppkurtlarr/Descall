@@ -108,8 +108,21 @@ export default function UserFeedbackButton({ socket, user }) {
         }),
       });
       
+      console.log("[Feedback] Response status:", res.status, res.statusText);
+      
+      const responseText = await res.text();
+      console.log("[Feedback] Raw response:", responseText);
+      
+      let data;
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseErr) {
+        console.error("[Feedback] JSON parse error:", parseErr);
+        console.error("[Feedback] Raw response was:", responseText);
+        throw new Error("Server returned invalid JSON. Check console.");
+      }
+      
       if (res.ok) {
-        const data = await res.json();
         console.log("[Feedback] Submit success:", data);
         setSubmitted(true);
         setTimeout(() => {
@@ -122,9 +135,8 @@ export default function UserFeedbackButton({ socket, user }) {
           setAttachments([]);
         }, 2000);
       } else {
-        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
-        console.error("[Feedback] Submit failed:", errorData);
-        throw new Error(errorData.error || errorData.details || "Failed to submit");
+        console.error("[Feedback] Submit failed:", data);
+        throw new Error(data.error || data.details || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
       }
     } catch (err) {
       console.error("[Feedback] Failed to submit feedback:", err);

@@ -174,10 +174,16 @@ router.post("/feedback", requireAuth, async (req, res) => {
       io.to("admin").emit("feedback:new", feedback);
     }
 
-    res.json({ success: true, feedback, dbData: data });
+    console.log("[Feedback] Sending success response");
+    return res.json({ success: true, feedback, dbData: data });
   } catch (error) {
-    console.error("[Feedback] Failed to submit feedback:", error);
-    res.status(500).json({ error: "Failed to submit feedback", details: error.message });
+    console.error("[Feedback] FAILED:", error);
+    console.error("[Feedback] Error stack:", error.stack);
+    return res.status(500).json({ 
+      error: "Failed to submit feedback", 
+      details: error.message,
+      stack: error.stack 
+    });
   }
 });
 
