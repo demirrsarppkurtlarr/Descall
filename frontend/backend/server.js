@@ -128,13 +128,9 @@ app.get("/health", (_req, res) => {
 
 console.log("[SERVER] Registering routes...");
 
-// Response logging middleware for debugging
+// Simple debug - log ALL incoming requests
 app.use((req, res, next) => {
-  const originalJson = res.json;
-  res.json = function(body) {
-    console.log(`[RESPONSE] ${req.method} ${req.path} - Status: ${res.statusCode} - Body length: ${JSON.stringify(body).length}`);
-    return originalJson.call(this, body);
-  };
+  console.log(`[DEBUG-ALL] ${req.method} ${req.path} - Body:`, JSON.stringify(req.body).slice(0, 100));
   next();
 });
 
@@ -151,13 +147,7 @@ app.post("/api/test-feedback-simple", (req, res) => {
 });
 
 console.log("[SERVER] About to register /api/errors route");
-
-// Debug middleware for /api/errors
-app.use("/api/errors", (req, res, next) => {
-  console.log(`[DEBUG-ERRORS] ${req.method} ${req.path} - BEFORE ROUTER`);
-  next();
-}, errorRoutes);
-
+app.use("/api/errors", errorRoutes);
 console.log("[SERVER] /api/errors route registered");
 app.use("/api/test", feedbackTestRoutes);
 console.log("[SERVER] All routes registered");
