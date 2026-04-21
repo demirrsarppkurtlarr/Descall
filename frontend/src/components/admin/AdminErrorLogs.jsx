@@ -82,7 +82,15 @@ export default function AdminErrorLogs({ socket }) {
       params.append("order", sortConfig.order);
       params.append("limit", "500");
       
+      console.log("[AdminErrorLogs] Fetching from /admin/errors?" + params.toString());
+      
       const d = await adminFetch(`/errors?${params}`);
+      
+      console.log("[AdminErrorLogs] Response:", d);
+      
+      if (!d || typeof d !== 'object') {
+        throw new Error("Invalid response from server");
+      }
       
       if (append && realtimeMode) {
         setLogs(prev => {

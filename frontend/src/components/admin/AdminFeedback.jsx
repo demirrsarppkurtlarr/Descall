@@ -51,6 +51,8 @@ export default function AdminFeedback({ socket }) {
   const loadFeedbacks = useCallback(async () => {
     try {
       setLoading(true);
+      console.log("[AdminFeedback] Loading feedbacks...");
+      
       const params = new URLSearchParams();
       if (filter.category !== "all") params.append("category", filter.category);
       if (filter.priority !== "all") params.append("priority", filter.priority);
@@ -58,7 +60,15 @@ export default function AdminFeedback({ socket }) {
       if (searchQ) params.append("q", searchQ);
       params.append("sort", sortBy);
       
+      console.log("[AdminFeedback] Fetching from /admin/feedback?" + params.toString());
+      
       const d = await adminFetch(`/feedback?${params}`);
+      console.log("[AdminFeedback] Response:", d);
+      
+      if (!d || typeof d !== 'object') {
+        throw new Error("Invalid response from server");
+      }
+      
       setFeedbacks(d.feedbacks || []);
       setStats(d.stats || null);
       
@@ -68,8 +78,11 @@ export default function AdminFeedback({ socket }) {
         if (f.status === "new" && !f.viewed) newIds.add(f.id);
       });
       setNewFeedbackIds(newIds);
+      
+      console.log("[AdminFeedback] Loaded", d.feedbacks?.length || 0, "feedbacks");
     } catch (e) {
-      console.error("Failed to load feedbacks:", e);
+      console.error("[AdminFeedback] Failed to load feedbacks:", e);
+      alert("Failed to load feedbacks: " + e.message);
     } finally {
       setLoading(false);
     }
@@ -77,10 +90,12 @@ export default function AdminFeedback({ socket }) {
 
   const loadStats = useCallback(async () => {
     try {
+      console.log("[AdminFeedback] Loading stats...");
       const d = await adminFetch("/feedback/stats");
+      console.log("[AdminFeedback] Stats response:", d);
       setStats(d);
     } catch (e) {
-      console.error("Failed to load stats:", e);
+      console.error("[AdminFeedback] Failed to load stats:", e);
     }
   }, []);
 

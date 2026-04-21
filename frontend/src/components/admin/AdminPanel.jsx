@@ -492,6 +492,311 @@ export default function AdminPanel({ socket, onClose }) {
           </section>
         )}
 
+        {tab === "moderation" && (
+          <section className="admin-section">
+            <h2>Content Moderation</h2>
+            <p className="muted">Manage banned users, flagged messages, and content filters</p>
+            
+            <div className="admin-toolbar">
+              <RippleButton type="button" onClick={() => act(loadSystem)} disabled={busy}>
+                Refresh
+              </RippleButton>
+            </div>
+            
+            {system && (
+              <div className="admin-form">
+                <h3>Banned Users</h3>
+                <div className="banned-users-list">
+                  {system.bannedUserIds?.length > 0 ? (
+                    system.bannedUserIds.map(id => (
+                      <div key={id} className="banned-user-item">
+                        <code>{id}</code>
+                        <RippleButton 
+                          type="button" 
+                          className="small"
+                          onClick={() => act(async () => {
+                            await adminFetch(`/users/${id}/unban`, { method: "POST" });
+                            await loadSystem();
+                          })}
+                        >
+                          Unban
+                        </RippleButton>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="muted">No banned users</p>
+                  )}
+                </div>
+                
+                <h3>Flagged Messages</h3>
+                <div className="flagged-messages-list">
+                  {system.flaggedMessages?.length > 0 ? (
+                    system.flaggedMessages.map(msg => (
+                      <div key={msg.id} className="flagged-message-item">
+                        <span>{msg.text}</span>
+                        <span className="badge">{msg.reason}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="muted">No flagged messages</p>
+                  )}
+                </div>
+                
+                <h3>Profanity Filter</h3>
+                <label>
+                  Add word to filter
+                  <input className="admin-input" id="prof-moderation" placeholder="Enter word..." />
+                  <RippleButton
+                    type="button"
+                    onClick={() => {
+                      const w = document.getElementById("prof-moderation")?.value?.trim();
+                      if (!w) return;
+                      act(async () => {
+                        await adminFetch("/profanity", { method: "POST", body: JSON.stringify({ word: w }) });
+                        await loadSystem();
+                      });
+                    }}
+                  >
+                    Add
+                  </RippleButton>
+                </label>
+                <div className="profanity-list">
+                  {system.profanityWords?.length > 0 ? (
+                    system.profanityWords.map(word => (
+                      <span key={word} className="profanity-tag">{word}</span>
+                    ))
+                  ) : (
+                    <p className="muted">No filter words</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === "analytics" && (
+          <section className="admin-section">
+            <h2>Analytics Dashboard</h2>
+            <p className="muted">Real-time system analytics and usage statistics</p>
+            
+            <div className="analytics-grid">
+              <div className="analytics-card">
+                <h3>User Activity</h3>
+                <div className="stat-row">
+                  <span>Online Now:</span>
+                  <strong>{snapshot?.online || 0}</strong>
+                </div>
+                <div className="stat-row">
+                  <span>Total Connections:</span>
+                  <strong>{snapshot?.sockets || 0}</strong>
+                </div>
+                <div className="stat-row">
+                  <span>Active Users (1h):</span>
+                  <strong>{stats?.activeUsersLastHour || 0}</strong>
+                </div>
+              </div>
+              
+              <div className="analytics-card">
+                <h3>Message Statistics</h3>
+                <div className="stat-row">
+                  <span>Total Messages:</span>
+                  <strong>{stats?.totalMessages || 0}</strong>
+                </div>
+                <div className="stat-row">
+                  <span>DM Conversations:</span>
+                  <strong>{stats?.totalDmConversations || 0}</strong>
+                </div>
+                <div className="stat-row">
+                  <span>Groups:</span>
+                  <strong>{stats?.totalGroups || 0}</strong>
+                </div>
+              </div>
+              
+              <div className="analytics-card">
+                <h3>System Health</h3>
+                <div className="stat-row">
+                  <span>Uptime:</span>
+                  <strong>{stats?.uptime || "N/A"}</strong>
+                </div>
+                <div className="stat-row">
+                  <span>Memory Usage:</span>
+                  <strong>{stats?.memoryUsage || "N/A"}</strong>
+                </div>
+                <div className="stat-row">
+                  <span>Last Restart:</span>
+                  <strong>{stats?.lastRestart || "N/A"}</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {tab === "security" && (
+          <section className="admin-section">
+            <h2>Security Center</h2>
+            <p className="muted">Security settings and access control</p>
+            
+            <div className="security-grid">
+              <div className="security-card">
+                <h3>Access Control</h3>
+                <label>
+                  <input 
+                    type="checkbox" 
+                    checked={system?.config?.registrationEnabled !== false}
+                    onChange={(e) => act(async () => {
+                      await adminFetch("/system", {
+                        method: "PATCH",
+                        body: JSON.stringify({ registrationEnabled: e.target.checked }),
+                      });
+                      await loadSystem();
+                    })}
+                  />
+                  Allow new user registrations
+                </label>
+                
+                <label>
+                  <input 
+                    type="checkbox" 
+                    checked={system?.config?.dmEnabled !== false}
+                    onChange={(e) => act(async () => {
+                      await adminFetch("/system", {
+                        method: "PATCH",
+                        body: JSON.stringify({ dmEnabled: e.target.checked }),
+                      });
+                      await loadSystem();
+                    })}
+                  />
+                  Enable direct messages
+                </label>
+                
+                <label>
+                  <input 
+                    type="checkbox" 
+                    checked={system?.config?.groupCreationEnabled !== false}
+                    onChange={(e) => act(async () => {
+                      await adminFetch("/system", {
+                        method: "PATCH",
+                        body: JSON.stringify({ groupCreationEnabled: e.target.checked }),
+                      });
+                      await loadSystem();
+                    })}
+                  />
+                  Allow group creation
+                </label>
+              </div>
+              
+              <div className="security-card">
+                <h3>Rate Limits</h3>
+                <label>
+                  Max login attempts per minute
+                  <input 
+                    type="number" 
+                    className="admin-input"
+                    value={system?.config?.maxLoginAttempts || 5}
+                    onChange={(e) => act(async () => {
+                      await adminFetch("/system", {
+                        method: "PATCH",
+                        body: JSON.stringify({ maxLoginAttempts: Number(e.target.value) }),
+                      });
+                      await loadSystem();
+                    })}
+                  />
+                </label>
+                
+                <label>
+                  Max messages per minute
+                  <input 
+                    type="number" 
+                    className="admin-input"
+                    value={system?.config?.maxMessagesPerMinute || 60}
+                    onChange={(e) => act(async () => {
+                      await adminFetch("/system", {
+                        method: "PATCH",
+                        body: JSON.stringify({ maxMessagesPerMinute: Number(e.target.value) }),
+                      });
+                      await loadSystem();
+                    })}
+                  />
+                </label>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {tab === "maintenance" && (
+          <section className="admin-section">
+            <h2>System Maintenance</h2>
+            <p className="muted">System maintenance and cleanup tools</p>
+            
+            <div className="maintenance-grid">
+              <div className="maintenance-card">
+                <h3>Cache Management</h3>
+                <RippleButton
+                  type="button"
+                  onClick={() =>
+                    act(async () => {
+                      await adminFetch("/cache/clear", { method: "POST" });
+                      alert("Cache cleared successfully");
+                    })
+                  }
+                >
+                  Clear System Cache
+                </RippleButton>
+                <p className="muted">Clears all temporary caches</p>
+              </div>
+              
+              <div className="maintenance-card">
+                <h3>Log Management</h3>
+                <RippleButton
+                  type="button"
+                  onClick={() =>
+                    act(async () => {
+                      await adminFetch("/logs/archive", { method: "POST" });
+                      alert("Old logs archived successfully");
+                    })
+                  }
+                >
+                  Archive Old Logs
+                </RippleButton>
+                <p className="muted">Archives logs older than 30 days</p>
+              </div>
+              
+              <div className="maintenance-card">
+                <h3>Database</h3>
+                <RippleButton
+                  type="button"
+                  onClick={() =>
+                    act(async () => {
+                      const d = await adminFetch("/backup", { method: "POST" });
+                      alert("Backup created: " + d.backupId);
+                    })
+                  }
+                >
+                  Create Backup
+                </RippleButton>
+                <p className="muted">Creates a full system backup</p>
+              </div>
+              
+              <div className="maintenance-card danger">
+                <h3>Danger Zone</h3>
+                <RippleButton
+                  type="button"
+                  className="danger"
+                  onClick={() =>
+                    act(async () => {
+                      if (!window.confirm("Restart Node process?\n\nAll connections will be lost.")) return;
+                      await adminFetch("/restart", { method: "POST" });
+                    })
+                  }
+                >
+                  Restart Server
+                </RippleButton>
+                <p className="muted warning">Immediately restarts the server</p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {tab === "system" && (
           <section className="admin-section">
             {system && (

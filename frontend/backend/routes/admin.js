@@ -891,4 +891,112 @@ router.delete("/feedback/:id", (req, res) => {
   }
 });
 
+// ========== ADDITIONAL ADMIN ROUTES ==========
+
+// Clear cache
+router.post("/cache/clear", (req, res) => {
+  try {
+    // Clear various caches
+    state.dmBlockPairs?.clear?.();
+    state.rateLimitDm?.clear?.();
+    state.userOnlineAccumMs?.clear?.();
+    state.userSessionStartMs?.clear?.();
+    
+    res.json({ success: true, message: "Cache cleared successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to clear cache." });
+  }
+});
+
+// Archive old logs
+router.post("/logs/archive", (req, res) => {
+  try {
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const oldLogs = (state.errorLogs || []).filter(l => new Date(l.timestamp).getTime() < thirtyDaysAgo);
+    
+    if (oldLogs.length > 0) {
+      state.archivedErrorLogs = [...(state.archivedErrorLogs || []), ...oldLogs];
+      state.errorLogs = (state.errorLogs || []).filter(l => new Date(l.timestamp).getTime() >= thirtyDaysAgo);
+    }
+    
+    res.json({ 
+      success: true, 
+      archived: oldLogs.length,
+      message: `${oldLogs.length} logs archived successfully` 
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to archive logs." });
+  }
+});
+
+// Bulk delete error logs
+router.post("/errors/bulk-delete", (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "No IDs provided." });
+    }
+    
+    const beforeCount = state.errorLogs?.length || 0;
+    state.errorLogs = (state.errorLogs || []).filter(l => !ids.includes(l.id));
+    const deleted = beforeCount - state.errorLogs.length;
+    
+    res.json({ success: true, deleted });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete logs." });
+  }
+});
+
+// Bulk archive error logs
+router.post("/errors/bulk-archive", (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "No IDs provided." });
+    }
+    
+    const toArchive = (state.errorLogs || []).filter(l => ids.includes(l.id));
+    if (toArchive.length > 0) {
+      state.archivedErrorLogs = [...(state.archivedErrorLogs || []), ...toArchive];
+      state.errorLogs = (state.errorLogs || []).filter(l => !ids.includes(l.id));
+    }
+    
+    res.json({ success: true, archived: toArchive.length });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to archive logs." });
+  }
+});
+
+// Export error logs
+router.get("/errors/export", (req, res) => {
+  try {
+    const { format = "json" } = req.query;
+    const logs = state.errorLogs || [];
+    
+    if (format === "csv") {
+      const headers = ["id", "timestamp", "severity", "source", "message", "userId", "username"].join(",");
+      const rows = logs.map(l => [
+        l.id,
+        l.timestamp,
+        l.severity,
+        l.source,
+        `"${(l.message || "").replace(/"/g, "\"")}"`,
+        l.user?.id || "",
+        l.user?.username || ""
+      ].join(","));
+      
+      const csv = [headers, ...rows].join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=error-logs.csv");
+      res.send(csv);
+    } else {
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", "attachment; filename=error-logs.json");
+      res.json(logs);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Failed to export logs." });
+  }
+});
+
 module.exports = router;

@@ -53,21 +53,36 @@ export default function UserFeedbackButton({ socket, user }) {
     try {
       // Upload attachments first
       const attachmentUrls = [];
+      const token = localStorage.getItem("token");
+      
       for (const file of attachments) {
         const formData = new FormData();
         formData.append("file", file);
         
+        console.log("[Feedback] Uploading file:", file.name, "size:", file.size);
+        
         const res = await fetch("/api/media/upload", {
           method: "POST",
           body: formData,
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { 
+            "Authorization": `Bearer ${token}`,
+          },
         });
+        
+        console.log("[Feedback] Upload response status:", res.status);
         
         if (res.ok) {
           const data = await res.json();
+          console.log("[Feedback] Upload success:", data.url);
           attachmentUrls.push(data.url);
+        } else {
+          const errorText = await res.text();
+          console.error("[Feedback] Upload failed:", errorText);
+          throw new Error(`Failed to upload ${file.name}: ${res.status}`);
         }
       }
+      
+      console.log("[Feedback] Submitting with attachments:", attachmentUrls);
       
       // Submit feedback
       const res = await fetch("/api/errors/feedback", {
