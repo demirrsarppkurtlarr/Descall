@@ -14,6 +14,8 @@ const mediaRoutes = require("./routes/media");
 const groupRoutes = require("./routes/groups");
 const errorRoutes = require("./routes/errors");
 const feedbackTestRoutes = require("./routes/feedback-test");
+const { requireAuth } = require("./middleware/auth");
+const { supabase } = require("./db/supabase");
 const { socketAuthMiddleware } = require("./middleware/socketAuth");
 const { registerSocketHandlers } = require("./socket/handlers");
 
@@ -108,6 +110,44 @@ app.post("/api/test-feedback-simple", (req, res) => {
   console.log("[INLINE-TEST] POST /api/test-feedback-simple - HIT!");
   console.log("[INLINE-TEST] Body:", req.body);
   res.json({ success: true, timestamp: Date.now(), body: req.body });
+});
+
+// DIRECT FEEDBACK ENDPOINT - bypass router issues
+app.post("/api/errors/feedback-direct", requireAuth, async (req, res) => {
+  console.log("[DIRECT-FEEDBACK] POST /api/errors/feedback-direct - HIT!");
+  console.log("[DIRECT-FEEDBACK] User:", req.user);
+  console.log("[DIRECT-FEEDBACK] Body:", req.body);
+  
+  try {
+    const { category, priority, message, attachments } = req.body;
+    const userId = req.user.id;
+    const username = req.user.username;
+    
+    const { data, error } = await supabase
+      .from("user_feedback")
+      .insert({
+        user_id: userId,
+        username: username,
+        category: category || "general",
+        priority: priority || "medium",
+        message: message || "",
+        attachments: attachments || [],
+        status: "new",
+        viewed: false,
+      })
+      .select();
+    
+    if (error) {
+      console.error("[DIRECT-FEEDBACK] Supabase error:", error);
+      return res.status(500).json({ error: error.message });
+    }
+    
+    console.log("[DIRECT-FEEDBACK] Success:", data);
+    return res.json({ success: true, data });
+  } catch (err) {
+    console.error("[DIRECT-FEEDBACK] Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 console.log("[SERVER] About to register /api/errors route");
