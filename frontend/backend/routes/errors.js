@@ -265,13 +265,15 @@ router.post("/feedback", (req, res, next) => {
 
     console.log("[Feedback] Step 15: Sending response");
     const responseBody = { success: true, feedback, dbData: data };
-    const jsonString = JSON.stringify(responseBody);
-    console.log("[Feedback] Response body length:", jsonString.length);
     
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Length', Buffer.byteLength(jsonString));
-    res.setHeader('Cache-Control', 'no-cache');
-    return res.end(jsonString);
+    // Explicit response with proper headers
+    res.set('Content-Type', 'application/json');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
+    console.log("[Feedback] Sending JSON response:", JSON.stringify(responseBody).slice(0, 200));
+    return res.status(200).json(responseBody);
     
   } catch (error) {
     console.error("[Feedback] CRITICAL ERROR:", error);
