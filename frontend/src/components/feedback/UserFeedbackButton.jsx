@@ -116,7 +116,10 @@ export default function UserFeedbackButton({ socket, user }) {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${submitToken}`,
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
         },
+        cache: "no-store",
         body: JSON.stringify({
           category,
           priority,

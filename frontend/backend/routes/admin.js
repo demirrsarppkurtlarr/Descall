@@ -277,7 +277,8 @@ router.get("/users/:id/activity", (req, res) => {
 router.get("/messages", (req, res) => {
   const q = String(req.query.q || "").trim().toLowerCase();
   const userId = req.query.userId;
-  let list = [...state.generalMessages];
+  const messages = state.generalMessages || [];
+  let list = [...messages];
   if (userId) list = list.filter((m) => m.userId === userId);
   if (q) list = list.filter((m) => (m.text || "").toLowerCase().includes(q));
   const limit = Math.min(500, parseInt(req.query.limit || "200", 10) || 200);
@@ -285,9 +286,10 @@ router.get("/messages", (req, res) => {
 });
 
 router.delete("/messages/:msgId", (req, res) => {
-  const idx = state.generalMessages.findIndex((m) => m.id === req.params.msgId);
+  const messages = state.generalMessages || [];
+  const idx = messages.findIndex((m) => m.id === req.params.msgId);
   if (idx < 0) return res.status(404).json({ error: "Not found." });
-  state.generalMessages.splice(idx, 1);
+  messages.splice(idx, 1);
   getIo(req).emit("message:deleted", { msgId: req.params.msgId });
   audit(req.user, "message_delete", req.params.msgId, {});
   notifyAdminRoom(getIo(req), { type: "message_delete", msgId: req.params.msgId });
