@@ -112,9 +112,9 @@ app.post("/api/test-feedback-simple", (req, res) => {
   res.json({ success: true, timestamp: Date.now(), body: req.body });
 });
 
-// DIRECT FEEDBACK ENDPOINT - bypass router issues
-app.post("/api/errors/feedback-direct", requireAuth, async (req, res) => {
-  console.log("[DIRECT-FEEDBACK] POST /api/errors/feedback-direct - HIT!");
+// DIRECT FEEDBACK ENDPOINT - bypass router issues (MUST be defined BEFORE app.use("/api/errors", ...))
+app.post("/api/errors/feedback", requireAuth, async (req, res) => {
+  console.log("[DIRECT-FEEDBACK] POST /api/errors/feedback - HIT!");
   console.log("[DIRECT-FEEDBACK] User:", req.user);
   console.log("[DIRECT-FEEDBACK] Body:", req.body);
   

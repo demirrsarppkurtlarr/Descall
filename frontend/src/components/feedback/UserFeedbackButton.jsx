@@ -111,8 +111,8 @@ export default function UserFeedbackButton({ socket, user }) {
       const submitToken = localStorage.getItem("descall_token");
       console.log("[FRONTEND] Submit token:", !!submitToken);
       
-      console.log("[FRONTEND] Using DIRECT endpoint /api/errors/feedback-direct");
-      const res = await fetch("/api/errors/feedback-direct", {
+      console.log("[FRONTEND] Using endpoint /api/errors/feedback");
+      const res = await fetch("/api/errors/feedback", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
