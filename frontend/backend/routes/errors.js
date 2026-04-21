@@ -119,26 +119,45 @@ router.post("/feedback", requireAuth, async (req, res) => {
     const { category, priority, message, attachments = [] } = req.body;
     const user = req.user;
 
+    console.log("[Feedback] Received submission:", { 
+      userId: user?.id, 
+      username: user?.username,
+      category, 
+      priority, 
+      messageLength: message?.length,
+      attachmentsCount: attachments?.length 
+    });
+
     if (!category || !priority || !message) {
+      console.log("[Feedback] Missing required fields:", { category, priority, message: !!message });
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     // Store in Supabase
+    const insertData = {
+      user_id: user.id,
+      username: user.username,
+      category,
+      priority,
+      message,
+      attachments: attachments || [],
+      status: "new",
+      created_at: new Date().toISOString(),
+    };
+    
+    console.log("[Feedback] Inserting to Supabase:", insertData);
+
     const { data, error } = await supabase
       .from("user_feedback")
-      .insert({
-        user_id: user.id,
-        username: user.username,
-        category,
-        priority,
-        message,
-        attachments,
-        status: "new",
-        created_at: new Date().toISOString(),
-      })
+      .insert(insertData)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error("[Feedback] Supabase insert error:", error);
+      throw error;
+    }
+
+    console.log("[Feedback] Supabase insert success:", data);
 
     // Add to in-memory state
     const feedback = state.addFeedback(
@@ -155,10 +174,10 @@ router.post("/feedback", requireAuth, async (req, res) => {
       io.to("admin").emit("feedback:new", feedback);
     }
 
-    res.json({ success: true, feedback });
+    res.json({ success: true, feedback, dbData: data });
   } catch (error) {
     console.error("[Feedback] Failed to submit feedback:", error);
-    res.status(500).json({ error: "Failed to submit feedback" });
+    res.status(500).json({ error: "Failed to submit feedback", details: error.message });
   }
 });
 

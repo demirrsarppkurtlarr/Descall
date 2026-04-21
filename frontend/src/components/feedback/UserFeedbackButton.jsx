@@ -109,6 +109,8 @@ export default function UserFeedbackButton({ socket, user }) {
       });
       
       if (res.ok) {
+        const data = await res.json();
+        console.log("[Feedback] Submit success:", data);
         setSubmitted(true);
         setTimeout(() => {
           setIsOpen(false);
@@ -120,11 +122,13 @@ export default function UserFeedbackButton({ socket, user }) {
           setAttachments([]);
         }, 2000);
       } else {
-        throw new Error("Failed to submit");
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        console.error("[Feedback] Submit failed:", errorData);
+        throw new Error(errorData.error || errorData.details || "Failed to submit");
       }
     } catch (err) {
-      console.error("Failed to submit feedback:", err);
-      alert("Failed to submit feedback. Please try again.");
+      console.error("[Feedback] Failed to submit feedback:", err);
+      alert("Failed to submit feedback: " + err.message);
     } finally {
       setIsSubmitting(false);
     }
