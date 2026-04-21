@@ -407,21 +407,34 @@ export function useGroupCall(socket) {
       screenStreamRef.current = stream;
       setScreenStream(stream);
       
-      // Replace camera track with screen track instead of adding
-      pcMapRef.current.forEach((peerData, userId) => {
+      // Replace camera track with screen track or add if no video exists
+      pcMapRef.current.forEach(async (peerData, userId) => {
         try {
           const senders = peerData.pc.getSenders();
           const videoSender = senders.find(s => s.track?.kind === 'video');
           
           if (videoSender) {
+            // Video call - replace camera with screen
             videoSender.replaceTrack(screenTrack);
             screenSenderRef.current = videoSender;
             console.log(`[GroupCall] Replaced camera track with screen track for ${userId}`);
           } else {
-            // If no video sender exists, add the screen track
-            const sender = peerData.pc.addTrack(screenTrack, stream);
-            screenSenderRef.current = sender;
-            console.log(`[GroupCall] Added screen track for ${userId} (no existing video sender)`);
+            // Voice-only call - need to add track and renegotiate
+            peerData.pc.addTrack(screenTrack, stream);
+            screenSenderRef.current = senders.find(s => s.track === screenTrack);
+            console.log(`[GroupCall] Added screen track for ${userId} (voice call, needs renegotiation)`);
+            
+            // Renegotiate - create new offer
+            const offer = await peerData.pc.createOffer();
+            await peerData.pc.setLocalDescription(offer);
+            
+            socketRef.current.emit("group:call:offer", {
+              groupId: activeGroupId,
+              toUserId: userId,
+              offer: peerData.pc.localDescription,
+              callType: "video", // Upgrade to video for screen share
+            });
+            console.log(`[GroupCall] Renegotiation offer sent to ${userId}`);
           }
         } catch (err) {
           console.error(`[GroupCall] Failed to replace/add screen track for ${userId}:`, err);
@@ -448,20 +461,43 @@ export function useGroupCall(socket) {
     }
   }, [isScreenSharing, activeGroupId]);
 
-  const stopScreenShare = useCallback(() => {
+  const stopScreenShare = useCallback(async () => {
     if (!isScreenSharing) return;
 
-    // Replace screen track back with camera track
-    if (screenSenderRef.current && localStreamRef.current) {
-      const cameraTrack = localStreamRef.current.getVideoTracks()[0];
-      pcMapRef.current.forEach((peerData, userId) => {
+    const hadCamera = localStreamRef.current?.getVideoTracks().length > 0;
+    
+    // Replace screen track back with camera track or remove if no camera
+    if (screenSenderRef.current) {
+      const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
+      pcMapRef.current.forEach(async (peerData, userId) => {
         try {
           if (cameraTrack) {
+            // Has camera - replace screen with camera
             screenSenderRef.current.replaceTrack(cameraTrack);
             console.log(`[GroupCall] Replaced screen track with camera track for ${userId}`);
+          } else {
+            // Voice-only call - remove screen track and renegotiate
+            const senders = peerData.pc.getSenders();
+            const screenSender = senders.find(s => s.track?.label?.toLowerCase().includes("screen"));
+            if (screenSender) {
+              peerData.pc.removeTrack(screenSender);
+              console.log(`[GroupCall] Removed screen track for ${userId} (voice call)`);
+              
+              // Renegotiate back to audio-only
+              const offer = await peerData.pc.createOffer();
+              await peerData.pc.setLocalDescription(offer);
+              
+              socketRef.current.emit("group:call:offer", {
+                groupId: activeGroupId,
+                toUserId: userId,
+                offer: peerData.pc.localDescription,
+                callType: "voice",
+              });
+              console.log(`[GroupCall] Renegotiation offer (back to voice) sent to ${userId}`);
+            }
           }
         } catch (err) {
-          console.error(`[GroupCall] Failed to replace screen track for ${userId}:`, err);
+          console.error(`[GroupCall] Failed to replace/remove screen track for ${userId}:`, err);
         }
       });
       screenSenderRef.current = null;
