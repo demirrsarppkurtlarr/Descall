@@ -121,6 +121,13 @@ router.get("/feedback-test", (_req, res) => {
   res.json({ message: "Feedback route is working", time: Date.now() });
 });
 
+// SUPER SIMPLE POST TEST - No auth, no supabase, just test if POST works
+router.post("/simple-test", (req, res) => {
+  console.log("[SIMPLE-TEST] POST /api/errors/simple-test - HIT!");
+  console.log("[SIMPLE-TEST] Body:", JSON.stringify(req.body));
+  res.json({ success: true, received: req.body, time: Date.now() });
+});
+
 // Submit feedback (authenticated users)
 console.log("[ERRORS-JS] Registering POST /feedback route...");
 router.post("/feedback", (req, res, next) => {
