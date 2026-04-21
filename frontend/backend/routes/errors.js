@@ -113,8 +113,19 @@ router.delete("/:id", async (req, res) => {
 
 // ========== USER FEEDBACK ENDPOINTS ==========
 
+// Simple GET test - does this route even work?
+router.get("/feedback-test", (_req, res) => {
+  console.log("[ROUTE-TEST] GET /api/errors/feedback-test - WORKING!");
+  res.json({ message: "Feedback route is working", time: Date.now() });
+});
+
 // Submit feedback (authenticated users)
-router.post("/feedback", requireAuth, async (req, res) => {
+router.post("/feedback", async (req, res, next) => {
+  console.log("[ROUTE-HIT] POST /api/errors/feedback - Route hit!");
+  console.log("[ROUTE-HIT] Headers:", JSON.stringify(req.headers));
+  console.log("[ROUTE-HIT] Body:", JSON.stringify(req.body));
+  next();
+}, requireAuth, async (req, res) => {
   console.log("[Feedback] ========== START ==========");
   
   try {
