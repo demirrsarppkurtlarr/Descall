@@ -739,6 +739,76 @@ export function useGroupCall(socket) {
       });
     };
 
+    // Handle server telling us to join an existing call instead of starting new
+    const onJoinExisting = async ({ groupId, initiatorId, callType: existingCallType, participants: existingParticipants }) => {
+      console.log(`[GroupCall] Server says join existing call in group ${groupId}`);
+      
+      if (isInCall) {
+        console.log("[GroupCall] Already in a call, ignoring join-existing");
+        return;
+      }
+
+      try {
+        // Get media stream
+        const constraints = existingCallType === "video"
+          ? { audio: true, video: { width: 1280, height: 720, facingMode: "user" } }
+          : { audio: true, video: false };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        
+        // Enable audio tracks
+        stream.getAudioTracks().forEach(track => {
+          track.enabled = true;
+        });
+        
+        setIsInCall(true);
+        setIsInitiator(false); // We're joining, not initiating
+        setCallType(existingCallType);
+        setActiveGroupId(groupId);
+        setIsCameraOn(existingCallType === "video");
+
+        if (localVideoRef.current && existingCallType === "video") {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch(() => {});
+        }
+
+        // Add existing participants to our list
+        existingParticipants.forEach((userId) => {
+          if (userId !== myId) {
+            setParticipants((prev) => {
+              const exists = prev.find((p) => p.id === userId);
+              if (!exists) {
+                return [...prev, {
+                  id: userId,
+                  username: "Member",
+                  hasVideo: existingCallType === "video",
+                  hasAudio: true,
+                }];
+              }
+              return prev;
+            });
+
+            // Set up peer connection for each existing participant
+            const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+            const peerData = { pc, pendingIce: [] };
+            pcMapRef.current.set(userId, peerData);
+            
+            setupPeerConnection(pc, stream, userId);
+          }
+        });
+
+        // Notify server we're joining
+        socket.emit("group:call:join", { groupId, callType: existingCallType });
+
+        console.log("[GroupCall] Joined existing call");
+      } catch (err) {
+        console.error("[GroupCall] Join existing call failed:", err);
+        cleanup();
+      }
+    };
+
     socket.on("group:call:incoming", onIncoming);
     socket.on("group:call:accepted", onAccept);
     socket.on("group:call:answer", onAnswer);
@@ -751,6 +821,7 @@ export function useGroupCall(socket) {
     socket.on("group:screen:stopped", onScreenStopped);
     socket.on("group:call:participant-joined", onParticipantJoined);
     socket.on("group:call:started", onCallStarted);
+    socket.on("group:call:join-existing", onJoinExisting);
 
     return () => {
       socket.off("group:call:incoming", onIncoming);
@@ -765,6 +836,7 @@ export function useGroupCall(socket) {
       socket.off("group:screen:stopped", onScreenStopped);
       socket.off("group:call:participant-joined", onParticipantJoined);
       socket.off("group:call:started", onCallStarted);
+      socket.off("group:call:join-existing", onJoinExisting);
     };
   }, [socket, activeGroupId, isInCall, callType, cleanup, setupPeerConnection]);
 
