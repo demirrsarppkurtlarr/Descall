@@ -13,6 +13,7 @@ const adminRoutes = require("./routes/admin");
 const mediaRoutes = require("./routes/media");
 const groupRoutes = require("./routes/groups");
 const errorRoutes = require("./routes/errors");
+const feedbackTestRoutes = require("./routes/feedback-test");
 const { socketAuthMiddleware } = require("./middleware/socketAuth");
 const { registerSocketHandlers } = require("./socket/handlers");
 
@@ -81,6 +82,7 @@ app.use("/admin", adminRoutes);
 app.use("/media", mediaRoutes);
 app.use("/groups", groupRoutes);
 app.use("/api/errors", errorRoutes);
+app.use("/api/test", feedbackTestRoutes);  // TEST ROUTE
 app.use("/media/files", express.static(path.join(__dirname, "uploads")));
 
 // Serve frontend build in production
