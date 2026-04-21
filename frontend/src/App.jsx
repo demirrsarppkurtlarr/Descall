@@ -152,6 +152,8 @@ export default function App() {
       transportFallbackStepRef.current = 0;
       setAuthError("");
       emitDmActive(socket, activeDmRef.current?.id ?? null);
+      // Request friend list on connect/reconnect
+      socket.emit("friend:list");
     });
 
     socket.on("disconnect", (reason) => {

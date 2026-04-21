@@ -3481,33 +3481,43 @@ html[data-theme="light"] body {
   object-fit: cover;
 }
 
-/* Screen Share Cell */
-.vc-screen-share-cell {
+/* Screen Share Overlay within Video Cell */
+.vc-video-cell.has-screen-share {
   position: relative;
-  background: #1a1f2e;
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-height: 0;
-  margin-top: 8px;
-  aspect-ratio: 16/9;
 }
 
-.vc-screen-share-cell:hover {
+.vc-screen-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #0a0a0f;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.vc-screen-overlay:hover {
   outline: 2px solid var(--accent);
 }
 
-.vc-screen-share-cell.fullscreen {
+.vc-screen-overlay.fullscreen {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 9999;
-  margin: 0;
   border-radius: 0;
-  aspect-ratio: auto;
+}
+
+.vc-screen-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .vc-screen-badge {
