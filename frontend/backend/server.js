@@ -87,6 +87,17 @@ app.get("/health", (_req, res) => {
 });
 
 console.log("[SERVER] Registering routes...");
+
+// Response logging middleware for debugging
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(body) {
+    console.log(`[RESPONSE] ${req.method} ${req.path} - Status: ${res.statusCode} - Body length: ${JSON.stringify(body).length}`);
+    return originalJson.call(this, body);
+  };
+  next();
+});
+
 app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/media", mediaRoutes);
