@@ -38,6 +38,7 @@ export default function VideoConference({
   const remoteStreamMap = remoteStreams?.current instanceof Map ? remoteStreams.current : new Map();
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "focus"
   const [showControls, setShowControls] = useState(true);
+  const [fullscreenParticipant, setFullscreenParticipant] = useState(null); // null | 'local' | userId
   const controlsTimeoutRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -252,66 +253,119 @@ export default function VideoConference({
             }}
           >
             {/* Local Video */}
-            <div 
-              className={`vc-video-cell ${focusedParticipant === 'local' ? 'focused' : ''}`}
-              onClick={() => setFocusedParticipant('local')}
-            >
-              {isCameraOn || isScreenSharing ? (
-                <video
-                  ref={(el) => {
-                    if (el && localStream) el.srcObject = localStream;
-                  }}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="vc-video"
-                />
-              ) : (
-                <div className="vc-avatar-placeholder">
-                  <span>You</span>
+            <div>
+              <div 
+                className={`vc-video-cell ${focusedParticipant === 'local' ? 'focused' : ''}`}
+                onClick={() => setFocusedParticipant('local')}
+              >
+                {isCameraOn ? (
+                  <video
+                    ref={(el) => {
+                      if (el && localStream) el.srcObject = localStream;
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="vc-video"
+                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                  />
+                ) : (
+                  <div className="vc-avatar-placeholder">
+                    <span>You</span>
+                  </div>
+                )}
+                <div className="vc-video-badge">
+                  {isMuted ? <MicOff size={14} /> : <Mic size={14} />}
+                </div>
+                <span className="vc-name">You</span>
+              </div>
+              
+              {/* Local Screen Share */}
+              {isScreenSharing && screenStream && (
+                <div 
+                  className={`vc-screen-share-cell ${fullscreenParticipant === 'local' ? 'fullscreen' : ''}`}
+                  onClick={() => setFullscreenParticipant(fullscreenParticipant === 'local' ? null : 'local')}
+                >
+                  <video
+                    ref={(el) => {
+                      if (el && screenStream) el.srcObject = screenStream;
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="vc-video"
+                    style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+                  />
+                  <div className="vc-screen-badge">
+                    <Monitor size={14} />
+                    <span>Your Screen</span>
+                    <span className="vc-fullscreen-hint">{fullscreenParticipant === 'local' ? 'Click to exit' : 'Click to fullscreen'}</span>
+                  </div>
                 </div>
               )}
-              <div className="vc-video-badge">
-                {isMuted ? <MicOff size={14} /> : <Mic size={14} />}
-                {isScreenSharing && <Monitor size={14} />}
-              </div>
-              <span className="vc-name">You</span>
             </div>
 
             {/* Remote Videos */}
             {activeParticipants.map((participant) => {
               const stream = remoteStreamMap.get(participant.id);
+              const screenStream = participant.screenStream;
               const isFocused = focusedParticipant === participant.id;
+              const isFullscreen = fullscreenParticipant === participant.id;
               
               return (
-                <div 
-                  key={participant.id}
-                  className={`vc-video-cell ${isFocused ? 'focused' : ''}`}
-                  onClick={() => setFocusedParticipant(participant.id)}
-                >
-                  {stream && (participant.hasVideo || participant.isScreenSharing) ? (
-                    <video
-                      ref={(el) => {
-                        if (el) el.srcObject = stream;
-                      }}
-                      autoPlay
-                      playsInline
-                      className="vc-video"
-                    />
-                  ) : (
-                    <div className="vc-avatar-placeholder">
-                      <img 
-                        src={participant.avatarUrl || "/default-avatar.png"} 
-                        alt={participant.username}
+                <div key={participant.id}>
+                  {/* Camera Video */}
+                  <div 
+                    className={`vc-video-cell ${isFocused ? 'focused' : ''}`}
+                    onClick={() => setFocusedParticipant(participant.id)}
+                  >
+                    {stream && participant.hasVideo ? (
+                      <video
+                        ref={(el) => {
+                          if (el) el.srcObject = stream;
+                        }}
+                        autoPlay
+                        playsInline
+                        className="vc-video"
+                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                       />
-                      <span>{participant.username}</span>
+                    ) : (
+                      <div className="vc-avatar-placeholder">
+                        <img 
+                          src={participant.avatarUrl || "/default-avatar.png"} 
+                          alt={participant.username}
+                        />
+                        <span>{participant.username}</span>
+                      </div>
+                    )}
+                    <div className="vc-video-badge">
+                      {!participant.hasAudio && <MicOff size={14} />}
+                    </div>
+                    <span className="vc-name">{participant.username}</span>
+                  </div>
+                  
+                  {/* Screen Share - Separate Rectangle */}
+                  {screenStream && participant.isScreenSharing && (
+                    <div 
+                      className={`vc-screen-share-cell ${isFullscreen ? 'fullscreen' : ''}`}
+                      onClick={() => setFullscreenParticipant(isFullscreen ? null : participant.id)}
+                    >
+                      <video
+                        ref={(el) => {
+                          if (el) el.srcObject = screenStream;
+                        }}
+                        autoPlay
+                        playsInline
+                        className="vc-video"
+                        style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+                      />
+                      <div className="vc-screen-badge">
+                        <Monitor size={14} />
+                        <span>Screen Share</span>
+                        <span className="vc-fullscreen-hint">{isFullscreen ? 'Click to exit' : 'Click to fullscreen'}</span>
+                      </div>
                     </div>
                   )}
-                  <div className="vc-video-badge">
-                    {!participant.hasAudio && <MicOff size={14} />}
-                    {participant.isScreenSharing && <Monitor size={14} />}
-                  </div>
-                  <span className="vc-name">{participant.username}</span>
                 </div>
               );
             })}
