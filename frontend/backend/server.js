@@ -64,13 +64,22 @@ app.use(cors(expressCorsConfig));
 app.options("*", cors(expressCorsConfig));
 app.use(express.json());
 
+// GET - Root endpoint
 app.get("/", (_req, res) => {
   res.json({
     status: "ok",
-    message: "Descall backend is running - BUILD 2025-04-21-22:00",
-    version: "1.1.1",
+    message: "Descall backend is running - DEPLOY-V2",
+    version: "2.0.0",
+    timestamp: Date.now(),
     features: ["auth", "presence", "friends", "dm", "voice-signaling", "video-signaling", "screen-share", "media-upload", "feedback-fixed"],
   });
+});
+
+// POST - Feedback test (same route)
+app.post("/", express.json(), (req, res) => {
+  console.log("[ROOT-POST] POST to / received!");
+  console.log("[ROOT-POST] Body:", req.body);
+  res.json({ success: true, received: req.body, endpoint: "root-post" });
 });
 
 app.get("/health", (_req, res) => {
