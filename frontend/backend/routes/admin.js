@@ -744,121 +744,159 @@ router.post("/errors/archive", (req, res) => {
 
 // ========== USER FEEDBACK SYSTEM ==========
 
-// Get all feedback
-router.get("/feedback", (req, res) => {
+// Get all feedback (Admin only - from Supabase)
+router.get("/feedback", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { category, priority, status, q, sort = "newest" } = req.query;
     
-    let feedbacks = state.userFeedbacks || [];
+    // Build query
+    let query = supabase.from("user_feedback").select("*");
     
+    // Apply filters
     if (category && category !== "all") {
-      feedbacks = feedbacks.filter(f => f.category === category);
+      query = query.eq("category", category);
     }
     if (priority && priority !== "all") {
-      feedbacks = feedbacks.filter(f => f.priority === priority);
+      query = query.eq("priority", priority);
     }
     if (status && status !== "all") {
-      feedbacks = feedbacks.filter(f => f.status === status);
+      query = query.eq("status", status);
     }
     if (q) {
-      const qLower = q.toLowerCase();
-      feedbacks = feedbacks.filter(f => 
-        f.message?.toLowerCase().includes(qLower) ||
-        f.user?.username?.toLowerCase().includes(qLower)
-      );
+      query = query.or(`message.ilike.%${q}%,username.ilike.%${q}%`);
     }
     
     // Sort
-    feedbacks.sort((a, b) => {
-      if (sort === "newest") return new Date(b.created_at) - new Date(a.created_at);
-      if (sort === "oldest") return new Date(a.created_at) - new Date(b.created_at);
-      if (sort === "priority") {
-        const pOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-        return pOrder[a.priority] - pOrder[b.priority];
-      }
-      return 0;
-    });
+    if (sort === "newest") query = query.order("created_at", { ascending: false });
+    else if (sort === "oldest") query = query.order("created_at", { ascending: true });
+    else if (sort === "priority") query = query.order("priority", { ascending: true });
+    
+    const { data: feedbacks, error } = await query;
+    
+    if (error) throw error;
     
     // Calculate stats
     const byStatus = {};
     const byCategory = {};
-    feedbacks.forEach(f => {
+    feedbacks?.forEach(f => {
       byStatus[f.status] = (byStatus[f.status] || 0) + 1;
       byCategory[f.category] = (byCategory[f.category] || 0) + 1;
     });
     
+    // Transform to match frontend format
+    const transformed = feedbacks?.map(f => ({
+      id: f.id,
+      user: { id: f.user_id, username: f.username },
+      category: f.category,
+      priority: f.priority,
+      message: f.message,
+      attachments: f.attachments || [],
+      status: f.status,
+      viewed: f.viewed,
+      created_at: f.created_at,
+      updated_at: f.updated_at,
+      replies: f.admin_replies || [],
+    })) || [];
+    
     res.json({
-      feedbacks,
-      total: feedbacks.length,
+      feedbacks: transformed,
+      total: transformed.length,
       stats: { byStatus, byCategory },
     });
   } catch (error) {
+    console.error("[Admin] Failed to load feedback:", error);
     res.status(500).json({ error: "Failed to load feedback." });
   }
 });
 
-// Get feedback statistics
-router.get("/feedback/stats", (req, res) => {
+// Get feedback statistics (from Supabase)
+router.get("/feedback/stats", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const feedbacks = state.userFeedbacks || [];
+    const { data: feedbacks, error } = await supabase
+      .from("user_feedback")
+      .select("status, category, priority, viewed");
+    
+    if (error) throw error;
+    
     const byStatus = {};
     const byCategory = {};
     const byPriority = {};
     
-    feedbacks.forEach(f => {
+    feedbacks?.forEach(f => {
       byStatus[f.status] = (byStatus[f.status] || 0) + 1;
       byCategory[f.category] = (byCategory[f.category] || 0) + 1;
       byPriority[f.priority] = (byPriority[f.priority] || 0) + 1;
     });
     
     res.json({
-      total: feedbacks.length,
+      total: feedbacks?.length || 0,
       byStatus,
       byCategory,
       byPriority,
-      new: feedbacks.filter(f => f.status === "new" && !f.viewed).length,
+      new: feedbacks?.filter(f => f.status === "new" && !f.viewed).length || 0,
     });
   } catch (error) {
+    console.error("[Admin] Failed to load feedback stats:", error);
     res.status(500).json({ error: "Failed to load feedback stats." });
   }
 });
 
-// Update feedback
-router.patch("/feedback/:id", (req, res) => {
+// Update feedback (in Supabase)
+router.patch("/feedback/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    const feedback = (state.userFeedbacks || []).find(f => f.id === id);
-    if (!feedback) return res.status(404).json({ error: "Feedback not found." });
     
-    Object.assign(feedback, updates, { updated_at: new Date().toISOString() });
-    res.json(feedback);
+    const { data, error } = await supabase
+      .from("user_feedback")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "Feedback not found." });
+    
+    res.json(data);
   } catch (error) {
+    console.error("[Admin] Failed to update feedback:", error);
     res.status(500).json({ error: "Failed to update feedback." });
   }
 });
 
-// Mark feedback as viewed
-router.post("/feedback/:id/view", (req, res) => {
+// Mark feedback as viewed (in Supabase)
+router.post("/feedback/:id/view", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const feedback = (state.userFeedbacks || []).find(f => f.id === id);
-    if (feedback) {
-      feedback.viewed = true;
-      feedback.viewed_at = new Date().toISOString();
-    }
+    
+    const { error } = await supabase
+      .from("user_feedback")
+      .update({ viewed: true, viewed_at: new Date().toISOString() })
+      .eq("id", id);
+    
+    if (error) throw error;
+    
     res.json({ success: true });
   } catch (error) {
+    console.error("[Admin] Failed to mark feedback as viewed:", error);
     res.status(500).json({ error: "Failed to mark as viewed." });
   }
 });
 
-// Reply to feedback
-router.post("/feedback/:id/reply", (req, res) => {
+// Reply to feedback (in Supabase)
+router.post("/feedback/:id/reply", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { text, attachments } = req.body;
-    const feedback = (state.userFeedbacks || []).find(f => f.id === id);
+    
+    // Get current feedback
+    const { data: feedback, error: getError } = await supabase
+      .from("user_feedback")
+      .select("admin_replies")
+      .eq("id", id)
+      .single();
+    
+    if (getError) throw getError;
     if (!feedback) return res.status(404).json({ error: "Feedback not found." });
     
     const reply = {
@@ -866,27 +904,48 @@ router.post("/feedback/:id/reply", (req, res) => {
       text,
       attachments: attachments || [],
       isAdmin: true,
-      user: req.user,
+      adminId: req.user.id,
+      adminUsername: req.user.username,
       created_at: new Date().toISOString(),
     };
     
-    feedback.replies = [...(feedback.replies || []), reply];
-    feedback.status = "in_progress";
-    feedback.updated_at = new Date().toISOString();
+    const replies = [...(feedback.admin_replies || []), reply];
+    
+    const { data, error } = await supabase
+      .from("user_feedback")
+      .update({ 
+        admin_replies: replies,
+        status: "in_progress",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    
+    if (error) throw error;
     
     res.json(reply);
   } catch (error) {
+    console.error("[Admin] Failed to send reply:", error);
     res.status(500).json({ error: "Failed to send reply." });
   }
 });
 
-// Delete feedback
-router.delete("/feedback/:id", (req, res) => {
+// Delete feedback (from Supabase)
+router.delete("/feedback/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    state.userFeedbacks = (state.userFeedbacks || []).filter(f => f.id !== id);
+    
+    const { error } = await supabase
+      .from("user_feedback")
+      .delete()
+      .eq("id", id);
+    
+    if (error) throw error;
+    
     res.json({ success: true });
   } catch (error) {
+    console.error("[Admin] Failed to delete feedback:", error);
     res.status(500).json({ error: "Failed to delete feedback." });
   }
 });

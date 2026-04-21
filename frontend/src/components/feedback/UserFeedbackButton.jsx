@@ -73,8 +73,17 @@ export default function UserFeedbackButton({ socket, user }) {
         
         if (res.ok) {
           const data = await res.json();
-          console.log("[Feedback] Upload success:", data.url);
-          attachmentUrls.push(data.url);
+          console.log("[Feedback] Upload response data:", data);
+          
+          // Handle different response formats
+          const url = data.url || data.fileUrl || data.path || (data[0] && data[0].url);
+          
+          if (url) {
+            console.log("[Feedback] Upload success, URL:", url);
+            attachmentUrls.push(url);
+          } else {
+            console.error("[Feedback] Upload response missing URL:", data);
+          }
         } else {
           const errorText = await res.text();
           console.error("[Feedback] Upload failed:", errorText);
