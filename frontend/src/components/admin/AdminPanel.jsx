@@ -1,17 +1,39 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { 
+  Shield, Users, MessageSquare, Activity, AlertCircle, Settings, 
+  FileText, BarChart3, Bell, Search, Filter, Download, RefreshCw,
+  Ban, Trash2, Eye, EyeOff, Lock, Unlock, Wifi, WifiOff, Zap,
+  Database, Server, Clock, Calendar, MapPin, Smartphone, Globe,
+  Mail, Send, Image, Paperclip, X, CheckCircle, AlertTriangle,
+  Info, MoreHorizontal, ChevronDown, ChevronUp, Terminal, Cpu,
+  HardDrive, Network, TrendingUp, TrendingDown, UserCheck,
+  UserX, MessageCircle, Volume2, VolumeX, Flag, FlagOff,
+  History, RotateCcw, Save, Edit3, Layers, Grid, List, PieChart,
+  Activity as ActivityIcon, Box, Code, GitBranch, Layers2, Monitor,
+  MousePointer, Play, Pause, Square, Maximize2, Minimize2, Copy,
+  ExternalLink, FileDown, Printer, Share2, Star, ThumbsUp,
+  ThumbsDown, Upload, Video, Voicemail, ZoomIn, ZoomOut
+} from "lucide-react";
 import { adminFetch } from "../../api/adminHttp";
 import RippleButton from "../ui/RippleButton";
+import AdminFeedback from "./AdminFeedback";
+import AdminErrorLogs from "./AdminErrorLogs";
 
 const TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "users", label: "Users" },
-  { id: "messages", label: "Messages" },
-  { id: "dm", label: "DM" },
-  { id: "sockets", label: "Sockets" },
-  { id: "errors", label: "Errors" },
-  { id: "system", label: "System" },
-  { id: "audit", label: "Audit" },
+  { id: "overview", label: "Overview", icon: BarChart3 },
+  { id: "users", label: "Users", icon: Users },
+  { id: "messages", label: "Messages", icon: MessageSquare },
+  { id: "dm", label: "DM", icon: Mail },
+  { id: "sockets", label: "Sockets", icon: Wifi },
+  { id: "errors", label: "Error Logs", icon: AlertCircle },
+  { id: "feedback", label: "Feedback", icon: Bell },
+  { id: "moderation", label: "Moderation", icon: Shield },
+  { id: "analytics", label: "Analytics", icon: Activity },
+  { id: "system", label: "System", icon: Settings },
+  { id: "security", label: "Security", icon: Lock },
+  { id: "maintenance", label: "Maintenance", icon: Server },
+  { id: "audit", label: "Audit", icon: FileText },
 ];
 
 export default function AdminPanel({ socket, onClose }) {
@@ -19,21 +41,103 @@ export default function AdminPanel({ socket, onClose }) {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [userQ, setUserQ] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userDetails, setUserDetails] = useState(null);
+  const [userSessions, setUserSessions] = useState([]);
+  const [userActivity, setUserActivity] = useState([]);
   const [messages, setMessages] = useState([]);
   const [msgQ, setMsgQ] = useState("");
   const [conversations, setConversations] = useState([]);
   const [audit, setAudit] = useState([]);
   const [system, setSystem] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
+  
+  // Enhanced Error Log States
   const [errorLogs, setErrorLogs] = useState([]);
   const [errorQ, setErrorQ] = useState("");
   const [errorSourceFilter, setErrorSourceFilter] = useState("all");
   const [errorUserFilter, setErrorUserFilter] = useState("all");
+  const [errorSeverityFilter, setErrorSeverityFilter] = useState("all");
+  const [errorTimeRange, setErrorTimeRange] = useState("24h");
   const [errorSources, setErrorSources] = useState([]);
   const [errorUsers, setErrorUsers] = useState([]);
   const [expandedError, setExpandedError] = useState(null);
+  const [realtimeErrors, setRealtimeErrors] = useState(true);
+  const [errorStats, setErrorStats] = useState(null);
+  const [selectedErrors, setSelectedErrors] = useState(new Set());
+  const [autoRefreshErrors, setAutoRefreshErrors] = useState(true);
+  const errorLogEndRef = useRef(null);
+  
+  // User Feedback States
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [feedbackFilter, setFeedbackFilter] = useState("all");
+  const [feedbackStatus, setFeedbackStatus] = useState("all");
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
+  const [feedbackReply, setFeedbackReply] = useState("");
+  const [feedbackStats, setFeedbackStats] = useState(null);
+  const [newFeedbackCount, setNewFeedbackCount] = useState(0);
+  const [feedbackCategories, setFeedbackCategories] = useState([]);
+  const [feedbackPriority, setFeedbackPriority] = useState("all");
+  
+  // Moderation States
+  const [bannedWords, setBannedWords] = useState([]);
+  const [spamPatterns, setSpamPatterns] = useState([]);
+  const [moderationQueue, setModerationQueue] = useState([]);
+  const [autoModSettings, setAutoModSettings] = useState(null);
+  const [reportedContent, setReportedContent] = useState([]);
+  const [shadowBannedUsers, setShadowBannedUsers] = useState([]);
+  const [slowModeSettings, setSlowModeSettings] = useState(null);
+  const [ipBlacklist, setIpBlacklist] = useState([]);
+  
+  // Analytics States
+  const [trafficData, setTrafficData] = useState([]);
+  const [userGrowth, setUserGrowth] = useState([]);
+  const [messageStats, setMessageStats] = useState([]);
+  const [peakHours, setPeakHours] = useState([]);
+  const [deviceStats, setDeviceStats] = useState([]);
+  const [geographicData, setGeographicData] = useState([]);
+  const [retentionData, setRetentionData] = useState([]);
+  const [performanceMetrics, setPerformanceMetrics] = useState([]);
+  
+  // Security States
+  const [failedLogins, setFailedLogins] = useState([]);
+  const [suspiciousActivities, setSuspiciousActivities] = useState([]);
+  const [activeThreats, setActiveThreats] = useState([]);
+  const [securityLogs, setSecurityLogs] = useState([]);
+  const [twoFactorStats, setTwoFactorStats] = useState(null);
+  const [tokenBlacklist, setTokenBlacklist] = useState([]);
+  
+  // Maintenance States
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [chatFrozen, setChatFrozen] = useState(false);
+  const [backupStatus, setBackupStatus] = useState(null);
+  const [systemHealth, setSystemHealth] = useState(null);
+  const [scheduledTasks, setScheduledTasks] = useState([]);
+  const [cacheStats, setCacheStats] = useState(null);
+  const [dbStats, setDbStats] = useState(null);
+  
+  // UI States
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const [viewMode, setViewMode] = useState("grid");
+  const [dateRange, setDateRange] = useState("7d");
+  const [refreshInterval, setRefreshInterval] = useState(30);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [sortBy, setSortBy] = useState("timestamp");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [showFilters, setShowFilters] = useState(false);
+  const [exportFormat, setExportFormat] = useState("json");
+  const [modalContent, setModalContent] = useState(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(null);
+  const [bulkAction, setBulkAction] = useState(null);
+  
+  // Real-time updates
+  const [liveUsers, setLiveUsers] = useState([]);
+  const [liveMessages, setLiveMessages] = useState([]);
+  const [systemAlerts, setSystemAlerts] = useState([]);
+  const [activeSessions, setActiveSessions] = useState([]);
 
   const loadStats = useCallback(async () => {
     const d = await adminFetch("/stats");
@@ -109,10 +213,10 @@ export default function AdminPanel({ socket, onClose }) {
     if (tab === "users") loadUsers().catch((e) => setErr(e.message));
     if (tab === "messages") loadMessages().catch((e) => setErr(e.message));
     if (tab === "dm") loadDm().catch((e) => setErr(e.message));
-    if (tab === "errors") loadErrors().catch((e) => setErr(e.message));
     if (tab === "audit") loadAudit().catch((e) => setErr(e.message));
     if (tab === "system") loadSystem().catch((e) => setErr(e.message));
-  }, [tab, loadUsers, loadMessages, loadDm, loadErrors, loadAudit, loadSystem]);
+    // feedback and errors tabs use their own components with internal loading
+  }, [tab, loadUsers, loadMessages, loadDm, loadAudit, loadSystem]);
 
   const act = async (fn) => {
     try {
@@ -377,107 +481,14 @@ export default function AdminPanel({ socket, onClose }) {
         )}
 
         {tab === "errors" && (
-          <section className="admin-section">
-            <h2>Error Logs</h2>
-            <p className="muted">All server errors from all users with detailed information</p>
-            
-            <div className="admin-toolbar">
-              <input
-                className="admin-input"
-                placeholder="Search error message..."
-                value={errorQ}
-                onChange={(e) => setErrorQ(e.target.value)}
-              />
-              <select
-                className="admin-select"
-                value={errorSourceFilter}
-                onChange={(e) => setErrorSourceFilter(e.target.value)}
-              >
-                <option value="all">All Sources</option>
-                {errorSources.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <select
-                className="admin-select"
-                value={errorUserFilter}
-                onChange={(e) => setErrorUserFilter(e.target.value)}
-              >
-                <option value="all">All Users</option>
-                {errorUsers.map((uid) => (
-                  <option key={uid} value={uid}>{uid.slice(0, 8)}…</option>
-                ))}
-              </select>
-              <RippleButton type="button" onClick={() => act(loadErrors)} disabled={busy}>
-                Refresh
-              </RippleButton>
-            </div>
+          <section className="admin-section admin-section-full">
+            <AdminErrorLogs socket={socket} />
+          </section>
+        )}
 
-            <div className="error-stats">
-              <span>Total: {(errorLogs || []).length}</span>
-              <span>Unique Sources: {errorSources.length}</span>
-              <span>Users with Errors: {errorUsers.length}</span>
-            </div>
-
-            <div className="error-list">
-              {(errorLogs || [])
-                .filter(e => {
-                  const message = e.message || "";
-                  const source = e.source || "";
-                  const userId = e.userId || "";
-                  const matchesSource = errorSourceFilter === "all" || source === errorSourceFilter;
-                  const matchesUser = errorUserFilter === "all" || userId === errorUserFilter;
-                  const matchesSearch = !errorQ || 
-                    message.toLowerCase().includes(errorQ.toLowerCase()) ||
-                    source.toLowerCase().includes(errorQ.toLowerCase()) ||
-                    (e.username || "").toLowerCase().includes(errorQ.toLowerCase());
-                  return matchesSource && matchesUser && matchesSearch;
-                })
-                .map((e) => (
-                  <div key={e.id} className="error-item">
-                    <div className="error-header" onClick={() => setExpandedError(expandedError === e.id ? null : e.id)}>
-                      <div className="error-info">
-                        <span className="error-time">{e.at ? new Date(e.at).toLocaleString() : 'Invalid'}</span>
-                        <span className="error-source mono">{e.source || "unknown"}</span>
-                        {e.username && <span className="error-user">{e.username}</span>}
-                        {e.userId && <span className="error-user-id mono">{e.userId.slice(0, 8)}…</span>}
-                      </div>
-                      <span className="error-message">{e.message || "Unknown error"}</span>
-                    </div>
-                    
-                    {expandedError === e.id && (
-                      <div className="error-details">
-                        {e.userId && (
-                          <div className="error-detail-section">
-                            <h4>User ID</h4>
-                            <code className="error-user-id">{e.userId}</code>
-                          </div>
-                        )}
-                        {e.username && (
-                          <div className="error-detail-section">
-                            <h4>Username</h4>
-                            <span className="error-username">{e.username}</span>
-                          </div>
-                        )}
-                        {e.source && (
-                          <div className="error-detail-section">
-                            <h4>Source</h4>
-                            <code className="error-source">{e.source}</code>
-                          </div>
-                        )}
-                        {e.meta && Object.keys(e.meta).length > 0 && (
-                          <div className="error-detail-section">
-                            <h4>Meta Information</h4>
-                            <pre className="error-meta">{JSON.stringify(e.meta, null, 2)}</pre>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </div>
-            
-            {errorLogs.length === 0 && <p className="muted">No errors logged yet</p>}
+        {tab === "feedback" && (
+          <section className="admin-section admin-section-full">
+            <AdminFeedback socket={socket} />
           </section>
         )}
 

@@ -10,6 +10,7 @@ import VideoConference from "./VideoConference";
 import UserHoverCard from "./social/UserHoverCard";
 import UserProfilePopover from "./social/UserProfilePopover";
 import RippleButton from "./ui/RippleButton";
+import UserFeedbackButton from "./feedback/UserFeedbackButton";
 import { Avatar } from "./ui/Avatar";
 import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
@@ -1889,6 +1890,14 @@ export default function ChatLayout({
             </button>
           </nav>
         </>
+      )}
+
+      {/* User Feedback Button */}
+      {me && (
+        <UserFeedbackButton 
+          socket={socket} 
+          user={me}
+        />
       )}
     </div>
   );

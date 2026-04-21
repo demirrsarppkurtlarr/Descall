@@ -587,4 +587,308 @@ router.get("/snapshot", (req, res) => {
   res.json(buildSnapshot(io));
 });
 
+// ========== ENHANCED ERROR LOGGING ==========
+
+// Get error logs with advanced filtering
+router.get("/errors", (req, res) => {
+  try {
+    const { severity, source, user, timeRange, q, sort = "timestamp", order = "desc", limit = 500 } = req.query;
+    
+    let logs = state.errorLogs || [];
+    
+    // Filter by severity
+    if (severity && severity !== "all") {
+      logs = logs.filter(l => l.severity === severity);
+    }
+    
+    // Filter by source
+    if (source && source !== "all") {
+      logs = logs.filter(l => l.source === source);
+    }
+    
+    // Filter by user
+    if (user && user !== "all") {
+      logs = logs.filter(l => l.user?.id === user);
+    }
+    
+    // Filter by time range
+    if (timeRange && timeRange !== "all") {
+      const ranges = { "1h": 3600000, "6h": 21600000, "24h": 86400000, "7d": 604800000, "30d": 2592000000 };
+      const cutoff = Date.now() - (ranges[timeRange] || 86400000);
+      logs = logs.filter(l => new Date(l.timestamp).getTime() > cutoff);
+    }
+    
+    // Search query
+    if (q) {
+      const qLower = q.toLowerCase();
+      logs = logs.filter(l => 
+        l.message?.toLowerCase().includes(qLower) ||
+        l.source?.toLowerCase().includes(qLower) ||
+        l.stack?.toLowerCase().includes(qLower)
+      );
+    }
+    
+    // Sort
+    logs.sort((a, b) => {
+      const aVal = sort === "timestamp" ? new Date(a.timestamp) : a[sort];
+      const bVal = sort === "timestamp" ? new Date(b.timestamp) : b[sort];
+      return order === "desc" ? (aVal > bVal ? -1 : 1) : (aVal > bVal ? 1 : -1);
+    });
+    
+    // Get unique sources and users for filters
+    const sources = [...new Set(logs.map(l => l.source))].filter(Boolean);
+    const users = [...new Map(logs.filter(l => l.user).map(l => [l.user.id, l.user])).values()];
+    
+    // Calculate stats
+    const bySeverity = {};
+    logs.forEach(l => {
+      bySeverity[l.severity] = (bySeverity[l.severity] || 0) + 1;
+    });
+    
+    // Limit results
+    const limitedLogs = logs.slice(0, parseInt(limit));
+    
+    res.json({
+      errors: limitedLogs,
+      total: logs.length,
+      sources,
+      users,
+      stats: { bySeverity },
+      archivedCount: state.archivedErrorLogs?.length || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load error logs." });
+  }
+});
+
+// Get error statistics
+router.get("/errors/stats", (req, res) => {
+  try {
+    const logs = state.errorLogs || [];
+    const bySeverity = {};
+    const bySource = {};
+    const byHour = {};
+    const trends = {};
+    
+    logs.forEach(l => {
+      bySeverity[l.severity] = (bySeverity[l.severity] || 0) + 1;
+      bySource[l.source] = (bySource[l.source] || 0) + 1;
+      
+      const hour = new Date(l.timestamp).getHours();
+      byHour[hour] = (byHour[hour] || 0) + 1;
+    });
+    
+    // Calculate trends (compare last hour vs previous hour)
+    const now = Date.now();
+    const lastHour = logs.filter(l => new Date(l.timestamp).getTime() > now - 3600000);
+    const prevHour = logs.filter(l => {
+      const t = new Date(l.timestamp).getTime();
+      return t > now - 7200000 && t <= now - 3600000;
+    });
+    
+    ["critical", "error", "warning"].forEach(sev => {
+      const last = lastHour.filter(l => l.severity === sev).length;
+      const prev = prevHour.filter(l => l.severity === sev).length;
+      trends[sev] = prev === 0 ? 0 : Math.round(((last - prev) / prev) * 100);
+    });
+    
+    res.json({
+      total: logs.length,
+      bySeverity,
+      bySource,
+      byHour,
+      trends,
+      last24h: logs.filter(l => new Date(l.timestamp).getTime() > now - 86400000).length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load error stats." });
+  }
+});
+
+// Delete single error
+router.delete("/errors/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    state.errorLogs = (state.errorLogs || []).filter(l => l.id !== id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete error." });
+  }
+});
+
+// Bulk delete errors
+router.post("/errors/bulk-delete", (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ error: "Invalid ids." });
+    state.errorLogs = (state.errorLogs || []).filter(l => !ids.includes(l.id));
+    res.json({ deleted: ids.length });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete errors." });
+  }
+});
+
+// Archive old errors
+router.post("/errors/archive", (req, res) => {
+  try {
+    const { days = 7 } = req.body;
+    const cutoff = Date.now() - (days * 86400000);
+    const toArchive = (state.errorLogs || []).filter(l => new Date(l.timestamp).getTime() < cutoff);
+    state.archivedErrorLogs = [...(state.archivedErrorLogs || []), ...toArchive];
+    state.errorLogs = (state.errorLogs || []).filter(l => new Date(l.timestamp).getTime() >= cutoff);
+    res.json({ archived: toArchive.length });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to archive errors." });
+  }
+});
+
+// ========== USER FEEDBACK SYSTEM ==========
+
+// Get all feedback
+router.get("/feedback", (req, res) => {
+  try {
+    const { category, priority, status, q, sort = "newest" } = req.query;
+    
+    let feedbacks = state.userFeedbacks || [];
+    
+    if (category && category !== "all") {
+      feedbacks = feedbacks.filter(f => f.category === category);
+    }
+    if (priority && priority !== "all") {
+      feedbacks = feedbacks.filter(f => f.priority === priority);
+    }
+    if (status && status !== "all") {
+      feedbacks = feedbacks.filter(f => f.status === status);
+    }
+    if (q) {
+      const qLower = q.toLowerCase();
+      feedbacks = feedbacks.filter(f => 
+        f.message?.toLowerCase().includes(qLower) ||
+        f.user?.username?.toLowerCase().includes(qLower)
+      );
+    }
+    
+    // Sort
+    feedbacks.sort((a, b) => {
+      if (sort === "newest") return new Date(b.created_at) - new Date(a.created_at);
+      if (sort === "oldest") return new Date(a.created_at) - new Date(b.created_at);
+      if (sort === "priority") {
+        const pOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+        return pOrder[a.priority] - pOrder[b.priority];
+      }
+      return 0;
+    });
+    
+    // Calculate stats
+    const byStatus = {};
+    const byCategory = {};
+    feedbacks.forEach(f => {
+      byStatus[f.status] = (byStatus[f.status] || 0) + 1;
+      byCategory[f.category] = (byCategory[f.category] || 0) + 1;
+    });
+    
+    res.json({
+      feedbacks,
+      total: feedbacks.length,
+      stats: { byStatus, byCategory },
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load feedback." });
+  }
+});
+
+// Get feedback statistics
+router.get("/feedback/stats", (req, res) => {
+  try {
+    const feedbacks = state.userFeedbacks || [];
+    const byStatus = {};
+    const byCategory = {};
+    const byPriority = {};
+    
+    feedbacks.forEach(f => {
+      byStatus[f.status] = (byStatus[f.status] || 0) + 1;
+      byCategory[f.category] = (byCategory[f.category] || 0) + 1;
+      byPriority[f.priority] = (byPriority[f.priority] || 0) + 1;
+    });
+    
+    res.json({
+      total: feedbacks.length,
+      byStatus,
+      byCategory,
+      byPriority,
+      new: feedbacks.filter(f => f.status === "new" && !f.viewed).length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load feedback stats." });
+  }
+});
+
+// Update feedback
+router.patch("/feedback/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const feedback = (state.userFeedbacks || []).find(f => f.id === id);
+    if (!feedback) return res.status(404).json({ error: "Feedback not found." });
+    
+    Object.assign(feedback, updates, { updated_at: new Date().toISOString() });
+    res.json(feedback);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update feedback." });
+  }
+});
+
+// Mark feedback as viewed
+router.post("/feedback/:id/view", (req, res) => {
+  try {
+    const { id } = req.params;
+    const feedback = (state.userFeedbacks || []).find(f => f.id === id);
+    if (feedback) {
+      feedback.viewed = true;
+      feedback.viewed_at = new Date().toISOString();
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to mark as viewed." });
+  }
+});
+
+// Reply to feedback
+router.post("/feedback/:id/reply", (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text, attachments } = req.body;
+    const feedback = (state.userFeedbacks || []).find(f => f.id === id);
+    if (!feedback) return res.status(404).json({ error: "Feedback not found." });
+    
+    const reply = {
+      id: Math.random().toString(36).slice(2),
+      text,
+      attachments: attachments || [],
+      isAdmin: true,
+      user: req.user,
+      created_at: new Date().toISOString(),
+    };
+    
+    feedback.replies = [...(feedback.replies || []), reply];
+    feedback.status = "in_progress";
+    feedback.updated_at = new Date().toISOString();
+    
+    res.json(reply);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to send reply." });
+  }
+});
+
+// Delete feedback
+router.delete("/feedback/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    state.userFeedbacks = (state.userFeedbacks || []).filter(f => f.id !== id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete feedback." });
+  }
+});
+
 module.exports = router;

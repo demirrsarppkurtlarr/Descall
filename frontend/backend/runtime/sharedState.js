@@ -35,8 +35,15 @@ const userLastLoginAt = new Map();
 const userSessionStartMs = new Map();
 const userOnlineAccumMs = new Map();
 const rateLimitDm = new Map();
-const serverErrorLog = [];
-const MAX_ERROR_LOG = 500;
+// Enhanced Error Logging
+const errorLogs = [];
+const archivedErrorLogs = [];
+const MAX_ERROR_LOGS = 5000;
+const MAX_ARCHIVED_LOGS = 10000;
+
+// User Feedback System
+const userFeedbacks = [];
+const MAX_FEEDBACKS = 5000;
 
 function appendAudit(actorId, actorUsername, action, target, meta = {}) {
   const entry = {
@@ -53,6 +60,10 @@ function appendAudit(actorId, actorUsername, action, target, meta = {}) {
   return entry;
 }
 
+// Legacy error log function (for backward compatibility)
+const serverErrorLog = [];
+const MAX_ERROR_LOG = 500;
+
 function appendErrorLog(source, message, meta = {}, userId = null, username = null) {
   const entry = { 
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -65,6 +76,43 @@ function appendErrorLog(source, message, meta = {}, userId = null, username = nu
   };
   serverErrorLog.unshift(entry);
   if (serverErrorLog.length > MAX_ERROR_LOG) serverErrorLog.length = MAX_ERROR_LOG;
+  
+  // Also add to new enhanced error logs
+  const enhancedEntry = {
+    id: entry.id,
+    timestamp: entry.at,
+    severity: meta.severity || "error",
+    source: source,
+    message: message,
+    stack: meta.stack || null,
+    metadata: meta,
+    user: userId ? { id: userId, username } : null,
+    request: meta.request || null,
+  };
+  errorLogs.unshift(enhancedEntry);
+  if (errorLogs.length > MAX_ERROR_LOGS) errorLogs.length = MAX_ERROR_LOGS;
+  
+  return enhancedEntry;
+}
+
+// Add user feedback
+function addFeedback(user, category, priority, message, attachments = []) {
+  const feedback = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    user,
+    category,
+    priority,
+    message,
+    attachments,
+    status: "new",
+    viewed: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    replies: [],
+  };
+  userFeedbacks.unshift(feedback);
+  if (userFeedbacks.length > MAX_FEEDBACKS) userFeedbacks.length = MAX_FEEDBACKS;
+  return feedback;
 }
 
 module.exports = {
@@ -96,4 +144,13 @@ module.exports = {
   serverErrorLog,
   appendErrorLog,
   MAX_AUDIT,
+  // Enhanced Error Logging
+  errorLogs,
+  archivedErrorLogs,
+  MAX_ERROR_LOGS,
+  MAX_ARCHIVED_LOGS,
+  // User Feedback System
+  userFeedbacks,
+  MAX_FEEDBACKS,
+  addFeedback,
 };

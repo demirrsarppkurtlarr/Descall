@@ -17,6 +17,7 @@ import {
 } from "./lib/storage";
 import audioManager, { initAudioManager } from "./lib/audioManager";
 import AdminPanel from "./components/admin/AdminPanel";
+import "./styles.admin-new.css";
 
 function mergeById(existing, incoming) {
   const ids = new Set(existing.map((m) => m.id));
