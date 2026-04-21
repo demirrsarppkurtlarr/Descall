@@ -111,7 +111,13 @@ app.post("/api/test-feedback-simple", (req, res) => {
 });
 
 console.log("[SERVER] About to register /api/errors route");
-app.use("/api/errors", errorRoutes);
+
+// Debug middleware for /api/errors
+app.use("/api/errors", (req, res, next) => {
+  console.log(`[DEBUG-ERRORS] ${req.method} ${req.path} - BEFORE ROUTER`);
+  next();
+}, errorRoutes);
+
 console.log("[SERVER] /api/errors route registered");
 app.use("/api/test", feedbackTestRoutes);
 console.log("[SERVER] All routes registered");
