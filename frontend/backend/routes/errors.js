@@ -120,12 +120,7 @@ router.get("/feedback-test", (_req, res) => {
 });
 
 // Submit feedback (authenticated users)
-router.post("/feedback", async (req, res, next) => {
-  console.log("[ROUTE-HIT] POST /api/errors/feedback - Route hit!");
-  console.log("[ROUTE-HIT] Headers:", JSON.stringify(req.headers));
-  console.log("[ROUTE-HIT] Body:", JSON.stringify(req.body));
-  next();
-}, requireAuth, async (req, res) => {
+router.post("/feedback", requireAuth, async (req, res) => {
   console.log("[Feedback] ========== START ==========");
   
   try {
