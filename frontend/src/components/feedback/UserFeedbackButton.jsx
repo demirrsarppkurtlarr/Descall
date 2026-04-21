@@ -46,11 +46,21 @@ export default function UserFeedbackButton({ socket, user }) {
   };
 
   const handleSubmit = async () => {
-    if (!message.trim()) return;
+    console.log("[FRONTEND] ========== handleSubmit START ==========");
+    console.log("[FRONTEND] Message:", message?.slice(0, 50));
+    console.log("[FRONTEND] Category:", category);
+    console.log("[FRONTEND] Priority:", priority);
+    console.log("[FRONTEND] Token exists:", !!localStorage.getItem("token"));
+    
+    if (!message.trim()) {
+      console.log("[FRONTEND] REJECTED: Empty message");
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
+      console.log("[FRONTEND] Entering try block");
       // Upload attachments first
       const attachmentUrls = [];
       const token = localStorage.getItem("token");
