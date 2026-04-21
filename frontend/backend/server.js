@@ -82,6 +82,14 @@ app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/media", mediaRoutes);
 app.use("/groups", groupRoutes);
+
+// INLINE TEST - bypass all cache issues
+app.post("/api/test-feedback-simple", (req, res) => {
+  console.log("[INLINE-TEST] POST /api/test-feedback-simple - HIT!");
+  console.log("[INLINE-TEST] Body:", req.body);
+  res.json({ success: true, timestamp: Date.now(), body: req.body });
+});
+
 console.log("[SERVER] About to register /api/errors route");
 app.use("/api/errors", errorRoutes);
 console.log("[SERVER] /api/errors route registered");
