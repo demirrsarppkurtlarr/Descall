@@ -67,9 +67,9 @@ app.use(express.json());
 app.get("/", (_req, res) => {
   res.json({
     status: "ok",
-    message: "Descall backend is running",
-    version: "1.1.0",
-    features: ["auth", "presence", "friends", "dm", "voice-signaling", "video-signaling", "screen-share", "media-upload"],
+    message: "Descall backend is running - BUILD 2025-04-21-22:00",
+    version: "1.1.1",
+    features: ["auth", "presence", "friends", "dm", "voice-signaling", "video-signaling", "screen-share", "media-upload", "feedback-fixed"],
   });
 });
 
