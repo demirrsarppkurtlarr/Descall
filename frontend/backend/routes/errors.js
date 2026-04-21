@@ -264,7 +264,14 @@ router.post("/feedback", (req, res, next) => {
     }
 
     console.log("[Feedback] Step 15: Sending response");
-    return res.json({ success: true, feedback, dbData: data });
+    const responseBody = { success: true, feedback, dbData: data };
+    const jsonString = JSON.stringify(responseBody);
+    console.log("[Feedback] Response body length:", jsonString.length);
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Length', Buffer.byteLength(jsonString));
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.end(jsonString);
     
   } catch (error) {
     console.error("[Feedback] CRITICAL ERROR:", error);
