@@ -50,7 +50,9 @@ export default function UserFeedbackButton({ socket, user }) {
     console.log("[FRONTEND] Message:", message?.slice(0, 50));
     console.log("[FRONTEND] Category:", category);
     console.log("[FRONTEND] Priority:", priority);
-    console.log("[FRONTEND] Token exists:", !!localStorage.getItem("token"));
+    const token = localStorage.getItem("descall_token");
+    console.log("[FRONTEND] Token key 'descall_token':", !!token);
+    console.log("[FRONTEND] Token key 'token':", !!localStorage.getItem("token"));
     
     if (!message.trim()) {
       console.log("[FRONTEND] REJECTED: Empty message");
@@ -63,7 +65,9 @@ export default function UserFeedbackButton({ socket, user }) {
       console.log("[FRONTEND] Entering try block");
       // Upload attachments first
       const attachmentUrls = [];
-      const token = localStorage.getItem("token");
+      // Use correct token key
+      const token = localStorage.getItem("descall_token");
+      console.log("[FRONTEND] Using token from 'descall_token':", !!token);
       
       for (const file of attachments) {
         const formData = new FormData();
@@ -104,11 +108,14 @@ export default function UserFeedbackButton({ socket, user }) {
       console.log("[Feedback] Submitting with attachments:", attachmentUrls);
       
       // Submit feedback
+      const submitToken = localStorage.getItem("descall_token");
+      console.log("[FRONTEND] Submit token:", !!submitToken);
+      
       const res = await fetch("/api/errors/feedback", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${submitToken}`,
         },
         body: JSON.stringify({
           category,
