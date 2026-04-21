@@ -77,12 +77,16 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
 });
 
+console.log("[SERVER] Registering routes...");
 app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/media", mediaRoutes);
 app.use("/groups", groupRoutes);
+console.log("[SERVER] About to register /api/errors route");
 app.use("/api/errors", errorRoutes);
-app.use("/api/test", feedbackTestRoutes);  // TEST ROUTE
+console.log("[SERVER] /api/errors route registered");
+app.use("/api/test", feedbackTestRoutes);
+console.log("[SERVER] All routes registered");
 app.use("/media/files", express.static(path.join(__dirname, "uploads")));
 
 // Serve frontend build in production
