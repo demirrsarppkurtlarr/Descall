@@ -84,35 +84,7 @@ app.post("/", express.json(), (req, res) => {
   res.json({ success: true, received: req.body, endpoint: "root-post" });
 });
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", uptime: process.uptime() });
-});
-
-console.log("[SERVER] Registering routes...");
-
-// Response logging middleware for debugging
-app.use((req, res, next) => {
-  const originalJson = res.json;
-  res.json = function(body) {
-    console.log(`[RESPONSE] ${req.method} ${req.path} - Status: ${res.statusCode} - Body length: ${JSON.stringify(body).length}`);
-    return originalJson.call(this, body);
-  };
-  next();
-});
-
-app.use("/auth", authRoutes);
-app.use("/admin", adminRoutes);
-app.use("/media", mediaRoutes);
-app.use("/groups", groupRoutes);
-
-// INLINE TEST - bypass all cache issues
-app.post("/api/test-feedback-simple", (req, res) => {
-  console.log("[INLINE-TEST] POST /api/test-feedback-simple - HIT!");
-  console.log("[INLINE-TEST] Body:", req.body);
-  res.json({ success: true, timestamp: Date.now(), body: req.body });
-});
-
-// DIRECT FEEDBACK ENDPOINT - bypass router issues (MUST be defined BEFORE app.use("/api/errors", ...))
+// DIRECT FEEDBACK ENDPOINT - MUST be defined BEFORE any app.use("/api/errors", ...)
 app.post("/api/errors/feedback", requireAuth, async (req, res) => {
   console.log("[DIRECT-FEEDBACK] POST /api/errors/feedback - HIT!");
   console.log("[DIRECT-FEEDBACK] User:", req.user);
@@ -148,6 +120,34 @@ app.post("/api/errors/feedback", requireAuth, async (req, res) => {
     console.error("[DIRECT-FEEDBACK] Error:", err);
     return res.status(500).json({ error: err.message });
   }
+});
+
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
+});
+
+console.log("[SERVER] Registering routes...");
+
+// Response logging middleware for debugging
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function(body) {
+    console.log(`[RESPONSE] ${req.method} ${req.path} - Status: ${res.statusCode} - Body length: ${JSON.stringify(body).length}`);
+    return originalJson.call(this, body);
+  };
+  next();
+});
+
+app.use("/auth", authRoutes);
+app.use("/admin", adminRoutes);
+app.use("/media", mediaRoutes);
+app.use("/groups", groupRoutes);
+
+// INLINE TEST - bypass all cache issues
+app.post("/api/test-feedback-simple", (req, res) => {
+  console.log("[INLINE-TEST] POST /api/test-feedback-simple - HIT!");
+  console.log("[INLINE-TEST] Body:", req.body);
+  res.json({ success: true, timestamp: Date.now(), body: req.body });
 });
 
 console.log("[SERVER] About to register /api/errors route");
