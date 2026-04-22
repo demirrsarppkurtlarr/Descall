@@ -152,11 +152,28 @@ export default function AdminPanel({ socket, onClose }) {
   }, [userQ]);
 
   const loadAllUsers = useCallback(async () => {
-    const token = localStorage.getItem("descall_token");
-    const d = await fetch(`${API_BASE_URL}/api/admin/users`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((r) => r.json());
-    if (d.success) setUsers(d.users || []);
+    try {
+      const token = localStorage.getItem("descall_token");
+      console.log("[ADMIN] Loading users, token:", !!token);
+      console.log("[ADMIN] API_BASE_URL:", API_BASE_URL);
+      
+      const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json();
+      
+      console.log("[ADMIN] Users response:", d);
+      
+      if (d.success) {
+        setUsers(d.users || []);
+      } else {
+        console.error("[ADMIN] Failed to load users:", d.error);
+        setErr(d.error || "Failed to load users");
+      }
+    } catch (err) {
+      console.error("[ADMIN] Error loading users:", err);
+      setErr(err.message);
+    }
   }, []);
 
   const loadMessages = useCallback(async () => {
