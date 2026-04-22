@@ -6,6 +6,12 @@ const { supabase } = require("../db/supabase");
 
 const router = express.Router();
 
+// TEST - No auth required
+router.post("/test", async (req, res) => {
+  console.log("[FeedbackRoute] TEST endpoint hit!");
+  res.json({ success: true, message: "Test endpoint works", body: req.body });
+});
+
 // Submit feedback - robust error handling
 router.post("/submit", requireAuth, async (req, res) => {
   console.log("[FeedbackRoute] POST /api/feedback/submit received");
