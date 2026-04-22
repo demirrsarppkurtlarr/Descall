@@ -883,7 +883,9 @@ export default function ChatLayout({
                       onClick={() => groupActions.open(group)}
                       whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                       whileTap={{ scale: 0.98 }}
-                      transition={{ duration: 0.15 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
                     >
                       <div className="dm-avatar">
                         {group.avatar_url ? (
