@@ -361,14 +361,14 @@ app.put("/api/user/regional", requireAuth, async (req, res) => {
 // Make user admin - PUT /api/admin/make-admin/:userId
 app.put("/api/admin/make-admin/:userId", requireAuth, async (req, res) => {
   try {
-    // Check if requester is admin
+    // Check if requester is admin (by username or is_admin field)
     const { data: requester } = await supabase
       .from("users")
-      .select("is_admin")
+      .select("username, is_admin")
       .eq("id", req.user.id)
       .single();
     
-    if (!requester?.is_admin) {
+    if (!requester?.is_admin && requester?.username !== "admin") {
       return res.status(403).json({ success: false, error: "Not authorized" });
     }
     
@@ -392,14 +392,14 @@ app.put("/api/admin/make-admin/:userId", requireAuth, async (req, res) => {
 // Remove admin - PUT /api/admin/remove-admin/:userId
 app.put("/api/admin/remove-admin/:userId", requireAuth, async (req, res) => {
   try {
-    // Check if requester is admin
+    // Check if requester is admin (by username or is_admin field)
     const { data: requester } = await supabase
       .from("users")
-      .select("is_admin")
+      .select("username, is_admin")
       .eq("id", req.user.id)
       .single();
     
-    if (!requester?.is_admin) {
+    if (!requester?.is_admin && requester?.username !== "admin") {
       return res.status(403).json({ success: false, error: "Not authorized" });
     }
     
@@ -423,14 +423,14 @@ app.put("/api/admin/remove-admin/:userId", requireAuth, async (req, res) => {
 // Get all users - GET /api/admin/users
 app.get("/api/admin/users", requireAuth, async (req, res) => {
   try {
-    // Check if requester is admin
+    // Check if requester is admin (by username or is_admin field)
     const { data: requester } = await supabase
       .from("users")
-      .select("is_admin")
+      .select("username, is_admin")
       .eq("id", req.user.id)
       .single();
     
-    if (!requester?.is_admin) {
+    if (!requester?.is_admin && requester?.username !== "admin") {
       return res.status(403).json({ success: false, error: "Not authorized" });
     }
     
