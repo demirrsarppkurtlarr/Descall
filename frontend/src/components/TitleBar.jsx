@@ -69,27 +69,30 @@ export default function TitleBar() {
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
-        gap: '8px',
+        gap: '10px',
         WebkitAppRegion: 'no-drag'
       }}>
+        {/* Descall Logo */}
         <div style={{
-          width: 24,
-          height: 24,
-          background: 'linear-gradient(135deg, #5865f2, #4752c4)',
-          borderRadius: '6px',
+          width: 32,
+          height: 32,
+          background: 'linear-gradient(135deg, #5865f2 0%, #4752c4 50%, #3b45a3 100%)',
+          borderRadius: '8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '14px',
+          fontSize: '18px',
           fontWeight: 'bold',
           color: '#fff',
+          boxShadow: '0 2px 8px rgba(88, 101, 242, 0.4)',
+          border: '2px solid rgba(255,255,255,0.1)',
         }}>
           D
         </div>
         <span style={{ 
           color: '#fff', 
-          fontSize: '14px', 
-          fontWeight: 600,
+          fontSize: '15px', 
+          fontWeight: 700,
           letterSpacing: '0.5px'
         }}>
           Descall
@@ -98,30 +101,30 @@ export default function TitleBar() {
         {/* Menu items */}
         <div style={{ 
           display: 'flex', 
-          gap: '16px', 
-          marginLeft: '24px',
+          gap: '4px', 
+          marginLeft: '20px',
           color: '#b9bbbe',
           fontSize: '13px'
         }}>
-          <span style={menuItemStyle}>Dosya</span>
-          <span style={menuItemStyle}>Düzen</span>
-          <span style={menuItemStyle}>Görünüm</span>
-          <span style={menuItemStyle}>Yardım</span>
+          <span className="menu-item" style={menuItemStyle}>Dosya</span>
+          <span className="menu-item" style={menuItemStyle}>Düzen</span>
+          <span className="menu-item" style={menuItemStyle}>Görünüm</span>
+          <span className="menu-item" style={menuItemStyle}>Yardım</span>
         </div>
       </div>
 
-      {/* Right - Window Controls */}
+      {/* Right - Window Controls (Windows Style) */}
       <div style={{ 
         display: 'flex', 
-        alignItems: 'center', 
-        gap: '4px',
+        alignItems: 'center',
         WebkitAppRegion: 'no-drag'
       }}>
         {/* Fullscreen button */}
         <button 
           onClick={handleFullscreen}
+          className="win-btn"
           style={{
-            ...btnStyle,
+            ...winBtnStyle,
             color: isFullscreen ? '#5865f2' : '#b9bbbe',
           }}
           title="Tam Ekran (F11)"
@@ -129,75 +132,90 @@ export default function TitleBar() {
           {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
         </button>
 
-        <div style={{ width: '1px', height: '16px', background: '#2f3136', margin: '0 4px' }} />
-
-        {/* Minimize */}
+        {/* Minimize - Windows Style */}
         <button 
           onClick={handleMinimize}
-          style={btnStyle}
+          className="win-btn minimize"
+          style={winBtnStyle}
           title="Küçült"
         >
-          <Minus size={16} />
+          <Minus size={16} strokeWidth={2} />
         </button>
         
-        {/* Maximize/Restore */}
+        {/* Maximize/Restore - Windows Style */}
         <button 
           onClick={handleMaximize}
-          style={btnStyle}
+          className="win-btn maximize"
+          style={winBtnStyle}
           title={isMaximized ? "Geri Yükle" : "Büyüt"}
         >
-          {isMaximized ? <Minimize2 size={14} /> : <Square size={14} />}
+          {isMaximized ? <Minimize2 size={14} strokeWidth={2} /> : <Square size={14} strokeWidth={2} />}
         </button>
         
-        {/* Close */}
+        {/* Close - Windows Style (Red on hover) */}
         <button 
           onClick={handleClose}
+          className="win-btn close"
           style={{
-            ...btnStyle,
-            color: '#ff5f57',
-            hover: { background: '#ff5f5720' }
+            ...winBtnStyle,
+            width: '46px',
           }}
-          onMouseEnter={(e) => e.target.style.background = '#ff5f5720'}
-          onMouseLeave={(e) => e.target.style.background = 'transparent'}
-          title="Kapat (Sistem Tepsisine Küçült)"
+          title="Kapat"
         >
-          <X size={16} />
+          <X size={16} strokeWidth={2} />
         </button>
       </div>
     </div>
   );
 }
 
-const btnStyle = {
-  width: '32px',
-  height: '32px',
+// Windows-style button styles
+const winBtnStyle = {
+  width: '46px',
+  height: '40px',
   background: 'transparent',
   border: 'none',
   color: '#b9bbbe',
   cursor: 'pointer',
-  borderRadius: '4px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  transition: 'all 0.2s ease',
+  transition: 'all 0.15s ease',
 };
 
 const menuItemStyle = {
   cursor: 'pointer',
-  padding: '4px 8px',
+  padding: '6px 10px',
   borderRadius: '4px',
-  transition: 'all 0.2s',
+  transition: 'all 0.15s',
 };
 
-// Hover effect için CSS
+// Windows-style hover effects CSS
 const style = document.createElement('style');
 style.textContent = `
-  .titlebar button:hover {
-    background: #ffffff10 !important;
+  .titlebar {
+    -webkit-app-region: drag;
+  }
+  .titlebar .win-btn {
+    -webkit-app-region: no-drag;
+  }
+  .titlebar .win-btn:hover {
+    background: #ffffff15 !important;
     color: #fff !important;
   }
-  .titlebar button:active {
-    background: #ffffff20 !important;
+  .titlebar .win-btn:active {
+    background: #ffffff25 !important;
+  }
+  .titlebar .win-btn.close:hover {
+    background: #e81123 !important;
+    color: #fff !important;
+  }
+  .titlebar .win-btn.close:active {
+    background: #f1707a !important;
+  }
+  .menu-item:hover {
+    background: #ffffff10;
+    color: #fff;
   }
 `;
 document.head.appendChild(style);

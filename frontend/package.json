@@ -7,15 +7,15 @@
 
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "set VITE_API_BASE_URL=https://descall-qzkg.onrender.com && vite build",
     "preview": "vite preview",
 
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:start": "electron .",
-    "electron:build": "npm run build && electron-builder",
-    "electron:build:win": "npm run build && electron-builder --win",
-    "electron:build:mac": "npm run build && electron-builder --mac",
-    "electron:build:linux": "npm run build && electron-builder --linux",
+    "electron:build": "set VITE_API_BASE_URL=https://descall-qzkg.onrender.com && npm run build && electron-builder",
+    "electron:build:win": "set VITE_API_BASE_URL=https://descall-qzkg.onrender.com && npm run build && electron-builder --win",
+    "electron:build:mac": "set VITE_API_BASE_URL=https://descall-qzkg.onrender.com && npm run build && electron-builder --mac",
+    "electron:build:linux": "set VITE_API_BASE_URL=https://descall-qzkg.onrender.com && npm run build && electron-builder --linux",
     "electron:pack": "npm run build && electron-builder --dir"
   },
 
@@ -37,7 +37,9 @@
     "lucide-react": "^0.454.0",
     "multer": "^1.4.5-lts.1",
     "socket.io": "^4.7.4",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "electron-updater": "^6.3.0",
+    "electron-log": "^5.0.1"
   },
 
   "devDependencies": {
@@ -45,8 +47,6 @@
     "vite": "^5.4.10",
     "electron": "^41.2.1",
     "electron-builder": "^24.13.3",
-    "electron-updater": "^6.3.0",
-    "electron-log": "^5.0.1",
     "concurrently": "^8.2.2",
     "wait-on": "^7.2.0"
   },
@@ -80,14 +80,13 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "ia32"]
+          "arch": ["x64"]
         },
         {
           "target": "portable",
           "arch": ["x64"]
         }
       ],
-      "icon": "public/icon.ico",
       "requestedExecutionLevel": "asInvoker"
     },
     "mac": {
@@ -101,7 +100,6 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "icon": "public/icon.icns",
       "category": "public.app-category.social-networking",
       "hardenedRuntime": true,
       "gatekeeperAssess": false
@@ -115,13 +113,8 @@
         {
           "target": "deb",
           "arch": ["x64"]
-        },
-        {
-          "target": "rpm",
-          "arch": ["x64"]
         }
       ],
-      "icon": "public/icon.png",
       "category": "Network",
       "maintainer": "Descall Team",
       "vendor": "Descall"
@@ -130,14 +123,9 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "uninstallDisplayName": "Descall",
-      "installerIcon": "public/icon.ico",
-      "uninstallerIcon": "public/icon.ico",
-      "installerHeaderIcon": "public/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Descall",
-      "include": "build/installer.nsh",
-      "license": "LICENSE"
+      "shortcutName": "Descall"
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
