@@ -16,6 +16,7 @@ import {
   ThumbsDown, Upload, Video, Voicemail, ZoomIn, ZoomOut
 } from "lucide-react";
 import { adminFetch } from "../../api/adminHttp";
+import { API_BASE_URL } from "../../config/api";
 import RippleButton from "../ui/RippleButton";
 import AdminFeedback from "./AdminFeedback";
 import AdminErrorLogs from "./AdminErrorLogs";
@@ -150,6 +151,14 @@ export default function AdminPanel({ socket, onClose }) {
     setUsers(d.users || []);
   }, [userQ]);
 
+  const loadAllUsers = useCallback(async () => {
+    const token = localStorage.getItem("descall_token");
+    const d = await fetch(`${API_BASE_URL}/api/admin/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then((r) => r.json());
+    if (d.success) setUsers(d.users || []);
+  }, []);
+
   const loadMessages = useCallback(async () => {
     const q = msgQ ? `?q=${encodeURIComponent(msgQ)}` : "";
     const d = await adminFetch(`/messages${q}`);
@@ -210,13 +219,13 @@ export default function AdminPanel({ socket, onClose }) {
   }, [loadStats]);
 
   useEffect(() => {
-    if (tab === "users") loadUsers().catch((e) => setErr(e.message));
+    if (tab === "users") loadAllUsers().catch((e) => setErr(e.message));
     if (tab === "messages") loadMessages().catch((e) => setErr(e.message));
     if (tab === "dm") loadDm().catch((e) => setErr(e.message));
     if (tab === "audit") loadAudit().catch((e) => setErr(e.message));
     if (tab === "system") loadSystem().catch((e) => setErr(e.message));
     // feedback and errors tabs use their own components with internal loading
-  }, [tab, loadUsers, loadMessages, loadDm, loadAudit, loadSystem]);
+  }, [tab, loadAllUsers, loadMessages, loadDm, loadAudit, loadSystem]);
 
   const act = async (fn) => {
     try {
@@ -315,7 +324,7 @@ export default function AdminPanel({ socket, onClose }) {
                 value={userQ}
                 onChange={(e) => setUserQ(e.target.value)}
               />
-              <RippleButton type="button" onClick={() => act(loadUsers)} disabled={busy}>
+              <RippleButton type="button" onClick={() => act(loadAllUsers)} disabled={busy}>
                 Search
               </RippleButton>
             </div>
@@ -324,57 +333,53 @@ export default function AdminPanel({ socket, onClose }) {
                 <tr>
                   <th>Username</th>
                   <th>ID</th>
-                  <th>Online</th>
-                  <th>Banned</th>
-                  <th>Role</th>
+                  <th>Admin</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
                   <motion.tr key={u.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <td>{u.username}</td>
+                    <td>{u.display_name || u.username}</td>
                     <td className="mono">{u.id.slice(0, 8)}…</td>
-                    <td>{u.online ? "yes" : "no"}</td>
-                    <td>{u.banned ? "yes" : "no"}</td>
-                    <td>{u.role}</td>
+                    <td>{u.is_admin ? "✓" : "✗"}</td>
                     <td className="admin-actions">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          act(async () => {
-                            await adminFetch(`/users/${u.id}/kick`, { method: "POST", body: JSON.stringify({}) });
-                            await loadUsers();
-                          })
-                        }
-                      >
-                        Kick
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          act(async () => {
-                            await adminFetch(`/users/${u.id}/ban`, {
-                              method: "POST",
-                              body: JSON.stringify({ reason: "Moderation" }),
-                            });
-                            await loadUsers();
-                          })
-                        }
-                      >
-                        Ban
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          act(async () => {
-                            await adminFetch(`/users/${u.id}/unban`, { method: "POST", body: JSON.stringify({}) });
-                            await loadUsers();
-                          })
-                        }
-                      >
-                        Unban
-                      </button>
+                      {!u.is_admin && (
+                        <button
+                          type="button"
+                          className="admin-btn-green"
+                          onClick={() =>
+                            act(async () => {
+                              const token = localStorage.getItem("descall_token");
+                              await fetch(`${API_BASE_URL}/api/admin/make-admin/${u.id}`, {
+                                method: "PUT",
+                                headers: { Authorization: `Bearer ${token}` },
+                              });
+                              await loadAllUsers();
+                            })
+                          }
+                        >
+                          Make Admin
+                        </button>
+                      )}
+                      {u.is_admin && (
+                        <button
+                          type="button"
+                          className="admin-btn-red"
+                          onClick={() =>
+                            act(async () => {
+                              const token = localStorage.getItem("descall_token");
+                              await fetch(`${API_BASE_URL}/api/admin/remove-admin/${u.id}`, {
+                                method: "PUT",
+                                headers: { Authorization: `Bearer ${token}` },
+                              });
+                              await loadAllUsers();
+                            })
+                          }
+                        >
+                          Remove Admin
+                        </button>
+                      )}
                     </td>
                   </motion.tr>
                 ))}

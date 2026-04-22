@@ -356,6 +356,97 @@ app.put("/api/user/regional", requireAuth, async (req, res) => {
   }
 });
 
+// ========== ADMIN ENDPOINTS ==========
+
+// Make user admin - PUT /api/admin/make-admin/:userId
+app.put("/api/admin/make-admin/:userId", requireAuth, async (req, res) => {
+  try {
+    // Check if requester is admin
+    const { data: requester } = await supabase
+      .from("users")
+      .select("is_admin")
+      .eq("id", req.user.id)
+      .single();
+    
+    if (!requester?.is_admin) {
+      return res.status(403).json({ success: false, error: "Not authorized" });
+    }
+    
+    const { userId } = req.params;
+    
+    const { data, error } = await supabase
+      .from("users")
+      .update({ is_admin: true })
+      .eq("id", userId)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true, user: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Remove admin - PUT /api/admin/remove-admin/:userId
+app.put("/api/admin/remove-admin/:userId", requireAuth, async (req, res) => {
+  try {
+    // Check if requester is admin
+    const { data: requester } = await supabase
+      .from("users")
+      .select("is_admin")
+      .eq("id", req.user.id)
+      .single();
+    
+    if (!requester?.is_admin) {
+      return res.status(403).json({ success: false, error: "Not authorized" });
+    }
+    
+    const { userId } = req.params;
+    
+    const { data, error } = await supabase
+      .from("users")
+      .update({ is_admin: false })
+      .eq("id", userId)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true, user: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get all users - GET /api/admin/users
+app.get("/api/admin/users", requireAuth, async (req, res) => {
+  try {
+    // Check if requester is admin
+    const { data: requester } = await supabase
+      .from("users")
+      .select("is_admin")
+      .eq("id", req.user.id)
+      .single();
+    
+    if (!requester?.is_admin) {
+      return res.status(403).json({ success: false, error: "Not authorized" });
+    }
+    
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, username, display_name, avatar_url, is_admin, created_at")
+      .order("created_at", { ascending: false });
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true, users: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 console.log("[SERVER] Routes registered:");
 console.log("  - /auth");
 console.log("  - /admin");
@@ -366,6 +457,9 @@ console.log("  - /api/user/profile");
 console.log("  - /api/user/notifications");
 console.log("  - /api/user/privacy");
 console.log("  - /api/user/regional");
+console.log("  - /api/admin/make-admin/:userId");
+console.log("  - /api/admin/remove-admin/:userId");
+console.log("  - /api/admin/users");
 console.log("  - /api/test (no auth)");
 console.log("  - /health");
 
