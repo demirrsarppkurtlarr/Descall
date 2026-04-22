@@ -368,7 +368,9 @@ app.put("/api/admin/make-admin/:userId", requireAuth, async (req, res) => {
       .eq("id", req.user.id)
       .single();
     
-    if (!requester?.is_admin && requester?.username !== "admin") {
+    const isAdmin = requester?.is_admin || req.user.username === "admin";
+    
+    if (!isAdmin) {
       return res.status(403).json({ success: false, error: "Not authorized" });
     }
     
@@ -399,7 +401,9 @@ app.put("/api/admin/remove-admin/:userId", requireAuth, async (req, res) => {
       .eq("id", req.user.id)
       .single();
     
-    if (!requester?.is_admin && requester?.username !== "admin") {
+    const isAdmin = requester?.is_admin || req.user.username === "admin";
+    
+    if (!isAdmin) {
       return res.status(403).json({ success: false, error: "Not authorized" });
     }
     
@@ -424,6 +428,7 @@ app.put("/api/admin/remove-admin/:userId", requireAuth, async (req, res) => {
 app.get("/api/admin/users", requireAuth, async (req, res) => {
   try {
     console.log("[ADMIN-USERS] Request from user ID:", req.user.id);
+    console.log("[ADMIN-USERS] Token username:", req.user.username);
     
     // Check if requester is admin (by username or is_admin field)
     const { data: requester } = await supabase
@@ -432,10 +437,13 @@ app.get("/api/admin/users", requireAuth, async (req, res) => {
       .eq("id", req.user.id)
       .single();
     
-    console.log("[ADMIN-USERS] Requester:", requester);
+    console.log("[ADMIN-USERS] Requester from DB:", requester);
     
-    if (!requester?.is_admin && requester?.username !== "admin") {
-      console.log("[ADMIN-USERS] Authorization failed - is_admin:", requester?.is_admin, "username:", requester?.username);
+    // Use token username if DB lookup fails
+    const isAdmin = requester?.is_admin || req.user.username === "admin";
+    
+    if (!isAdmin) {
+      console.log("[ADMIN-USERS] Authorization failed - is_admin:", requester?.is_admin, "username:", req.user.username);
       return res.status(403).json({ success: false, error: "Not authorized" });
     }
     
