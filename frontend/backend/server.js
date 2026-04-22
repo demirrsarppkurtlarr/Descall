@@ -21,7 +21,7 @@ const groupRoutes = require("./routes/groups");
 
 // Inline feedback - no external file needed
 const { requireAuth } = require("./middleware/auth");
-const { supabase } = require("./db/supabase");
+const supabase = require("./db/supabase");
 
 // Socket
 const { socketAuthMiddleware } = require("./middleware/socketAuth");
