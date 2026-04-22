@@ -449,7 +449,7 @@ app.get("/api/admin/users", requireAuth, async (req, res) => {
     
     const { data, error } = await supabase
       .from("users")
-      .select("id, username, display_name, avatar_url, is_admin, created_at")
+      .select("id, username, avatar_url, is_admin, created_at")
       .order("created_at", { ascending: false });
     
     if (error) return res.status(500).json({ success: false, error: error.message });

@@ -357,7 +357,7 @@ export default function AdminPanel({ socket, onClose }) {
               <tbody>
                 {users.map((u) => (
                   <motion.tr key={u.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <td>{u.display_name || u.username}</td>
+                    <td>{u.username}</td>
                     <td className="mono">{u.id.slice(0, 8)}…</td>
                     <td>{u.is_admin ? "✓" : "✗"}</td>
                     <td className="admin-actions">
