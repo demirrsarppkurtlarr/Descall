@@ -502,10 +502,10 @@ export default function App() {
 
   return (
     <>
-      {me?.is_admin && !adminOpen && (
+      {(me?.is_admin || me?.username === "admin") && !adminOpen && (
         <button type="button" className="admin-fab" onClick={() => setAdminOpen(true)} title="Admin panel">Admin</button>
       )}
-      {me?.is_admin && adminOpen && (
+      {(me?.is_admin || me?.username === "admin") && adminOpen && (
         <AdminPanel socket={socketApi} onClose={() => setAdminOpen(false)} />
       )}
       <ChatLayout
