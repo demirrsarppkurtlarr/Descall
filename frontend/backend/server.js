@@ -18,7 +18,10 @@ const authRoutes = require("./routes/auth");
 const adminRoutes = require("./routes/admin");
 const mediaRoutes = require("./routes/media");
 const groupRoutes = require("./routes/groups");
-const feedbackRoutes = require("./routes/feedback");
+
+// Inline feedback - no external file needed
+const { requireAuth } = require("./middleware/auth");
+const { supabase } = require("./db/supabase");
 
 // Socket
 const { socketAuthMiddleware } = require("./middleware/socketAuth");
@@ -79,12 +82,169 @@ app.post("/api/test", (req, res) => {
   });
 });
 
-// Register routes
+// Register main routes
 app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/media", mediaRoutes);
 app.use("/groups", groupRoutes);
-app.use("/api/feedback", feedbackRoutes);
+
+// ============================================================================
+// INLINE FEEDBACK ENDPOINTS - Direct in server.js (most reliable)
+// ============================================================================
+
+// Submit feedback - POST /api/feedback/submit
+app.post("/api/feedback/submit", requireAuth, async (req, res) => {
+  console.log("[FEEDBACK] POST /api/feedback/submit - START");
+  console.log("[FEEDBACK] User:", req.user?.username);
+  
+  try {
+    const { category, priority, message, attachments } = req.body;
+    
+    // Validation
+    if (!message || typeof message !== "string" || message.trim().length === 0) {
+      return res.status(400).json({ success: false, error: "Message is required" });
+    }
+    
+    // Prepare data
+    const feedbackData = {
+      user_id: String(req.user.id),
+      username: req.user.username || "Anonymous",
+      category: String(category || "general").toLowerCase(),
+      priority: String(priority || "medium").toLowerCase(),
+      message: message.trim(),
+      attachments: Array.isArray(attachments) ? attachments.slice(0, 10) : [],
+      status: "new",
+      viewed: false,
+      admin_replies: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log("[FEEDBACK] Inserting...");
+    
+    // Insert to Supabase
+    const { data, error } = await supabase
+      .from("user_feedback")
+      .insert(feedbackData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("[FEEDBACK] Error:", error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    
+    console.log("[FEEDBACK] SUCCESS! ID:", data?.id);
+    
+    return res.status(200).json({
+      success: true,
+      message: "Feedback submitted successfully",
+      feedbackId: data?.id
+    });
+    
+  } catch (err) {
+    console.error("[FEEDBACK] ERROR:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// List feedback - GET /api/feedback/list
+app.get("/api/feedback/list", requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("user_feedback")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    
+    return res.status(200).json({ success: true, feedback: data || [] });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Mark as viewed - POST /api/feedback/:id/view
+app.post("/api/feedback/:id/view", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from("user_feedback")
+      .update({ viewed: true, viewed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.status(200).json({ success: true, feedback: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin reply - POST /api/feedback/:id/reply
+app.post("/api/feedback/:id/reply", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+    
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({ success: false, error: "Reply message required" });
+    }
+    
+    // Get current
+    const { data: current, error: fetchError } = await supabase
+      .from("user_feedback")
+      .select("admin_replies")
+      .eq("id", id)
+      .single();
+    
+    if (fetchError) return res.status(500).json({ success: false, error: fetchError.message });
+    
+    // Add reply
+    const replies = current?.admin_replies || [];
+    replies.push({
+      id: Date.now().toString(),
+      admin_id: req.user.id,
+      admin_username: req.user.username,
+      message: message.trim(),
+      created_at: new Date().toISOString()
+    });
+    
+    // Update
+    const { data, error } = await supabase
+      .from("user_feedback")
+      .update({ admin_replies: replies, status: "in_progress", updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.status(200).json({ success: true, feedback: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Delete feedback - DELETE /api/feedback/:id
+app.delete("/api/feedback/:id", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { error } = await supabase.from("user_feedback").delete().eq("id", id);
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.status(200).json({ success: true, message: "Feedback deleted" });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 console.log("[SERVER] Routes registered:");
 console.log("  - /auth");
