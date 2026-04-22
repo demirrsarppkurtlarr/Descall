@@ -6,6 +6,8 @@ import {
   Download, Mail, Smartphone, Eye, EyeOff 
 } from "lucide-react";
 import RippleButton from "../ui/RippleButton";
+import { API_BASE_URL } from "../../config/api";
+import { uploadFile } from "../../api/media";
 
 /**
  * Profil Özelleştirme Paneli (15+ özellik)
@@ -90,32 +92,104 @@ export default function ProfileCustomization({ me, onUpdate }) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      const token = localStorage.getItem("descall_token");
+      
+      // Update profile
+      await fetch(`${API_BASE_URL}/api/user/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          displayName: profile.displayName,
+          bio: profile.bio,
+          customStatus: profile.customStatus,
+          accentColor: profile.accentColor,
+          fontSize: profile.fontSize,
+          uiDensity: profile.uiDensity,
+          bubbleStyle: profile.bubbleStyle,
+        }),
+      });
+
+      // Update notifications
+      await fetch(`${API_BASE_URL}/api/user/notifications`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          soundEnabled: profile.soundEnabled,
+          soundVolume: profile.soundVolume,
+          desktopNotifications: profile.desktopNotifications,
+          callNotifications: profile.callNotifications,
+          mentionNotifications: profile.mentionNotifications,
+        }),
+      });
+
+      // Update privacy
+      await fetch(`${API_BASE_URL}/api/user/privacy`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          onlineStatusVisible: profile.onlineStatusVisible,
+          lastSeenVisible: profile.lastSeenVisible,
+          typingIndicatorVisible: profile.typingIndicatorVisible,
+          profileVisibleTo: profile.profileVisibleTo,
+          allowFriendRequests: profile.allowFriendRequests,
+          allowGroupInvites: profile.allowGroupInvites,
+        }),
+      });
+
+      // Update regional
+      await fetch(`${API_BASE_URL}/api/user/regional`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          language: profile.language,
+          timezone: profile.timezone,
+        }),
+      });
+
       await onUpdate?.(profile);
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+      alert("Failed to save profile. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleAvatarUpload = (e) => {
+  const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Upload to server
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        handleChange("avatarUrl", e.target.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const result = await uploadFile(file);
+        handleChange("avatarUrl", result.url);
+      } catch (err) {
+        console.error("Failed to upload avatar:", err);
+        alert("Failed to upload avatar. Please try again.");
+      }
     }
   };
 
-  const handleBannerUpload = (e) => {
+  const handleBannerUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        handleChange("bannerUrl", e.target.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const result = await uploadFile(file);
+        handleChange("bannerUrl", result.url);
+      } catch (err) {
+        console.error("Failed to upload banner:", err);
+        alert("Failed to upload banner. Please try again.");
+      }
     }
   };
 

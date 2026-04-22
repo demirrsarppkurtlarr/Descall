@@ -246,12 +246,126 @@ app.delete("/api/feedback/:id", requireAuth, async (req, res) => {
   }
 });
 
+// ========== PROFILE SETTINGS ENDPOINTS ==========
+
+// Update profile - PUT /api/user/profile
+app.put("/api/user/profile", requireAuth, async (req, res) => {
+  try {
+    const { displayName, bio, customStatus, accentColor, fontSize, uiDensity, bubbleStyle } = req.body;
+    
+    const updateData = {};
+    if (displayName !== undefined) updateData.display_name = displayName;
+    if (bio !== undefined) updateData.bio = bio;
+    if (customStatus !== undefined) updateData.custom_status = customStatus;
+    if (accentColor !== undefined) updateData.accent_color = accentColor;
+    if (fontSize !== undefined) updateData.font_size = fontSize;
+    if (uiDensity !== undefined) updateData.ui_density = uiDensity;
+    if (bubbleStyle !== undefined) updateData.bubble_style = bubbleStyle;
+    
+    const { data, error } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("id", req.user.id)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true, user: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update notification settings - PUT /api/user/notifications
+app.put("/api/user/notifications", requireAuth, async (req, res) => {
+  try {
+    const { soundEnabled, soundVolume, desktopNotifications, callNotifications, mentionNotifications } = req.body;
+    
+    const updateData = {};
+    if (soundEnabled !== undefined) updateData.sound_enabled = soundEnabled;
+    if (soundVolume !== undefined) updateData.sound_volume = soundVolume;
+    if (desktopNotifications !== undefined) updateData.desktop_notifications = desktopNotifications;
+    if (callNotifications !== undefined) updateData.call_notifications = callNotifications;
+    if (mentionNotifications !== undefined) updateData.mention_notifications = mentionNotifications;
+    
+    const { data, error } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("id", req.user.id)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true, user: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update privacy settings - PUT /api/user/privacy
+app.put("/api/user/privacy", requireAuth, async (req, res) => {
+  try {
+    const { onlineStatusVisible, lastSeenVisible, typingIndicatorVisible, profileVisibleTo, allowFriendRequests, allowGroupInvites } = req.body;
+    
+    const updateData = {};
+    if (onlineStatusVisible !== undefined) updateData.online_status_visible = onlineStatusVisible;
+    if (lastSeenVisible !== undefined) updateData.last_seen_visible = lastSeenVisible;
+    if (typingIndicatorVisible !== undefined) updateData.typing_indicator_visible = typingIndicatorVisible;
+    if (profileVisibleTo !== undefined) updateData.profile_visible_to = profileVisibleTo;
+    if (allowFriendRequests !== undefined) updateData.allow_friend_requests = allowFriendRequests;
+    if (allowGroupInvites !== undefined) updateData.allow_group_invites = allowGroupInvites;
+    
+    const { data, error } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("id", req.user.id)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true, user: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update regional settings - PUT /api/user/regional
+app.put("/api/user/regional", requireAuth, async (req, res) => {
+  try {
+    const { language, timezone } = req.body;
+    
+    const updateData = {};
+    if (language !== undefined) updateData.language = language;
+    if (timezone !== undefined) updateData.timezone = timezone;
+    
+    const { data, error } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("id", req.user.id)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true, user: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 console.log("[SERVER] Routes registered:");
 console.log("  - /auth");
 console.log("  - /admin");
 console.log("  - /media");
 console.log("  - /groups");
 console.log("  - /api/feedback");
+console.log("  - /api/user/profile");
+console.log("  - /api/user/notifications");
+console.log("  - /api/user/privacy");
+console.log("  - /api/user/regional");
 console.log("  - /api/test (no auth)");
 console.log("  - /health");
 
