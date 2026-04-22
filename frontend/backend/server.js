@@ -85,22 +85,18 @@ app.post("/", express.json(), (req, res) => {
   res.json({ success: true, received: req.body, endpoint: "root-post" });
 });
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", uptime: process.uptime() });
-});
-
 console.log("[SERVER] Registering routes...");
 
 // Simple debug - log ALL incoming requests
 app.use((req, res, next) => {
-  console.log(`[DEBUG-ALL] ${req.method} ${req.path} - Body:`, JSON.stringify(req.body).slice(0, 100));
+  console.log(`[DEBUG-ALL] ${req.method} ${req.path}`);
   next();
 });
 
-app.use("/auth", authRoutes);
-app.use("/admin", adminRoutes);
-app.use("/media", mediaRoutes);
-app.use("/groups", groupRoutes);
+// Health check endpoint
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", uptime: process.uptime(), timestamp: Date.now() });
+});
 
 // INLINE TEST - bypass all cache issues
 app.post("/api/test-feedback-simple", (req, res) => {
@@ -109,7 +105,7 @@ app.post("/api/test-feedback-simple", (req, res) => {
   res.json({ success: true, timestamp: Date.now(), body: req.body });
 });
 
-console.log("[SERVER] Registering routes...");
+// Register all routes
 app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/media", mediaRoutes);
