@@ -551,9 +551,10 @@ select {
 /* —— Discord-like shell —— */
 .app-root {
   display: grid;
-  grid-template-columns: 72px 300px 1fr;
+  grid-template-columns: 72px var(--sidebar-width, 300px) 1fr;
   min-height: 100vh;
   width: 100%;
+  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-rail {

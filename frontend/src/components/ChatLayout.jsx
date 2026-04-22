@@ -717,7 +717,13 @@ export default function ChatLayout({
   const typingNamesDm = typingDmUser ? [typingDmUser.username] : [];
 
   return (
-    <div className={`app-root app-root-enhanced ${isMobile ? "mobile-view" : ""}`}>
+    <div 
+      className={`app-root app-root-enhanced ${isMobile ? "mobile-view" : ""}`}
+      style={{ 
+        '--sidebar-width': sidebarOpen ? '300px' : '0px',
+        transition: '--sidebar-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+      }}
+    >
       {/* Desktop Sidebar - Hidden on Mobile */}
       {!isMobile && (
         <>
