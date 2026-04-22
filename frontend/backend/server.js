@@ -13,9 +13,8 @@ const adminRoutes = require("./routes/admin");
 const mediaRoutes = require("./routes/media");
 const groupRoutes = require("./routes/groups");
 const errorRoutes = require("./routes/errors");
+const feedbackRoutes = require("./routes/feedback");
 const feedbackTestRoutes = require("./routes/feedback-test");
-const { requireAuth } = require("./middleware/auth");
-const { supabase } = require("./db/supabase");
 const { socketAuthMiddleware } = require("./middleware/socketAuth");
 const { registerSocketHandlers } = require("./socket/handlers");
 
@@ -84,44 +83,6 @@ app.post("/", express.json(), (req, res) => {
   res.json({ success: true, received: req.body, endpoint: "root-post" });
 });
 
-// DIRECT FEEDBACK ENDPOINT - Use different path to avoid router conflicts
-app.post("/api/feedback/submit", requireAuth, async (req, res) => {
-  console.log("[DIRECT-FEEDBACK] POST /api/feedback/submit - HIT!");
-  console.log("[DIRECT-FEEDBACK] User:", req.user);
-  console.log("[DIRECT-FEEDBACK] Body:", req.body);
-  
-  try {
-    const { category, priority, message, attachments } = req.body;
-    const userId = req.user.id;
-    const username = req.user.username;
-    
-    const { data, error } = await supabase
-      .from("user_feedback")
-      .insert({
-        user_id: userId,
-        username: username,
-        category: category || "general",
-        priority: priority || "medium",
-        message: message || "",
-        attachments: attachments || [],
-        status: "new",
-        viewed: false,
-      })
-      .select();
-    
-    if (error) {
-      console.error("[DIRECT-FEEDBACK] Supabase error:", error);
-      return res.status(500).json({ error: error.message });
-    }
-    
-    console.log("[DIRECT-FEEDBACK] Success:", data);
-    return res.json({ success: true, data });
-  } catch (err) {
-    console.error("[DIRECT-FEEDBACK] Error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", uptime: process.uptime() });
 });
@@ -146,9 +107,15 @@ app.post("/api/test-feedback-simple", (req, res) => {
   res.json({ success: true, timestamp: Date.now(), body: req.body });
 });
 
-console.log("[SERVER] About to register /api/errors route");
+console.log("[SERVER] Registering routes...");
+app.use("/auth", authRoutes);
+app.use("/admin", adminRoutes);
+app.use("/media", mediaRoutes);
+app.use("/groups", groupRoutes);
+app.use("/api/feedback", feedbackRoutes);
+console.log("[SERVER] Feedback routes registered at /api/feedback");
 app.use("/api/errors", errorRoutes);
-console.log("[SERVER] /api/errors route registered");
+console.log("[SERVER] Error routes registered");
 app.use("/api/test", feedbackTestRoutes);
 console.log("[SERVER] All routes registered");
 app.use("/media/files", express.static(path.join(__dirname, "uploads")));
