@@ -423,6 +423,8 @@ app.put("/api/admin/remove-admin/:userId", requireAuth, async (req, res) => {
 // Get all users - GET /api/admin/users
 app.get("/api/admin/users", requireAuth, async (req, res) => {
   try {
+    console.log("[ADMIN-USERS] Request from user ID:", req.user.id);
+    
     // Check if requester is admin (by username or is_admin field)
     const { data: requester } = await supabase
       .from("users")
@@ -430,7 +432,10 @@ app.get("/api/admin/users", requireAuth, async (req, res) => {
       .eq("id", req.user.id)
       .single();
     
+    console.log("[ADMIN-USERS] Requester:", requester);
+    
     if (!requester?.is_admin && requester?.username !== "admin") {
+      console.log("[ADMIN-USERS] Authorization failed - is_admin:", requester?.is_admin, "username:", requester?.username);
       return res.status(403).json({ success: false, error: "Not authorized" });
     }
     
@@ -441,8 +446,10 @@ app.get("/api/admin/users", requireAuth, async (req, res) => {
     
     if (error) return res.status(500).json({ success: false, error: error.message });
     
+    console.log("[ADMIN-USERS] Returning", data?.length, "users");
     return res.json({ success: true, users: data });
   } catch (err) {
+    console.error("[ADMIN-USERS] Error:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
