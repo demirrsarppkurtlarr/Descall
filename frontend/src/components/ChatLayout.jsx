@@ -718,11 +718,7 @@ export default function ChatLayout({
 
   return (
     <div 
-      className={`app-root app-root-enhanced ${isMobile ? "mobile-view" : ""}`}
-      style={{ 
-        '--sidebar-width': sidebarOpen ? '300px' : '0px',
-        transition: '--sidebar-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-      }}
+      className={`app-root app-root-enhanced ${isMobile ? "mobile-view" : ""} ${!sidebarOpen ? "sidebar-collapsed" : ""}`}
     >
       {/* Desktop Sidebar - Hidden on Mobile */}
       {!isMobile && (
@@ -753,12 +749,9 @@ export default function ChatLayout({
             </motion.button>
           </nav>
 
-          <motion.aside
+          <aside
             className="sidebar-secondary"
-            initial={false}
-            animate={{ width: sidebarOpen ? 300 : 0 }}
-            transition={{ type: "tween", duration: 0.2 }}
-            style={{ overflow: "hidden" }}
+            style={{ overflow: "hidden", width: sidebarOpen ? '300px' : '0px', transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
           >
         <div className="sidebar-inner">
           <div className="sidebar-brand">
@@ -934,7 +927,7 @@ export default function ChatLayout({
             <RippleButton type="button" className="logout-mini" onClick={onLogout}><LogOut size={16} /></RippleButton>
           </div>
         </div>
-      </motion.aside>
+      </aside>
         </>
       )}
 
