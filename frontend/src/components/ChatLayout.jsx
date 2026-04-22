@@ -741,8 +741,25 @@ export default function ChatLayout({
               <Circle size={10} fill="currentColor" />
             </motion.button>
             <div className="rail-spacer" />
-            <motion.button type="button" className="rail-btn subtle" title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarOpen((o) => !o)}>
-              <PanelLeftClose size={20} />
+            <motion.button 
+              type="button" 
+              className={`rail-btn subtle ${!sidebarOpen ? "sidebar-collapsed-btn" : ""}`} 
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} 
+              whileHover={{ scale: 1.08, rotate: sidebarOpen ? 0 : 180 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setSidebarOpen((o) => !o)}
+              animate={{ 
+                backgroundColor: sidebarOpen ? "rgba(255, 255, 255, 0.05)" : "rgba(103, 120, 255, 0.2)",
+                boxShadow: !sidebarOpen ? "0 0 12px rgba(103, 120, 255, 0.4)" : "none"
+              }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              <motion.div
+                animate={{ rotate: sidebarOpen ? 0 : 180 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+              >
+                <PanelLeftClose size={20} />
+              </motion.div>
             </motion.button>
             <motion.button type="button" className="rail-btn subtle" title="Settings" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSettingsOpen(true)}>
               <Settings size={20} />
@@ -753,7 +770,15 @@ export default function ChatLayout({
             className="sidebar-secondary"
             style={{ overflow: "hidden", width: sidebarOpen ? '300px' : '0px', transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
           >
-        <div className="sidebar-inner">
+        <motion.div 
+          className="sidebar-inner"
+          initial={false}
+          animate={{ 
+            opacity: sidebarOpen ? 1 : 0,
+            x: sidebarOpen ? 0 : -20
+          }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+        >
           <div className="sidebar-brand">
             <span className="brand-mark">Descall</span>
             <span className={`conn-pill ${isOnline ? "on" : "off"}`}>{connectionLabel}</span>
@@ -770,7 +795,9 @@ export default function ChatLayout({
                     type="button"
                     className={`dm-item ${activeDmUser?.id === friend.id ? "active" : ""}`}
                     onClick={() => { setGroups(g => ({ ...g, active: null })); try { localStorage.removeItem("descall_active_group"); } catch {}; onOpenDm(friend); }}
-                    whileHover={{ x: 2 }}
+                    whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
                   >
                     <Avatar name={friend.username} size={34} imageUrl={friend.avatarUrl} />
                     <div className="dm-item-body">
@@ -854,7 +881,9 @@ export default function ChatLayout({
                       type="button"
                       className={`dm-item ${groups.active?.id === group.id ? "active" : ""}`}
                       onClick={() => groupActions.open(group)}
-                      whileHover={{ x: 2 }}
+                      whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ duration: 0.15 }}
                     >
                       <div className="dm-avatar">
                         {group.avatar_url ? (
@@ -926,7 +955,7 @@ export default function ChatLayout({
             </div>
             <RippleButton type="button" className="logout-mini" onClick={onLogout}><LogOut size={16} /></RippleButton>
           </div>
-        </div>
+        </motion.div>
       </aside>
         </>
       )}
