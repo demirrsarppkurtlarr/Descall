@@ -17,6 +17,8 @@ const feedbackRoutes = require("./routes/feedback");
 const feedbackTestRoutes = require("./routes/feedback-test");
 const { socketAuthMiddleware } = require("./middleware/socketAuth");
 const { registerSocketHandlers } = require("./socket/handlers");
+const { requireAuth } = require("./middleware/auth");
+const { supabase } = require("./db/supabase");
 
 const PORT = process.env.PORT || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "*";
