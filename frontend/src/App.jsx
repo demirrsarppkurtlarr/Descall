@@ -125,7 +125,7 @@ export default function App() {
       const response = await fetch(`${API_BASE_URL}/health`, { method: "GET" });
       if (!response.ok) throw new Error(`Backend health check failed with status ${response.status}`);
       const data = await response.json().catch(() => null);
-      if (!data || data.status !== "ok") throw new Error("Invalid backend health response.");
+      if (!data || (data.status !== "ok" && data.status !== "healthy")) throw new Error("Invalid backend health response.");
       return true;
     } catch {
       throw new Error(`Wrong backend URL (${API_BASE_URL}). VITE_API_BASE_URL must point to your Node/Socket backend service.`);
