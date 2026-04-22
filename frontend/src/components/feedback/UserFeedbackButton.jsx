@@ -5,6 +5,7 @@ import {
   Star, CheckCircle, Flag, Loader2, Paperclip
 } from "lucide-react";
 import RippleButton from "../ui/RippleButton";
+import { API_BASE_URL } from "../../config/api";
 
 const CATEGORIES = [
   { id: "bug", label: "Bug Report", icon: AlertTriangle, color: "#f23f43" },
@@ -111,8 +112,8 @@ export default function UserFeedbackButton({ socket, user }) {
       const submitToken = localStorage.getItem("descall_token");
       console.log("[FRONTEND] Submit token:", !!submitToken);
       
-      console.log("[FRONTEND] Using endpoint /api/feedback/submit");
-      const res = await fetch("/api/feedback/submit", {
+      console.log("[FRONTEND] Using endpoint:", `${API_BASE_URL}/api/feedback/submit`);
+      const res = await fetch(`${API_BASE_URL}/api/feedback/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
