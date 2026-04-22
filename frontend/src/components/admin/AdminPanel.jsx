@@ -350,7 +350,6 @@ export default function AdminPanel({ socket, onClose }) {
                 <tr>
                   <th>Username</th>
                   <th>ID</th>
-                  <th>Admin</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -359,44 +358,23 @@ export default function AdminPanel({ socket, onClose }) {
                   <motion.tr key={u.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <td>{u.username}</td>
                     <td className="mono">{u.id.slice(0, 8)}…</td>
-                    <td>{u.is_admin ? "✓" : "✗"}</td>
                     <td className="admin-actions">
-                      {!u.is_admin && (
-                        <button
-                          type="button"
-                          className="admin-btn-green"
-                          onClick={() =>
-                            act(async () => {
-                              const token = localStorage.getItem("descall_token");
-                              await fetch(`${API_BASE_URL}/api/admin/make-admin/${u.id}`, {
-                                method: "PUT",
-                                headers: { Authorization: `Bearer ${token}` },
-                              });
-                              await loadAllUsers();
-                            })
-                          }
-                        >
-                          Make Admin
-                        </button>
-                      )}
-                      {u.is_admin && (
-                        <button
-                          type="button"
-                          className="admin-btn-red"
-                          onClick={() =>
-                            act(async () => {
-                              const token = localStorage.getItem("descall_token");
-                              await fetch(`${API_BASE_URL}/api/admin/remove-admin/${u.id}`, {
-                                method: "PUT",
-                                headers: { Authorization: `Bearer ${token}` },
-                              });
-                              await loadAllUsers();
-                            })
-                          }
-                        >
-                          Remove Admin
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="admin-btn-green"
+                        onClick={() =>
+                          act(async () => {
+                            const token = localStorage.getItem("descall_token");
+                            await fetch(`${API_BASE_URL}/api/admin/make-admin/${u.id}`, {
+                              method: "PUT",
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            await loadAllUsers();
+                          })
+                        }
+                      >
+                        Make Admin
+                      </button>
                     </td>
                   </motion.tr>
                 ))}
