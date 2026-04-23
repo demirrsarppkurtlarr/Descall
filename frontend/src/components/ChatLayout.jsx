@@ -369,6 +369,8 @@ export default function ChatLayout({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+  const [readAnnouncementIds, setReadAnnouncementIds] = useState(new Set());
   const [profileUser, setProfileUser] = useState(null);
   const [hoverCard, setHoverCard] = useState(null);
   const [compactBlur, setCompactBlur] = useState(14);
@@ -447,13 +449,52 @@ export default function ChatLayout({
   useEffect(() => {
     if (!me) return;
     const token = localStorage.getItem("descall_token");
+    
+    // Fetch announcements
     fetch(`${API_BASE_URL}/api/announcements`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then((data) => setAnnouncements(data.announcements || []))
       .catch(() => setAnnouncements([]));
+    
+    // Fetch unread count
+    fetch(`${API_BASE_URL}/api/announcements/unread/count`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setUnreadAnnouncements(data.count || 0))
+      .catch(() => setUnreadAnnouncements(0));
   }, [me]);
+
+  // Mark announcements as read when viewing announcements tab
+  useEffect(() => {
+    if (!me || sidebarView !== "announcements" || announcements.length === 0) return;
+    
+    const token = localStorage.getItem("descall_token");
+    const unreadAnnouncements = announcements.filter((a) => !readAnnouncementIds.has(a.id));
+    
+    if (unreadAnnouncements.length > 0) {
+      // Mark all unread announcements as read
+      Promise.all(
+        unreadAnnouncements.map((a) =>
+          fetch(`${API_BASE_URL}/api/announcements/${a.id}/read`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      ).then(() => {
+        setReadAnnouncementIds((prev) => {
+          const newSet = new Set(prev);
+          unreadAnnouncements.forEach((a) => newSet.add(a.id));
+          return newSet;
+        });
+        setUnreadAnnouncements(0);
+      }).catch((err) => {
+        console.error("Failed to mark announcements as read:", err);
+      });
+    }
+  }, [sidebarView, announcements, me, readAnnouncementIds]);
 
   // Socket event listeners for announcements
   useEffect(() => {
@@ -461,6 +502,19 @@ export default function ChatLayout({
 
     const onNewAnnouncement = (announcement) => {
       setAnnouncements((prev) => [announcement, ...prev]);
+      // Only increment unread if not currently viewing announcements
+      if (sidebarView !== "announcements") {
+        setUnreadAnnouncements((prev) => prev + 1);
+      } else {
+        // Mark as read immediately if viewing announcements
+        const token = localStorage.getItem("descall_token");
+        fetch(`${API_BASE_URL}/api/announcements/${announcement.id}/read`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(() => {
+          setReadAnnouncementIds((prev) => new Set(prev).add(announcement.id));
+        }).catch(() => {});
+      }
     };
 
     const onDeletedAnnouncement = ({ id }) => {
@@ -474,7 +528,7 @@ export default function ChatLayout({
       socket.off("announcement:new", onNewAnnouncement);
       socket.off("announcement:deleted", onDeletedAnnouncement);
     };
-  }, [socket]);
+  }, [socket, sidebarView]);
 
   // Socket event listeners for groups
   useEffect(() => {
@@ -770,7 +824,7 @@ export default function ChatLayout({
             </motion.button>
             <motion.button type="button" className={`rail-btn ${sidebarView === "announcements" ? "active" : ""}`} title="Announcements" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("announcements")}>
               <Megaphone size={22} />
-              {announcements.length > 0 && <span className="rail-badge">{announcements.length}</span>}
+              {unreadAnnouncements > 0 && <span className="rail-badge">{unreadAnnouncements > 99 ? "99+" : unreadAnnouncements}</span>}
             </motion.button>
             <motion.button type="button" className={`rail-btn ${notificationsOpen ? "active" : ""}`} title="Notifications" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setNotificationsOpen((o) => !o)}>
               <Bell size={22} />
@@ -967,25 +1021,28 @@ export default function ChatLayout({
 
           {sidebarView === "announcements" && (
             <div className="sidebar-section grow">
-              <h4>Announcements</h4>
+              <h4>Announcements {unreadAnnouncements > 0 && <span className="badge">{unreadAnnouncements}</span>}</h4>
               <div className="scroll-list custom-scroll">
                 {announcements.length === 0 && <p className="muted small">No announcements yet.</p>}
-                {announcements.map((a) => (
-                  <motion.div
-                    key={a.id}
-                    className="announcement-card"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{ borderLeft: `4px solid ${a.color}` }}
-                  >
-                    <div className="announcement-header">
-                      <h5>{a.title}</h5>
-                      <span className={`priority-badge ${a.priority}`}>{a.priority}</span>
-                    </div>
-                    <p className="announcement-content">{a.content}</p>
-                    <span className="announcement-date">{new Date(a.created_at).toLocaleString()}</span>
-                  </motion.div>
-                ))}
+                {announcements.map((a) => {
+                  const isUnread = !readAnnouncementIds.has(a.id);
+                  return (
+                    <motion.div
+                      key={a.id}
+                      className={`announcement-card ${isUnread ? "unread" : ""}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ borderLeft: `4px solid ${a.color}` }}
+                    >
+                      <div className="announcement-header">
+                        <h5>{a.title} {isUnread && <span className="unread-dot" />}</h5>
+                        <span className={`priority-badge ${a.priority}`}>{a.priority}</span>
+                      </div>
+                      <p className="announcement-content">{a.content}</p>
+                      <span className="announcement-date">{new Date(a.created_at).toLocaleString()}</span>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           )}

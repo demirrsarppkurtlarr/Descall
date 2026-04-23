@@ -450,6 +450,53 @@ app.delete("/api/admin/announcements/:id", requireAuth, async (req, res) => {
   }
 });
 
+// Mark announcement as read - POST /api/announcements/:id/read
+app.post("/api/announcements/:id/read", requireAuth, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from("announcement_reads")
+      .upsert({
+        user_id: req.user.id,
+        announcement_id: req.params.id,
+        read_at: new Date().toISOString(),
+      }, { onConflict: ["user_id", "announcement_id"] });
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get unread announcement count - GET /api/announcements/unread/count
+app.get("/api/announcements/unread/count", requireAuth, async (req, res) => {
+  try {
+    // Get all active announcements
+    const { data: announcements, error: annError } = await supabase
+      .from("announcements")
+      .select("id")
+      .eq("is_active", true);
+    
+    if (annError) return res.status(500).json({ success: false, error: annError.message });
+    
+    // Get read announcements for this user
+    const { data: reads, error: readError } = await supabase
+      .from("announcement_reads")
+      .select("announcement_id")
+      .eq("user_id", req.user.id);
+    
+    if (readError) return res.status(500).json({ success: false, error: readError.message });
+    
+    const readIds = new Set((reads || []).map((r) => r.announcement_id));
+    const unreadCount = (announcements || []).filter((a) => !readIds.has(a.id)).length;
+    
+    return res.json({ success: true, count: unreadCount });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ========== ADMIN ENDPOINTS ==========
 
 // Make user admin - PUT /api/admin/make-admin/:userId
