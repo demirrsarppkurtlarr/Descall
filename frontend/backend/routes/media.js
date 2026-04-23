@@ -1,33 +1,19 @@
 "use strict";
 
 const express = require("express");
-const path = require("path");
-const fs = require("fs");
 const multer = require("multer");
 const { requireAuth } = require("../middleware/auth");
 const supabase = require("../db/supabase");
 
 const router = express.Router();
 
-const UPLOAD_DIR = path.join(__dirname, "..", "uploads");
-
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
 const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_VIDEO = ["video/mp4", "video/webm"];
 const ALLOWED_ALL = [...ALLOWED_IMAGE, ...ALLOWED_VIDEO];
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".bin";
-    const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}${ext}`;
-    cb(null, unique);
-  },
-});
+// Use memory storage for Supabase upload
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -40,16 +26,38 @@ const upload = multer({
 
 router.use(requireAuth);
 
+// Upload file to Supabase Storage
+async function uploadToSupabase(file, folder = "files") {
+  const ext = file.originalname.split('.').pop();
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+  const filePath = `${folder}/${filename}`;
+
+  const { data, error } = await supabase.storage
+    .from("media")
+    .upload(filePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: true,
+    });
+
+  if (error) throw error;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from("media")
+    .getPublicUrl(filePath);
+
+  return { url: publicUrl, path: filePath };
+}
+
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded." });
 
     const file = req.file;
     const mediaType = ALLOWED_IMAGE.includes(file.mimetype) ? "image" : "video";
-    const url = `/media/files/${file.filename}`;
+    const { url, path } = await uploadToSupabase(file, "files");
 
     res.json({
-      id: file.filename,
+      id: path,
       url,
       mediaType,
       mimeType: file.mimetype,
@@ -57,6 +65,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       originalName: file.originalname,
     });
   } catch (err) {
+    console.error("[MEDIA] Upload error:", err);
     res.status(500).json({ error: "Upload failed." });
   }
 });
@@ -65,24 +74,24 @@ router.post("/avatar", upload.single("avatar"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No avatar uploaded." });
     if (!ALLOWED_IMAGE.includes(req.file.mimetype)) {
-      fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: "Avatar must be an image." });
     }
 
     const userId = req.user.id;
-    const avatarUrl = `/media/files/${req.file.filename}`;
+    const { url } = await uploadToSupabase(req.file, "avatars");
 
     const { error } = await supabase
       .from("users")
-      .update({ avatar_url: avatarUrl })
+      .update({ avatar_url: url })
       .eq("id", userId);
 
     if (error) {
       return res.status(500).json({ error: "Failed to update avatar." });
     }
 
-    res.json({ avatarUrl });
+    res.json({ avatarUrl: url });
   } catch (err) {
+    console.error("[MEDIA] Avatar upload error:", err);
     res.status(500).json({ error: "Avatar upload failed." });
   }
 });
@@ -91,24 +100,24 @@ router.post("/banner", upload.single("banner"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No banner uploaded." });
     if (!ALLOWED_IMAGE.includes(req.file.mimetype)) {
-      fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: "Banner must be an image." });
     }
 
     const userId = req.user.id;
-    const bannerUrl = `/media/files/${req.file.filename}`;
+    const { url } = await uploadToSupabase(req.file, "banners");
 
     const { error } = await supabase
       .from("users")
-      .update({ banner_url: bannerUrl })
+      .update({ banner_url: url })
       .eq("id", userId);
 
     if (error) {
       return res.status(500).json({ error: "Failed to update banner." });
     }
 
-    res.json({ bannerUrl });
+    res.json({ bannerUrl: url });
   } catch (err) {
+    console.error("[MEDIA] Banner upload error:", err);
     res.status(500).json({ error: "Banner upload failed." });
   }
 });
