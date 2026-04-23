@@ -996,24 +996,24 @@ export default function ChatLayout({
       {!isMobile && (
         <>
           <nav className="nav-rail" aria-label="Main">
-            <motion.button type="button" className={`rail-btn ${sidebarView === "dms" ? "active" : ""}`} title="Direct messages" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("dms")}>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "dms" ? "active" : ""}`} title="Direct messages" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setSidebarView("dms"); }}>
               <MessageSquare size={22} />
             </motion.button>
-            <motion.button type="button" className={`rail-btn ${sidebarView === "groups" ? "active" : ""}`} title="Groups" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("groups")}>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "groups" ? "active" : ""}`} title="Groups" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setSidebarView("groups"); }}>
               <Users size={22} />
             </motion.button>
-            <motion.button type="button" className={`rail-btn ${sidebarView === "friends" ? "active" : ""}`} title="Friends" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("friends")}>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "friends" ? "active" : ""}`} title="Friends" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setSidebarView("friends"); }}>
               <UserPlus size={22} />
             </motion.button>
-            <motion.button type="button" className={`rail-btn ${sidebarView === "announcements" ? "active" : ""}`} title="Announcements" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("announcements")}>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "announcements" ? "active" : ""}`} title="Announcements" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setSidebarView("announcements"); }}>
               <Megaphone size={22} />
               {unreadAnnouncements > 0 && <span className="rail-badge">{unreadAnnouncements > 99 ? "99+" : unreadAnnouncements}</span>}
             </motion.button>
-            <motion.button type="button" className={`rail-btn ${notificationsOpen ? "active" : ""}`} title="Notifications" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setNotificationsOpen((o) => !o)}>
+            <motion.button type="button" className={`rail-btn ${notificationsOpen ? "active" : ""}`} title="Notifications" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setNotificationsOpen((o) => !o); }}>
               <Bell size={22} />
               {globalUnread > 0 && <span className="rail-badge">{globalUnread > 99 ? "99+" : globalUnread}</span>}
             </motion.button>
-            <motion.button type="button" className={`rail-btn ${sidebarView === "online" ? "active" : ""}`} title="Online" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("online")}>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "online" ? "active" : ""}`} title="Online" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setSidebarView("online"); }}>
               <Circle size={10} fill="currentColor" />
             </motion.button>
             <div className="rail-spacer" />
@@ -1023,24 +1023,23 @@ export default function ChatLayout({
               title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"} 
               whileHover={{ scale: 1.08, rotate: sidebarOpen ? 0 : 180 }}
               whileTap={{ scale: 0.92 }}
-              onClick={() => setSidebarOpen((o) => !o)}
+              onClick={() => { playClickSound(); setSidebarOpen((o) => !o); }}
               animate={{ 
                 backgroundColor: sidebarOpen ? "rgba(255, 255, 255, 0.05)" : "rgba(103, 120, 255, 0.2)",
                 boxShadow: !sidebarOpen ? "0 0 12px rgba(103, 120, 255, 0.4)" : "none"
               }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
             >
               <motion.div
                 animate={{ rotate: sidebarOpen ? 0 : 180 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
+                transition={{ duration: 0.3 }}
               >
                 <PanelLeftClose size={20} />
               </motion.div>
             </motion.button>
-            <motion.button type="button" className={`rail-btn subtle ${customizationOpen ? "active" : ""}`} title="Customize" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setCustomizationOpen(true)}>
+            <motion.button type="button" className={`rail-btn subtle ${customizationOpen ? "active" : ""}`} title="Customize" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setCustomizationOpen(true); }}>
               <Palette size={20} />
             </motion.button>
-            <motion.button type="button" className="rail-btn subtle" title="Settings" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSettingsOpen(true)}>
+            <motion.button type="button" className="rail-btn subtle" title="Settings" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setSettingsOpen(true); }}>
               <Settings size={20} />
             </motion.button>
           </nav>
@@ -1073,7 +1072,7 @@ export default function ChatLayout({
                     key={friend.id}
                     type="button"
                     className={`dm-item ${activeDmUser?.id === friend.id ? "active" : ""}`}
-                    onClick={() => { setGroups(g => ({ ...g, active: null })); try { localStorage.removeItem("descall_active_group"); } catch {}; onOpenDm(friend); }}
+                    onClick={() => { playClickSound(); setGroups(g => ({ ...g, active: null })); try { localStorage.removeItem("descall_active_group"); } catch {}; onOpenDm(friend); }}
                     whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ duration: 0.15 }}
@@ -1116,15 +1115,15 @@ export default function ChatLayout({
                     }}
                     onMouseLeave={() => setHoverCard(null)}
                   >
-                    <button type="button" className="list-item" onClick={() => onOpenDm(friend)}>
+                    <button type="button" className="list-item" onClick={() => { playClickSound(); onOpenDm(friend); }}>
                       <StatusBadge status={friend.status} />
                       <span className="friend-name">{friend.username}</span>
                     </button>
                     <div className="friend-actions">
-                      <button type="button" className="icon-btn" title="Voice call" disabled={inCall} onClick={() => call?.startCall(friend, "voice")}><Phone size={16} /></button>
-                      <button type="button" className="icon-btn" title="Video call" disabled={inCall} onClick={() => call?.startCall(friend, "video")}><Video size={16} /></button>
-                      <button type="button" className="icon-btn" title="DM" onClick={() => onOpenDm(friend)}><MessageSquare size={16} /></button>
-                      <button type="button" className="icon-btn danger" title="Remove" onClick={() => onRemoveFriend(friend.id)}><X size={16} /></button>
+                      <button type="button" className="icon-btn" title="Voice call" disabled={inCall} onClick={() => { playClickSound(); call?.startCall(friend, "voice"); }}><Phone size={16} /></button>
+                      <button type="button" className="icon-btn" title="Video call" disabled={inCall} onClick={() => { playClickSound(); call?.startCall(friend, "video"); }}><Video size={16} /></button>
+                      <button type="button" className="icon-btn" title="DM" onClick={() => { playClickSound(); onOpenDm(friend); }}><MessageSquare size={16} /></button>
+                      <button type="button" className="icon-btn danger" title="Remove" onClick={() => { playClickSound(); onRemoveFriend(friend.id); }}><X size={16} /></button>
                     </div>
                   </div>
                 ))}
@@ -1139,7 +1138,7 @@ export default function ChatLayout({
                 <h4>Groups ({groupsList.length})</h4>
                 <button 
                   className="btn-icon"
-                  onClick={() => groupActions.setUI({ createOpen: true })}
+                  onClick={() => { playClickSound(); groupActions.setUI({ createOpen: true }); }}
                   title="Create group"
                 >
                   <Plus size={20} />
@@ -1149,7 +1148,7 @@ export default function ChatLayout({
                 {groupsList.length === 0 ? (
                   <div className="empty-state">
                     <p className="muted">No groups yet</p>
-                    <button className="btn-secondary" onClick={() => groupActions.setUI({ createOpen: true })}>
+                    <button className="btn-secondary" onClick={() => { playClickSound(); groupActions.setUI({ createOpen: true }); }}>
                       Create your first group
                     </button>
                   </div>
@@ -1159,7 +1158,7 @@ export default function ChatLayout({
                       key={group.id}
                       type="button"
                       className={`dm-item ${groups.active?.id === group.id ? "active" : ""}`}
-                      onClick={() => groupActions.open(group)}
+                      onClick={() => { playClickSound(); groupActions.open(group); }}
                       whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.05)" }}
                       whileTap={{ scale: 0.98 }}
                       transition={{ duration: 0.2, ease: "easeOut" }}
@@ -1240,8 +1239,8 @@ export default function ChatLayout({
               <div key={req.id} className="request-row compact-req">
                 <span>{req.username}</span>
                 <div>
-                  <RippleButton type="button" className="btn-mini ok" onClick={() => onAcceptFriend(req.id)}>Accept</RippleButton>
-                  <RippleButton type="button" className="btn-mini no" onClick={() => onDeclineFriend(req.id)}>Decline</RippleButton>
+                  <RippleButton type="button" className="btn-mini ok" onClick={() => { playClickSound(); onAcceptFriend(req.id); }}>Accept</RippleButton>
+                  <RippleButton type="button" className="btn-mini no" onClick={() => { playClickSound(); onDeclineFriend(req.id); }}>Decline</RippleButton>
                 </div>
               </div>
             ))}
@@ -1641,7 +1640,7 @@ export default function ChatLayout({
                       {fromSelf && !editingMessage && (
                         <button 
                           className="msg-edit-btn" 
-                          onClick={() => startEditingMessage(msg, 'dm')}
+                          onClick={() => { playClickSound(); startEditingMessage(msg, 'dm'); }}
                           title="Edit message"
                         >
                           Edit
@@ -1715,7 +1714,7 @@ export default function ChatLayout({
                       {fromSelf && !editingMessage && (
                         <button 
                           className="msg-edit-btn" 
-                          onClick={() => startEditingMessage({ id: msg.id, text: msg.content }, 'group')}
+                          onClick={() => { playClickSound(); startEditingMessage({ id: msg.id, text: msg.content }, 'group'); }}
                           title="Edit message"
                         >
                           Edit
