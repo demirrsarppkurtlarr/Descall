@@ -18,12 +18,15 @@ router.get("/conversation/:type/:id", requireAuth, async (req, res) => {
       }
     } else if (type === "group") {
       // For group, check membership
-      const { data: member } = await supabase
+      console.log("[reactions] Checking group membership for user:", userId, "group:", id);
+      const { data: member, error: memberError } = await supabase
         .from("group_members")
         .select("id")
         .eq("group_id", id)
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
+      
+      console.log("[reactions] Membership check result:", member, "error:", memberError);
       
       if (!member) {
         return res.status(403).json({ error: "Access denied" });
