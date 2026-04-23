@@ -681,15 +681,22 @@ export default function ChatLayout({
       // Fetch reactions for this group
       try {
         const token = localStorage.getItem("descall_token");
+        console.log("[ChatLayout] Fetching reactions for group:", group.id);
         const res = await fetch(`${API_BASE_URL}/reactions/conversation/group/${group.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        console.log("[ChatLayout] Reactions response status:", res.status, res.ok);
         if (res.ok) {
           const data = await res.json();
+          console.log("[ChatLayout] Reactions loaded:", data);
           setMessageReactions(data.reactions || {});
+          console.log("[ChatLayout] Set messageReactions:", data.reactions || {});
+        } else {
+          const errorText = await res.text();
+          console.error("[ChatLayout] Failed to load reactions:", res.status, errorText);
         }
       } catch (err) {
-        console.error("[ChatLayout] Failed to load reactions:", err);
+        console.error("[ChatLayout] Error loading reactions:", err);
       }
       // Socket join handled by useGroupCall hook
     },
@@ -838,16 +845,25 @@ export default function ChatLayout({
     if (!activeDmUser || !me) return;
     const convId = [me.id, activeDmUser.id].sort().join("::");
     const token = localStorage.getItem("descall_token");
+    console.log("[ChatLayout] Fetching DM reactions for:", convId);
     fetch(`${API_BASE_URL}/reactions/conversation/dm/${convId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.reactions) {
-          setMessageReactions(data.reactions);
+      .then(async res => {
+        console.log("[ChatLayout] DM reactions response:", res.status, res.ok);
+        if (res.ok) {
+          const data = await res.json();
+          console.log("[ChatLayout] DM reactions loaded:", data);
+          if (data?.reactions) {
+            setMessageReactions(data.reactions);
+            console.log("[ChatLayout] Set DM messageReactions:", data.reactions);
+          }
+        } else {
+          const errorText = await res.text();
+          console.error("[ChatLayout] Failed to load DM reactions:", res.status, errorText);
         }
       })
-      .catch(err => console.error("[ChatLayout] Failed to load DM reactions:", err));
+      .catch(err => console.error("[ChatLayout] Error loading DM reactions:", err));
   }, [activeDmUser, me]);
 
   const handleMessagesScroll = (e) => {
