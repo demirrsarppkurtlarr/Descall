@@ -441,7 +441,6 @@ export default function ChatLayout({
   const [customizationOpen, setCustomizationOpen] = useState(false);
   const [messageReactions, setMessageReactions] = useState({}); // { messageId: [{emoji, userId, username}] }
   const [editingMessage, setEditingMessage] = useState(null); // { id, text, type: 'dm'|'group' }
-  const [replyingTo, setReplyingTo] = useState(null); // { id, text, username, type: 'dm'|'group' }
   const fileInputRef = useRef(null);
   const groupsList = asArray(groups.list);
   const groupsMessages = asArray(groups.messages);
@@ -486,56 +485,6 @@ export default function ChatLayout({
     
     setEditingMessage(null);
   }, [editingMessage, activeDmUser, groups.active, socket]);
-
-  // Reply functions
-  const startReplying = useCallback((msg, type) => {
-    const username = type === 'dm' ? msg.from?.username : msg.sender?.username;
-    const text = type === 'dm' ? msg.text : msg.content;
-    setReplyingTo({ 
-      id: msg.id, 
-      text, 
-      username,
-      type 
-    });
-  }, []);
-
-  const cancelReply = useCallback(() => {
-    setReplyingTo(null);
-  }, []);
-
-  const sendReply = useCallback((text) => {
-    if (!replyingTo || !text.trim()) return;
-    
-    const { id, type } = replyingTo;
-    
-    console.log("[sendReply] Sending reply:", { id, type, text, socketConnected: socket?.connected });
-    
-    if (type === 'dm' && activeDmUser) {
-      if (!socket?.connected) {
-        console.error("[sendReply] Socket not connected!");
-        return;
-      }
-      socket.emit("dm:message:reply", {
-        parentMessageId: id,
-        text: text.trim(),
-        toUserId: activeDmUser.id
-      });
-      console.log("[sendReply] DM reply emitted to:", activeDmUser.id);
-    } else if (type === 'group' && groups.active) {
-      if (!socket?.connected) {
-        console.error("[sendReply] Socket not connected!");
-        return;
-      }
-      socket.emit("group:message:reply", {
-        parentMessageId: id,
-        text: text.trim(),
-        groupId: groups.active.id
-      });
-      console.log("[sendReply] Group reply emitted to group:", groups.active.id);
-    }
-    
-    setReplyingTo(null);
-  }, [replyingTo, activeDmUser, groups.active, socket]);
 
   useEffect(() => { document.documentElement.toggleAttribute("data-reduce-motion", reduceMotion); }, [reduceMotion]);
   useEffect(() => { 
@@ -738,41 +687,6 @@ export default function ChatLayout({
     };
     socket.on("dm:message:edited", onDmMessageEdited);
 
-    // Reply listeners
-    const onGroupMessageReplied = (data) => {
-      console.log("[ChatLayout] Group message replied:", data);
-      // Add reply as a regular message to the group
-      const replyMessage = {
-        id: data.id,
-        content: data.text,
-        sender: data.from,
-        created_at: data.timestamp,
-        replyTo: data.parentMessageId,
-        isReply: true
-      };
-      setGroups(g => ({
-        ...g,
-        messages: [...(g.messages || []), replyMessage]
-      }));
-    };
-    socket.on("group:message:replied", onGroupMessageReplied);
-
-    const onDmMessageReplied = (data) => {
-      console.log("[ChatLayout] DM message replied:", data);
-      // Add reply as a regular DM message
-      const replyMessage = {
-        id: data.id,
-        text: data.text,
-        from: data.from,
-        timestamp: data.timestamp,
-        replyTo: data.parentMessageId,
-        isReply: true,
-        to: activeDmUser?.id
-      };
-      setDmMessages(prev => [...prev, replyMessage]);
-    };
-    socket.on("dm:message:replied", onDmMessageReplied);
-
     return () => {
       socket.off("group:message", onGroupMessage);
       socket.off("group:call:left", onCallEnded);
@@ -780,8 +694,6 @@ export default function ChatLayout({
       socket.off("reaction:update", onReactionUpdate);
       socket.off("group:message:edited", onGroupMessageEdited);
       socket.off("dm:message:edited", onDmMessageEdited);
-      socket.off("group:message:replied", onGroupMessageReplied);
-      socket.off("dm:message:replied", onDmMessageReplied);
     };
   }, [socket, groups.active?.id, groupsList]);
 
@@ -1037,13 +949,7 @@ export default function ChatLayout({
     const text = composer.trim();
     if (!text || !activeDmUser) return;
     flushTyping();
-    
-    if (replyingTo && replyingTo.type === 'dm') {
-      sendReply(text);
-    } else {
-      onSendDm(activeDmUser.id, text);
-    }
-    
+    onSendDm(activeDmUser.id, text);
     setComposer("");
     requestAnimationFrame(() => scrollToBottom());
   };
@@ -1742,17 +1648,6 @@ export default function ChatLayout({
                         </button>
                       )}
                       
-                      {/* Reply button for all messages */}
-                      {!editingMessage && (
-                        <button 
-                          className="msg-reply-btn" 
-                          onClick={() => startReplying(msg, 'dm')}
-                          title="Reply to message"
-                        >
-                          Reply
-                        </button>
-                      )}
-                      
                       {fromSelf && (
                         <div className="dm-ack" aria-label="Delivery status">
                           {msg.readAt ? <span className="ack-read">Read</span> : msg.deliveredAt ? <span className="ack-delivered">Delivered</span> : <span className="ack-sent">Sent</span>}
@@ -1827,17 +1722,6 @@ export default function ChatLayout({
                         </button>
                       )}
                       
-                      {/* Reply button for all messages */}
-                      {!editingMessage && (
-                        <button 
-                          className="msg-reply-btn" 
-                          onClick={() => startReplying(msg, 'group')}
-                          title="Reply to message"
-                        >
-                          Reply
-                        </button>
-                      )}
-                      
                       <MessageReactions
                         messageId={msg.id}
                         conversationType="group"
@@ -1861,18 +1745,8 @@ export default function ChatLayout({
             onSubmit={submitMessage}
             onBlur={() => flushTyping()}
           >
-            {replyingTo && replyingTo.type === 'dm' && (
-              <div className="reply-indicator">
-                <span className="reply-indicator-text">
-                  Replying to <strong>{replyingTo.username}</strong>: {replyingTo.text?.slice(0, 50)}{replyingTo.text?.length > 50 ? '...' : ''}
-                </span>
-                <button type="button" className="reply-indicator-cancel" onClick={cancelReply}>
-                  ×
-                </button>
-              </div>
-            )}
             <input
-              placeholder={replyingTo ? `Reply to ${replyingTo.username}...` : `Message @${activeDmUser.username}`}
+              placeholder={`Message @${activeDmUser.username}`}
               value={composer}
               onChange={handleComposerChange}
             />
@@ -1897,26 +1771,12 @@ export default function ChatLayout({
             className={`composer glass-composer ${inCall ? "composer-dimmed" : ""}`}
             onSubmit={(e) => { 
               e.preventDefault(); 
-              if (replyingTo && replyingTo.type === 'group') {
-                sendReply(groups.ui.groupComposer);
-              } else {
-                groupActions.sendMessage(groups.ui.groupComposer);
-              }
+              groupActions.sendMessage(groups.ui.groupComposer);
               groupActions.setUI({ groupComposer: "" });
             }}
           >
-            {replyingTo && replyingTo.type === 'group' && (
-              <div className="reply-indicator">
-                <span className="reply-indicator-text">
-                  Replying to <strong>{replyingTo.username}</strong>: {replyingTo.text?.slice(0, 50)}{replyingTo.text?.length > 50 ? '...' : ''}
-                </span>
-                <button type="button" className="reply-indicator-cancel" onClick={cancelReply}>
-                  ×
-                </button>
-              </div>
-            )}
             <input
-              placeholder={replyingTo ? `Reply to ${replyingTo.username}...` : `Message #${groups.active.name}`}
+              placeholder={`Message #${groups.active.name}`}
               value={groups.ui.groupComposer || ""}
               onChange={(e) => groupActions.setUI({ groupComposer: e.target.value })}
             />

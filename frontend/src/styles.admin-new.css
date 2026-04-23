@@ -1705,92 +1705,9 @@
   border-color: rgba(102, 120, 255, 0.5);
 }
 
-.msg-reply-btn {
-  padding: 4px 8px;
-  margin-top: 4px;
-  margin-left: 4px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11px;
-  cursor: pointer;
-  opacity: 0;
-  transition: all 0.15s;
-}
-
-.dm-msg:hover .msg-reply-btn {
-  opacity: 1;
-}
-
-.msg-reply-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
-  border-color: rgba(102, 120, 255, 0.5);
-}
-
 .edited-indicator {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
   margin-left: 4px;
   font-style: italic;
-}
-
-/* Reply indicator in composer - Discord style */
-.composer {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.reply-indicator {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  margin: 0 0 0 0;
-  background: rgba(102, 120, 255, 0.08);
-  border-left: 2px solid rgba(102, 120, 255, 0.6);
-  border-radius: 8px 8px 0 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.reply-indicator::before {
-  content: "↳";
-  color: rgba(102, 120, 255, 0.8);
-  font-size: 16px;
-}
-
-.reply-indicator-text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.reply-indicator-text strong {
-  color: rgba(102, 120, 255, 0.9);
-  font-weight: 600;
-}
-
-.reply-indicator-cancel {
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  transition: all 0.15s;
-}
-
-.reply-indicator-cancel:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* Composer input when replying */
-.composer:has(.reply-indicator) input {
-  border-radius: 0 0 8px 8px;
 }
