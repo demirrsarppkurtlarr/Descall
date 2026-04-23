@@ -1267,14 +1267,14 @@ export default function ChatLayout({
               )}
 
               {!isMobile && !activeDmUser && !groups.active && (
-                <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+                <motion.div className="empty-state" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Welcome to Descall</h4>
                   <p>Select a friend or start a new conversation to begin messaging.</p>
                 </motion.div>
               )}
 
               {activeDmUser && dmMessages.length === 0 && (
-                <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+                <motion.div className="empty-state" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Conversation with {activeDmUser.username}</h4>
                   <p>No messages yet. Say hello or share a file.</p>
                 </motion.div>
@@ -1328,7 +1328,7 @@ export default function ChatLayout({
 
               {/* Group Messages */}
               {groups.active && groupsMessages.length === 0 && (
-                <motion.div className="empty-state glass" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+                <motion.div className="empty-state" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                   <h4>Group: {groups.active.name}</h4>
                   <p>No messages yet. Start the conversation!</p>
                 </motion.div>
