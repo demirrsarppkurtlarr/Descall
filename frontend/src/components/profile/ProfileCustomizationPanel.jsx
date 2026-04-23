@@ -75,6 +75,7 @@ export default function ProfileCustomizationPanel({
   resetCustomization,
   onClose,
   me,
+  refreshMe,
 }) {
   const [activeTab, setActiveTab] = useState("theme");
   const [tempColor, setTempColor] = useState(customization.theme.primaryColor);
@@ -103,6 +104,10 @@ export default function ProfileCustomizationPanel({
       
       if (response.ok) {
         updateProfile({ avatarUrl: data.avatarUrl });
+        // Refresh me data to update avatar everywhere
+        if (refreshMe) {
+          await refreshMe();
+        }
       } else {
         console.error("Avatar upload failed:", data.error);
       }

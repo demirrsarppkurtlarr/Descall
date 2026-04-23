@@ -322,6 +322,7 @@ function AnimatedMessage({ children, delay = 0 }) {
 
 export default function ChatLayout({
   me,
+  refreshMe,
   connectionLabel,
   reconnectState,
   authError,
@@ -1113,8 +1114,8 @@ export default function ChatLayout({
           {friendNotice && <div className="notice-banner">{friendNotice}</div>}
 
           <div className="user-bar" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="user-avatar-wrap" onClick={() => setProfileUser({ username: me.username, userId: me.id, avatarUrl: me.avatarUrl })}>
-              <Avatar name={me.username} size={36} imageUrl={me.avatarUrl} />
+            <button type="button" className="user-avatar-wrap" onClick={() => setProfileUser({ username: me.username, userId: me.id, avatarUrl: me.avatar_url })}>
+              <Avatar name={me.username} size={36} imageUrl={me.avatar_url} />
             </button>
             <div className="user-meta">
               <div className="user-name">{me.username}</div>
@@ -1460,8 +1461,8 @@ export default function ChatLayout({
                     animate={{ opacity: 1, y: 0 }}
                   >
                     {!compact ? (
-                      <button type="button" className="dm-msg-avatar" onClick={() => setProfileUser({ username: msg.from?.username ?? "?", userId: msg.from?.id, avatarUrl: msg.from?.avatarUrl })}>
-                        <Avatar name={msg.from?.username ?? "?"} size={36} imageUrl={msg.from?.avatarUrl} />
+                      <button type="button" className="dm-msg-avatar" onClick={() => setProfileUser({ username: msg.from?.username ?? "?", userId: msg.from?.id, avatarUrl: msg.from?.avatar_url })}>
+                        <Avatar name={msg.from?.username ?? "?"} size={36} imageUrl={msg.from?.avatar_url} />
                       </button>
                     ) : (
                       <div className="msg-avatar-spacer sm" aria-hidden />
@@ -1513,8 +1514,8 @@ export default function ChatLayout({
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                   >
-                    <button type="button" className="dm-msg-avatar" onClick={() => setProfileUser({ username: msg.sender?.username ?? "?", userId: msg.sender?.id })}>
-                      <Avatar name={msg.sender?.username ?? "?"} size={36} />
+                    <button type="button" className="dm-msg-avatar" onClick={() => setProfileUser({ username: msg.sender?.username ?? "?", userId: msg.sender?.id, avatarUrl: msg.sender?.avatar_url })}>
+                      <Avatar name={msg.sender?.username ?? "?"} size={36} imageUrl={msg.sender?.avatar_url} />
                     </button>
                     <div>
                       <div className="msg-meta-line">
@@ -1900,6 +1901,7 @@ export default function ChatLayout({
           {...profileCustomization}
           onClose={() => setCustomizationOpen(false)}
           me={me}
+          refreshMe={refreshMe}
         />
       </Modal>
 

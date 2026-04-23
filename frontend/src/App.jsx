@@ -168,6 +168,21 @@ export default function App() {
     })();
   }, [adminChanged]);
 
+  // Refresh user data from backend
+  const refreshMe = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const { user } = await getMe(token);
+      console.log("[App] Refreshed me:", user);
+      setMe(user);
+      setUser(user);
+      return user;
+    } catch (err) {
+      console.error("[App] Failed to refresh me:", err);
+    }
+  }, []);
+
   const verifyBackendEndpoint = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/health`, { method: "GET" });
@@ -559,6 +574,7 @@ export default function App() {
       )}
       <ChatLayout
         me={me}
+        refreshMe={refreshMe}
         connectionLabel={connectionLabel}
         reconnectState={reconnectState}
         authError={authError}
