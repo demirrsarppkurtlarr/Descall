@@ -130,7 +130,9 @@ function CallBar({ call, peerScreenSharing, onMinimize }) {
     return (
       <div className="voice-modal-overlay">
         <motion.div className="voice-modal" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-          <div className="voice-avatar">{call.peer.username?.charAt(0).toUpperCase()}</div>
+          <div className="voice-avatar">
+            <Avatar name={call.peer.username} size={64} imageUrl={call.peer.avatarUrl || call.peer.avatar_url} />
+          </div>
           <h3>{call.peer.username}</h3>
           <p>Incoming {call.callType === "video" ? "video" : "voice"} call</p>
           <div className="voice-modal-actions">
@@ -652,6 +654,19 @@ export default function ChatLayout({
         console.error("[ChatLayout] Failed to load group members:", err);
         setGroups(g => ({ ...g, members: [] }));
       }
+      // Fetch reactions for this group
+      try {
+        const token = localStorage.getItem("descall_token");
+        const res = await fetch(`${API_BASE_URL}/reactions/conversation/group/${group.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMessageReactions(data.reactions || {});
+        }
+      } catch (err) {
+        console.error("[ChatLayout] Failed to load reactions:", err);
+      }
       // Socket join handled by useGroupCall hook
     },
 
@@ -793,6 +808,23 @@ export default function ChatLayout({
   }, [activeDmUser, onTypingDmStop]);
 
   useEffect(() => () => flushTyping(), [flushTyping]);
+
+  // Load reactions when DM user changes
+  useEffect(() => {
+    if (!activeDmUser || !me) return;
+    const convId = [me.id, activeDmUser.id].sort().join("::");
+    const token = localStorage.getItem("descall_token");
+    fetch(`${API_BASE_URL}/reactions/conversation/dm/${convId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.reactions) {
+          setMessageReactions(data.reactions);
+        }
+      })
+      .catch(err => console.error("[ChatLayout] Failed to load DM reactions:", err));
+  }, [activeDmUser, me]);
 
   const handleMessagesScroll = (e) => {
     const el = e.target;

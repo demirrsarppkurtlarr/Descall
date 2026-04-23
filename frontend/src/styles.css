@@ -995,6 +995,16 @@ select {
   justify-content: center;
   font-size: 28px;
   font-weight: 800;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.voice-avatar .avatar,
+.voice-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .voice-modal-actions {
@@ -1174,6 +1184,17 @@ select {
   border-radius: 50%;
   overflow: hidden;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-avatar-large .avatar,
+.voice-avatar-large img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .voice-waves {
