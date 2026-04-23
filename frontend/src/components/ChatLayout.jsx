@@ -499,18 +499,30 @@ export default function ChatLayout({
     
     const { id, type } = replyingTo;
     
+    console.log("[sendReply] Sending reply:", { id, type, text, socketConnected: socket?.connected });
+    
     if (type === 'dm' && activeDmUser) {
-      socket?.emit("dm:message:reply", {
+      if (!socket?.connected) {
+        console.error("[sendReply] Socket not connected!");
+        return;
+      }
+      socket.emit("dm:message:reply", {
         parentMessageId: id,
         text: text.trim(),
         toUserId: activeDmUser.id
       });
+      console.log("[sendReply] DM reply emitted to:", activeDmUser.id);
     } else if (type === 'group' && groups.active) {
-      socket?.emit("group:message:reply", {
+      if (!socket?.connected) {
+        console.error("[sendReply] Socket not connected!");
+        return;
+      }
+      socket.emit("group:message:reply", {
         parentMessageId: id,
         text: text.trim(),
         groupId: groups.active.id
       });
+      console.log("[sendReply] Group reply emitted to group:", groups.active.id);
     }
     
     setReplyingTo(null);
