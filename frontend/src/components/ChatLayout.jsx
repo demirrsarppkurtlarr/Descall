@@ -604,10 +604,33 @@ export default function ChatLayout({
     socket.on("group:call:left", onCallEnded);
     socket.on("group:call:ended", onCallEnded);
 
+    // Real-time reactions listener
+    const onReactionUpdate = (data) => {
+      console.log("[ChatLayout] Reaction update received:", data);
+      setMessageReactions(prev => {
+        const current = prev[data.messageId] || [];
+        if (data.removed) {
+          return {
+            ...prev,
+            [data.messageId]: current.filter(r => !(r.emoji === data.emoji && r.userId === data.userId))
+          };
+        } else {
+          const exists = current.find(r => r.emoji === data.emoji && r.userId === data.userId);
+          if (exists) return prev;
+          return {
+            ...prev,
+            [data.messageId]: [...current, { emoji: data.emoji, userId: data.userId, username: data.username }]
+          };
+        }
+      });
+    };
+    socket.on("reaction:update", onReactionUpdate);
+
     return () => {
       socket.off("group:message", onGroupMessage);
       socket.off("group:call:left", onCallEnded);
       socket.off("group:call:ended", onCallEnded);
+      socket.off("reaction:update", onReactionUpdate);
     };
   }, [socket, groups.active?.id, groupsList]);
 
