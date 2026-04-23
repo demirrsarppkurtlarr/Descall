@@ -5,6 +5,7 @@ import { useMobile } from "../hooks/useMobile";
 import { useProfileCustomization } from "../hooks/useProfileCustomization";
 import TypingIndicator from "./chat/TypingIndicator";
 import MessageReactions from "./chat/MessageReactions";
+import MessageEditUI from "./chat/MessageEditUI";
 import SettingsPanel from "./settings/SettingsPanel";
 import ProfileCustomizationPanel from "./profile/ProfileCustomizationPanel";
 import VideoConference from "./VideoConference";
@@ -1612,21 +1613,11 @@ export default function ChatLayout({
                       
                       {/* Message text or edit UI */}
                       {editingMessage?.id === msg.id ? (
-                        <div className="message-edit-ui">
-                          <input
-                            type="text"
-                            defaultValue={editingMessage.text}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveEditedMessage(e.target.value);
-                              if (e.key === 'Escape') cancelEditing();
-                            }}
-                            autoFocus
-                          />
-                          <div className="edit-actions">
-                            <button onClick={(e) => saveEditedMessage(e.target.previousSibling.value)}>Save</button>
-                            <button onClick={cancelEditing}>Cancel</button>
-                          </div>
-                        </div>
+                        <MessageEditUI 
+                          defaultValue={editingMessage.text}
+                          onSave={saveEditedMessage}
+                          onCancel={cancelEditing}
+                        />
                       ) : (
                         <>
                           {msg.text && (
@@ -1700,21 +1691,11 @@ export default function ChatLayout({
                       </div>
                       {/* Message text or edit UI */}
                       {editingMessage?.id === msg.id ? (
-                        <div className="message-edit-ui">
-                          <input
-                            type="text"
-                            defaultValue={editingMessage.text}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveEditedMessage(e.target.value);
-                              if (e.key === 'Escape') cancelEditing();
-                            }}
-                            autoFocus
-                          />
-                          <div className="edit-actions">
-                            <button onClick={(e) => saveEditedMessage(e.target.previousSibling.value)}>Save</button>
-                            <button onClick={cancelEditing}>Cancel</button>
-                          </div>
-                        </div>
+                        <MessageEditUI 
+                          defaultValue={editingMessage.text}
+                          onSave={saveEditedMessage}
+                          onCancel={cancelEditing}
+                        />
                       ) : (
                         <p className="dm-msg-text">
                           {msg.content}
