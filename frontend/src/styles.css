@@ -26,7 +26,7 @@ html, body {
 }
 
 body {
-  font-family: Inter, Segoe UI, Roboto, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background:
     radial-gradient(1200px 500px at 15% -10%, #2a317040 0%, transparent 60%),
     radial-gradient(1100px 500px at 90% -20%, #4f3ca432 0%, transparent 60%),
