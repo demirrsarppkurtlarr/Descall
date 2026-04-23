@@ -1466,3 +1466,174 @@
   width: 16px;
   height: 16px;
 }
+
+/* ========================================
+   MESSAGE REACTIONS
+   ======================================== */
+
+.message-reactions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.reactions-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.reaction-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.reaction-chip.reaction-mine {
+  background: rgba(102, 120, 255, 0.2);
+  border-color: rgba(102, 120, 255, 0.4);
+}
+
+.reaction-chip.reaction-mine:hover {
+  background: rgba(102, 120, 255, 0.3);
+  border-color: rgba(102, 120, 255, 0.5);
+}
+
+.reaction-emoji {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.reaction-count {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.reaction-chip.reaction-mine .reaction-count {
+  color: #6678ff;
+}
+
+.reaction-add-wrapper {
+  position: relative;
+}
+
+.reaction-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reaction-add-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.reaction-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.reaction-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 10000;
+  min-width: 220px;
+}
+
+.reaction-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.reaction-picker-header span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.reaction-picker-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reaction-picker-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.reaction-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.reaction-picker-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reaction-picker-emoji:hover {
+  background: rgba(102, 120, 255, 0.2);
+  border-color: rgba(102, 120, 255, 0.4);
+  transform: scale(1.1);
+}

@@ -613,6 +613,92 @@ function registerSocketHandlers(io) {
       });
     });
 
+    // Emoji Reactions
+    socket.on("reaction:add", async ({ messageId, conversationType, conversationId, emoji } = {}) => {
+      if (!messageId || !conversationType || !conversationId || !emoji) return;
+      
+      // Verify user is part of this conversation
+      if (conversationType === "dm") {
+        const key = convKey(myId, conversationId.replace(myId, "").replace("::", ""));
+        const otherId = key.replace(myId, "").replace("::", "");
+        if (!friends.get(myId)?.has(otherId)) return;
+      } else if (conversationType === "group") {
+        // Check group membership via group handlers
+        const isMember = socket.rooms.has(conversationId);
+        if (!isMember) return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("reactions")
+          .upsert({
+            message_id: messageId,
+            conversation_type: conversationType,
+            conversation_id: conversationId,
+            user_id: myId,
+            emoji: emoji,
+          }, { onConflict: "message_id,user_id,emoji" })
+          .select();
+
+        if (error) throw error;
+
+        // Broadcast to all users in conversation
+        const reactionData = {
+          messageId,
+          emoji,
+          userId: myId,
+          username: me.username,
+          conversationType,
+          conversationId,
+        };
+
+        if (conversationType === "dm") {
+          const otherId = conversationId.replace(myId, "").replace("::", "");
+          emitToUser(io, otherId, "reaction:update", reactionData);
+        } else {
+          io.to(conversationId).emit("reaction:update", reactionData);
+        }
+        socket.emit("reaction:update", reactionData);
+      } catch (err) {
+        console.error("[reaction:add] Error:", err);
+      }
+    });
+
+    socket.on("reaction:remove", async ({ messageId, conversationType, conversationId, emoji } = {}) => {
+      if (!messageId || !conversationType || !conversationId || !emoji) return;
+
+      try {
+        const { error } = await supabase
+          .from("reactions")
+          .delete()
+          .eq("message_id", messageId)
+          .eq("user_id", myId)
+          .eq("emoji", emoji);
+
+        if (error) throw error;
+
+        const reactionData = {
+          messageId,
+          emoji,
+          userId: myId,
+          username: me.username,
+          removed: true,
+          conversationType,
+          conversationId,
+        };
+
+        if (conversationType === "dm") {
+          const otherId = conversationId.replace(myId, "").replace("::", "");
+          emitToUser(io, otherId, "reaction:update", reactionData);
+        } else {
+          io.to(conversationId).emit("reaction:update", reactionData);
+        }
+        socket.emit("reaction:update", reactionData);
+      } catch (err) {
+        console.error("[reaction:remove] Error:", err);
+      }
+    });
+
     socket.on("disconnect", () => {
       const sessStart = userSessionStartMs.get(myId);
       if (sessStart) {

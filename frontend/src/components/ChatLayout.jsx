@@ -4,6 +4,7 @@ import { useToast } from "../context/ToastContext";
 import { useMobile } from "../hooks/useMobile";
 import { useProfileCustomization } from "../hooks/useProfileCustomization";
 import TypingIndicator from "./chat/TypingIndicator";
+import MessageReactions from "./chat/MessageReactions";
 import SettingsPanel from "./settings/SettingsPanel";
 import ProfileCustomizationPanel from "./profile/ProfileCustomizationPanel";
 import VideoConference from "./VideoConference";
@@ -426,6 +427,7 @@ export default function ChatLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeMobileView, setActiveMobileView] = useState("dms"); // "dms", "groups", "calls", "profile"
   const [customizationOpen, setCustomizationOpen] = useState(false);
+  const [messageReactions, setMessageReactions] = useState({}); // { messageId: [{emoji, userId, username}] }
   const fileInputRef = useRef(null);
   const groupsList = asArray(groups.list);
   const groupsMessages = asArray(groups.messages);
@@ -1488,6 +1490,14 @@ export default function ChatLayout({
                           {msg.readAt ? <span className="ack-read">Read</span> : msg.deliveredAt ? <span className="ack-delivered">Delivered</span> : <span className="ack-sent">Sent</span>}
                         </div>
                       )}
+                      <MessageReactions
+                        messageId={msg.id}
+                        conversationType="dm"
+                        conversationId={[me.id, activeDmUser.id].sort().join("::")}
+                        reactions={messageReactions[msg.id] || []}
+                        currentUserId={me.id}
+                        socket={socket}
+                      />
                     </div>
                   </motion.article>
                 );
@@ -1525,6 +1535,14 @@ export default function ChatLayout({
                         </span>
                       </div>
                       <p className="dm-msg-text">{msg.content}</p>
+                      <MessageReactions
+                        messageId={msg.id}
+                        conversationType="group"
+                        conversationId={groups.active.id}
+                        reactions={messageReactions[msg.id] || []}
+                        currentUserId={me.id}
+                        socket={socket}
+                      />
                     </div>
                   </motion.article>
                 );
