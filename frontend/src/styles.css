@@ -1378,7 +1378,11 @@ html[data-reduce-motion="true"] *::after {
 }
 
 .app-root-enhanced {
-  grid-template-columns: 72px minmax(0, 300px) minmax(0, 1fr) 280px;
+  grid-template-columns: 72px minmax(0, 300px) 1fr;
+}
+
+.app-root-enhanced.sidebar-collapsed {
+  grid-template-columns: 72px 0px 1fr;
 }
 
 .glass-sidebar {
