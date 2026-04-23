@@ -456,12 +456,16 @@ app.get("/api/admin/users", requireAuth, async (req, res) => {
     
     // Add online status from Socket.IO presence
     const state = require("./runtime/sharedState");
+    console.log("[ADMIN-USERS] Presence size:", state.presence.size);
+    console.log("[ADMIN-USERS] Presence keys:", Array.from(state.presence.keys()));
+    
     const usersWithStatus = (data || []).map(user => ({
       ...user,
       isOnline: state.presence.has(user.id),
       status: state.presence.get(user.id)?.status || "offline"
     }));
     
+    console.log("[ADMIN-USERS] Users with status:", usersWithStatus.map(u => ({ id: u.id, username: u.username, isOnline: u.isOnline })));
     console.log("[ADMIN-USERS] Returning", usersWithStatus.length, "users");
     return res.json({ success: true, users: usersWithStatus });
   } catch (err) {
