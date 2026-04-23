@@ -136,6 +136,108 @@ async function findUserByUsername(username) {
   return data;
 }
 
+// Load friends from database into memory
+async function loadFriendsFromDB(userId) {
+  try {
+    // Get friendships where user is the requester
+    const { data: myFriends, error: err1 } = await supabase
+      .from("friendships")
+      .select("friend_id, friend:users!friend_id(id, username), created_at")
+      .eq("user_id", userId)
+      .eq("status", "accepted");
+    
+    if (err1) {
+      console.error("[FRIENDS] Error loading friends from DB (my requests):", err1);
+    }
+
+    // Get friendships where user is the recipient
+    const { data: theirFriends, error: err2 } = await supabase
+      .from("friendships")
+      .select("user_id, user:users!user_id(id, username), created_at")
+      .eq("friend_id", userId)
+      .eq("status", "accepted");
+    
+    if (err2) {
+      console.error("[FRIENDS] Error loading friends from DB (their requests):", err2);
+    }
+
+    // Combine both directions
+    const friendSet = new Set();
+    
+    (myFriends || []).forEach(f => {
+      if (f.friend) {
+        friendSet.add(f.friend.id);
+        usernameById.set(f.friend.id, f.friend.username);
+      }
+    });
+    
+    (theirFriends || []).forEach(f => {
+      if (f.user) {
+        friendSet.add(f.user.id);
+        usernameById.set(f.user.id, f.user.username);
+      }
+    });
+    
+    friends.set(userId, friendSet);
+    console.log(`[FRIENDS] Loaded ${friendSet.size} friends for user ${userId}`);
+    return friendSet;
+  } catch (e) {
+    console.error("[FRIENDS] Error in loadFriendsFromDB:", e);
+    return new Set();
+  }
+}
+
+// Save friendship to database
+async function saveFriendshipToDB(userId, friendId) {
+  try {
+    const { error } = await supabase
+      .from("friendships")
+      .upsert({
+        user_id: userId,
+        friend_id: friendId,
+        status: "accepted",
+        created_at: new Date().toISOString()
+      }, { onConflict: ["user_id", "friend_id"] });
+    
+    if (error) {
+      console.error("[FRIENDS] Error saving friendship:", error);
+      return false;
+    }
+    console.log(`[FRIENDS] Saved friendship: ${userId} <-> ${friendId}`);
+    return true;
+  } catch (e) {
+    console.error("[FRIENDS] Error in saveFriendshipToDB:", e);
+    return false;
+  }
+}
+
+// Remove friendship from database
+async function removeFriendshipFromDB(userId, friendId) {
+  try {
+    // Try both directions since friendship is mutual
+    const { error: err1 } = await supabase
+      .from("friendships")
+      .delete()
+      .eq("user_id", userId)
+      .eq("friend_id", friendId);
+    
+    const { error: err2 } = await supabase
+      .from("friendships")
+      .delete()
+      .eq("user_id", friendId)
+      .eq("friend_id", userId);
+    
+    if (err1) console.error("[FRIENDS] Error removing friendship (dir 1):", err1);
+    if (err2) console.error("[FRIENDS] Error removing friendship (dir 2):", err2);
+    
+    console.log(`[FRIENDS] Removed friendship: ${userId} <-> ${friendId}`);
+    return true;
+  } catch (e) {
+    console.error("[FRIENDS] Error in removeFriendshipFromDB:", e);
+    return false;
+  }
+}
+
 function registerSocketHandlers(io) {
   io.on("connection", (socket) => {
     const me = socket.user;
@@ -165,13 +267,17 @@ function registerSocketHandlers(io) {
 
     setupAdminSocket(io, socket);
 
+    // Load friends from database on connection
+    loadFriendsFromDB(myId).then(() => {
+      socket.emit("friend:list", getFriendList(myId));
+    });
+
     socket.emit("connected", {
       user: me,
       message: "Socket connected successfully.",
     });
 
     broadcastUsers(io);
-    socket.emit("friend:list", getFriendList(myId));
     socket.emit("friend:requests", getPendingList(myId));
     socket.emit("sync:state", buildSyncState(myId));
 
@@ -231,7 +337,7 @@ function registerSocketHandlers(io) {
       }
     });
 
-    socket.on("friend:accept", ({ fromUserId } = {}) => {
+    socket.on("friend:accept", async ({ fromUserId } = {}) => {
       if (typeof fromUserId !== "string") return;
       const theirPending = pendingRequests.get(myId);
       if (!theirPending?.has(fromUserId)) return;
@@ -243,6 +349,10 @@ function registerSocketHandlers(io) {
       ensureSet(friends, myId).add(fromUserId);
       ensureSet(friends, fromUserId).add(myId);
       if (fromProf?.username) usernameById.set(fromUserId, fromProf.username);
+
+      // Save friendship to database for both directions
+      await saveFriendshipToDB(myId, fromUserId);
+      await saveFriendshipToDB(fromUserId, myId);
 
       emitToUser(io, fromUserId, "friend:accepted", { by: { id: myId, username: me.username } });
       pushNotification(io, fromUserId, {
@@ -269,7 +379,7 @@ function registerSocketHandlers(io) {
       socket.emit("friend:requests", getPendingList(myId));
     });
 
-    socket.on("friend:remove", ({ friendId } = {}) => {
+    socket.on("friend:remove", async ({ friendId } = {}) => {
       if (typeof friendId !== "string") return;
       const a = friends.get(myId);
       const b = friends.get(friendId);
@@ -277,6 +387,10 @@ function registerSocketHandlers(io) {
       if (b) b.delete(myId);
       ensureDmUnreadMap(myId).delete(friendId);
       ensureDmUnreadMap(friendId).delete(myId);
+      
+      // Remove friendship from database
+      await removeFriendshipFromDB(myId, friendId);
+      
       socket.emit("friend:list", getFriendList(myId));
       socket.emit("sync:state", buildSyncState(myId));
       emitToUser(io, friendId, "friend:list", getFriendList(friendId));
