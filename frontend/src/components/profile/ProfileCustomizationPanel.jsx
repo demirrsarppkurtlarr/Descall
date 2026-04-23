@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Palette,
@@ -16,9 +16,12 @@ import {
   EyeOff,
   Camera,
   Image as ImageIcon,
-  Hash
+  Hash,
+  Upload
 } from "lucide-react";
 import RippleButton from "../ui/RippleButton";
+import { uploadFile } from "../../api/media";
+import { API_BASE_URL } from "../../config/api";
 
 const colorPresets = [
   { name: "Default", primary: "#6678ff", secondary: "#7d6bff", accent: "#4ecdc4" },
@@ -76,6 +79,68 @@ export default function ProfileCustomizationPanel({
   const [activeTab, setActiveTab] = useState("theme");
   const [tempColor, setTempColor] = useState(customization.theme.primaryColor);
   const [previewStatus, setPreviewStatus] = useState(customization.profile.customStatus);
+  const [uploading, setUploading] = useState(false);
+  
+  const avatarInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
+
+  const handleAvatarUpload = async (file) => {
+    if (!file) return;
+    
+    try {
+      setUploading(true);
+      const token = localStorage.getItem("descall_token");
+      const formData = new FormData();
+      formData.append("avatar", file);
+      
+      const response = await fetch(`${API_BASE_URL}/media/avatar`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        updateProfile({ avatarUrl: data.avatarUrl });
+      } else {
+        console.error("Avatar upload failed:", data.error);
+      }
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleBannerUpload = async (file) => {
+    if (!file) return;
+    
+    try {
+      setUploading(true);
+      const token = localStorage.getItem("descall_token");
+      const formData = new FormData();
+      formData.append("banner", file);
+      
+      const response = await fetch(`${API_BASE_URL}/media/banner`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        updateProfile({ bannerUrl: data.bannerUrl });
+      } else {
+        console.error("Banner upload failed:", data.error);
+      }
+    } catch (err) {
+      console.error("Banner upload error:", err);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleColorPreset = (preset) => {
     updateTheme({
@@ -417,6 +482,37 @@ export default function ProfileCustomizationPanel({
                   <h3>Profile Customization</h3>
                 </div>
 
+                {/* Profile Photo */}
+                <div className="setting-row stacked">
+                  <label>Profile Photo</label>
+                  <div className="profile-photo-section">
+                    <div className="profile-photo-preview">
+                      {me?.avatar_url ? (
+                        <img src={me.avatar_url} alt="Profile" />
+                      ) : (
+                        <div className="profile-photo-placeholder">
+                          {me?.username?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className="upload-btn"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      <Upload size={16} />
+                      {uploading ? "Uploading..." : "Upload Photo"}
+                    </button>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => handleAvatarUpload(e.target.files[0])}
+                    />
+                  </div>
+                </div>
+
                 {/* Custom Status */}
                 <div className="setting-row stacked">
                   <label>Custom Status</label>
@@ -461,10 +557,21 @@ export default function ProfileCustomizationPanel({
                 <div className="setting-row stacked">
                   <label>Profile Banner</label>
                   <div className="banner-options">
-                    <button className="banner-option">
+                    <button
+                      className="banner-option"
+                      onClick={() => bannerInputRef.current?.click()}
+                      disabled={uploading}
+                    >
                       <Camera size={20} />
-                      <span>Upload Image</span>
+                      <span>{uploading ? "Uploading..." : "Upload Image"}</span>
                     </button>
+                    <input
+                      ref={bannerInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => handleBannerUpload(e.target.files[0])}
+                    />
                     <div className="banner-color-picker">
                       <input
                         type="color"

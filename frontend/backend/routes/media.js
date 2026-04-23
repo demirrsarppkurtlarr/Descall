@@ -87,4 +87,30 @@ router.post("/avatar", upload.single("avatar"), async (req, res) => {
   }
 });
 
+router.post("/banner", upload.single("banner"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No banner uploaded." });
+    if (!ALLOWED_IMAGE.includes(req.file.mimetype)) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: "Banner must be an image." });
+    }
+
+    const userId = req.user.id;
+    const bannerUrl = `/media/files/${req.file.filename}`;
+
+    const { error } = await supabase
+      .from("users")
+      .update({ banner_url: bannerUrl })
+      .eq("id", userId);
+
+    if (error) {
+      return res.status(500).json({ error: "Failed to update banner." });
+    }
+
+    res.json({ bannerUrl });
+  } catch (err) {
+    res.status(500).json({ error: "Banner upload failed." });
+  }
+});
+
 module.exports = router;

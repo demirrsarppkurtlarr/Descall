@@ -2882,6 +2882,62 @@ html[data-theme="light"] body {
   border-color: rgba(242, 63, 67, 0.5);
 }
 
+/* Profile Photo Upload */
+.profile-photo-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-photo-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+}
+
+.profile-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo-placeholder {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.upload-btn {
+  background: rgba(102, 120, 255, 0.15);
+  color: #6678ff;
+  border: 1px solid rgba(102, 120, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: rgba(102, 120, 255, 0.25);
+  border-color: rgba(102, 120, 255, 0.5);
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Error Log Section */
 .error-stats {
   display: flex;
