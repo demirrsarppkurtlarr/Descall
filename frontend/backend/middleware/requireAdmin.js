@@ -1,11 +1,35 @@
 "use strict";
 
-function requireAdmin(req, res, next) {
+const supabase = require("../db/supabase");
+
+async function requireAdmin(req, res, next) {
   const u = req.user;
-  if (!u || u.username !== "admin") {
+  if (!u) {
     return res.status(403).json({ error: "Admin access required." });
   }
-  return next();
+  
+  // Check if username is admin or if user has is_admin in database
+  if (u.username === "admin") {
+    return next();
+  }
+  
+  // Check database for is_admin field
+  try {
+    const { data: user } = await supabase
+      .from("users")
+      .select("is_admin")
+      .eq("id", u.id)
+      .single();
+    
+    if (user?.is_admin) {
+      return next();
+    }
+    
+    return res.status(403).json({ error: "Admin access required." });
+  } catch (err) {
+    console.error("[requireAdmin] Error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 }
 
 module.exports = { requireAdmin };
