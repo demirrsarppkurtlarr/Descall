@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const supabase = require("../db/supabase");
-const { authenticateToken } = require("../middleware/auth");
+const { requireAuth } = require("../middleware/auth");
 
 // Get reactions for a conversation (DM or Group)
-router.get("/conversation/:type/:id", authenticateToken, async (req, res) => {
+router.get("/conversation/:type/:id", requireAuth, async (req, res) => {
   const { type, id } = req.params;
   const userId = req.user.id;
 
