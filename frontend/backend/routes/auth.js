@@ -127,8 +127,23 @@ router.post("/login", async (req, res) => {
   }
 });
 
-router.get("/me", requireAuth, (req, res) => {
-  return res.status(200).json({ user: req.user });
+router.get("/me", requireAuth, async (req, res) => {
+  try {
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id, username, avatar_url, is_admin")
+      .eq("id", req.user.id)
+      .single();
+    
+    if (error || !user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    return res.status(200).json({ user });
+  } catch (err) {
+    console.error("[AUTH] /me error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 router.get("/test", async (_req, res) => {
