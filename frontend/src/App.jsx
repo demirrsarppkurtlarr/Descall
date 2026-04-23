@@ -52,6 +52,7 @@ export default function App() {
   const [loadingOlderDm, setLoadingOlderDm] = useState(false);
   const [reconnectState, setReconnectState] = useState("idle");
   const [adminOpen, setAdminOpen] = useState(false);
+  const [adminChanged, setAdminChanged] = useState(false);
   const [peerScreenSharing, setPeerScreenSharing] = useState(false);
   const [myGroups, setMyGroups] = useState([]);
 
@@ -119,6 +120,24 @@ export default function App() {
     connectSocket(token);
     return () => { socketRef.current?.disconnect(); };
   }, [me?.id, sessionChecked]);
+
+  // Refresh me when admin panel closes with changes
+  useEffect(() => {
+    if (!adminChanged) return;
+    const token = getToken();
+    if (!token) return;
+    (async () => {
+      try {
+        const { user } = await getMe(token);
+        setMe(user);
+        setUser(user);
+      } catch {
+        // Ignore error
+      } finally {
+        setAdminChanged(false);
+      }
+    })();
+  }, [adminChanged]);
 
   const verifyBackendEndpoint = async () => {
     try {
@@ -506,7 +525,7 @@ export default function App() {
         <button type="button" className="admin-fab" onClick={() => setAdminOpen(true)} title="Admin panel">Admin</button>
       )}
       {(me?.is_admin || me?.username === "admin") && adminOpen && (
-        <AdminPanel socket={socketApi} onClose={() => setAdminOpen(false)} />
+        <AdminPanel socket={socketApi} onClose={() => setAdminOpen(false)} onAdminChanged={() => setAdminChanged(true)} />
       )}
       <ChatLayout
         me={me}

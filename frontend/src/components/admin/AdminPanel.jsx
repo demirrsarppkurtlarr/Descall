@@ -37,7 +37,7 @@ const TABS = [
   { id: "audit", label: "Audit", icon: FileText },
 ];
 
-export default function AdminPanel({ socket, onClose }) {
+export default function AdminPanel({ socket, onClose, onAdminChanged }) {
   const [tab, setTab] = useState("overview");
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -382,11 +382,14 @@ export default function AdminPanel({ socket, onClose }) {
                           onClick={() =>
                             act(async () => {
                               const token = localStorage.getItem("descall_token");
-                              await fetch(`${API_BASE_URL}/api/admin/remove-admin/${u.id}`, {
+                              const res = await fetch(`${API_BASE_URL}/api/admin/remove-admin/${u.id}`, {
                                 method: "PUT",
                                 headers: { Authorization: `Bearer ${token}` },
                               });
-                              await loadAllUsers();
+                              if (res.ok) {
+                                await loadAllUsers();
+                                onAdminChanged?.();
+                              }
                             })
                           }
                         >
@@ -399,11 +402,14 @@ export default function AdminPanel({ socket, onClose }) {
                           onClick={() =>
                             act(async () => {
                               const token = localStorage.getItem("descall_token");
-                              await fetch(`${API_BASE_URL}/api/admin/make-admin/${u.id}`, {
+                              const res = await fetch(`${API_BASE_URL}/api/admin/make-admin/${u.id}`, {
                                 method: "PUT",
                                 headers: { Authorization: `Bearer ${token}` },
                               });
-                              await loadAllUsers();
+                              if (res.ok) {
+                                await loadAllUsers();
+                                onAdminChanged?.();
+                              }
                             })
                           }
                         >
