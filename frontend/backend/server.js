@@ -385,6 +385,10 @@ app.put("/api/admin/make-admin/:userId", requireAuth, async (req, res) => {
     
     if (error) return res.status(500).json({ success: false, error: error.message });
     
+    // Notify the user via Socket.IO to refresh their data
+    const io = req.app.get("io");
+    io.to(`user:${userId}`).emit("user:updated", { is_admin: true });
+    
     return res.json({ success: true, user: data });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

@@ -121,6 +121,30 @@ export default function App() {
     return () => { socketRef.current?.disconnect(); };
   }, [me?.id, sessionChecked]);
 
+  // Listen for user:updated event to refresh me
+  useEffect(() => {
+    if (!socketApi) return;
+    
+    const handleUserUpdated = (data) => {
+      console.log("[App] User updated event:", data);
+      const token = getToken();
+      if (!token) return;
+      (async () => {
+        try {
+          const { user } = await getMe(token);
+          console.log("[App] Refreshed me after user:updated:", user);
+          setMe(user);
+          setUser(user);
+        } catch {
+          // Ignore error
+        }
+      })();
+    };
+    
+    socketApi.on("user:updated", handleUserUpdated);
+    return () => { socketApi.off("user:updated", handleUserUpdated); };
+  }, [socketApi]);
+
   // Refresh me when admin panel closes with changes
   useEffect(() => {
     if (!adminChanged) return;
