@@ -13,7 +13,7 @@ import {
   Activity as ActivityIcon, Box, Code, GitBranch, Layers2, Monitor,
   MousePointer, Play, Pause, Square, Maximize2, Minimize2, Copy,
   ExternalLink, FileDown, Printer, Share2, Star, ThumbsUp,
-  ThumbsDown, Upload, Video, Voicemail, ZoomIn, ZoomOut
+  ThumbsDown, Upload, Video, Voicemail, ZoomIn, ZoomOut, Megaphone
 } from "lucide-react";
 import { adminFetch } from "../../api/adminHttp";
 import { API_BASE_URL } from "../../config/api";
@@ -29,6 +29,7 @@ const TABS = [
   { id: "sockets", label: "Sockets", icon: Wifi },
   { id: "errors", label: "Error Logs", icon: AlertCircle },
   { id: "feedback", label: "Feedback", icon: Bell },
+  { id: "announcements", label: "Announcements", icon: Megaphone },
   { id: "moderation", label: "Moderation", icon: Shield },
   { id: "analytics", label: "Analytics", icon: Activity },
   { id: "system", label: "System", icon: Settings },
@@ -79,6 +80,11 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
   const [newFeedbackCount, setNewFeedbackCount] = useState(0);
   const [feedbackCategories, setFeedbackCategories] = useState([]);
   const [feedbackPriority, setFeedbackPriority] = useState("all");
+  
+  // Announcements States
+  const [announcements, setAnnouncements] = useState([]);
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: "", content: "", priority: "normal", color: "#6678ff" });
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   
   // Moderation States
   const [bannedWords, setBannedWords] = useState([]);
@@ -163,16 +169,23 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
       const d = await res.json();
       
       console.log("[ADMIN] Users response:", d);
-      
-      if (d.success) {
-        setUsers(d.users || []);
-      } else {
-        console.error("[ADMIN] Failed to load users:", d.error);
-        setErr(d.error || "Failed to load users");
-      }
-    } catch (err) {
-      console.error("[ADMIN] Error loading users:", err);
-      setErr(err.message);
+      setUsers(d.users || []);
+    } catch (e) {
+      console.error("[ADMIN] Failed to load users:", e);
+      setErr(e.message);
+    }
+  }, []);
+
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("descall_token");
+      const res = await fetch(`${API_BASE_URL}/api/announcements`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json();
+      setAnnouncements(d.announcements || []);
+    } catch (e) {
+      console.error("[ADMIN] Failed to load announcements:", e);
     }
   }, []);
 
@@ -241,8 +254,9 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
     if (tab === "dm") loadDm().catch((e) => setErr(e.message));
     if (tab === "audit") loadAudit().catch((e) => setErr(e.message));
     if (tab === "system") loadSystem().catch((e) => setErr(e.message));
+    if (tab === "announcements") loadAnnouncements().catch((e) => setErr(e.message));
     // feedback and errors tabs use their own components with internal loading
-  }, [tab, loadAllUsers, loadMessages, loadDm, loadAudit, loadSystem]);
+  }, [tab, loadAllUsers, loadMessages, loadDm, loadAudit, loadSystem, loadAnnouncements]);
 
   const act = async (fn) => {
     try {
@@ -541,6 +555,134 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
         {tab === "feedback" && (
           <section className="admin-section admin-section-full">
             <AdminFeedback socket={socket} />
+          </section>
+        )}
+
+        {tab === "announcements" && (
+          <section className="admin-section">
+            <h2>Announcements</h2>
+            <p className="muted">Create and manage system-wide announcements</p>
+            
+            <div className="admin-toolbar">
+              <RippleButton 
+                type="button" 
+                onClick={() => setShowAnnouncementForm(!showAnnouncementForm)}
+                className="admin-btn-green"
+              >
+                {showAnnouncementForm ? "Cancel" : "New Announcement"}
+              </RippleButton>
+              <RippleButton 
+                type="button" 
+                onClick={() => act(loadAnnouncements)} 
+                disabled={busy}
+              >
+                Refresh
+              </RippleButton>
+            </div>
+
+            {showAnnouncementForm && (
+              <div className="admin-form">
+                <input
+                  className="admin-input"
+                  placeholder="Announcement title"
+                  value={newAnnouncement.title}
+                  onChange={(e) => setNewAnnouncement({...newAnnouncement, title: e.target.value})}
+                />
+                <textarea
+                  className="admin-input"
+                  placeholder="Announcement content"
+                  value={newAnnouncement.content}
+                  onChange={(e) => setNewAnnouncement({...newAnnouncement, content: e.target.value})}
+                  rows={4}
+                />
+                <div className="admin-row">
+                  <select
+                    className="admin-input"
+                    value={newAnnouncement.priority}
+                    onChange={(e) => setNewAnnouncement({...newAnnouncement, priority: e.target.value})}
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="important">Important</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                  <input
+                    type="color"
+                    className="admin-input"
+                    value={newAnnouncement.color}
+                    onChange={(e) => setNewAnnouncement({...newAnnouncement, color: e.target.value})}
+                    style={{ width: "60px" }}
+                  />
+                </div>
+                <RippleButton 
+                  type="button" 
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem("descall_token");
+                      const res = await fetch(`${API_BASE_URL}/api/admin/announcements`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify(newAnnouncement),
+                      });
+                      if (res.ok) {
+                        setNewAnnouncement({ title: "", content: "", priority: "normal", color: "#6678ff" });
+                        setShowAnnouncementForm(false);
+                        await loadAnnouncements();
+                      }
+                    } catch (e) {
+                      console.error("Failed to create announcement:", e);
+                    }
+                  }}
+                  disabled={busy || !newAnnouncement.title || !newAnnouncement.content}
+                  className="admin-btn-green"
+                >
+                  Create Announcement
+                </RippleButton>
+              </div>
+            )}
+
+            <div className="admin-list">
+              {announcements.map((a) => (
+                <motion.div 
+                  key={a.id} 
+                  className="admin-card"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{ borderLeft: `4px solid ${a.color}` }}
+                >
+                  <div className="admin-row">
+                    <h4>{a.title}</h4>
+                    <span className={`priority-badge ${a.priority}`}>{a.priority}</span>
+                  </div>
+                  <p>{a.content}</p>
+                  <div className="admin-row">
+                    <span className="muted">{new Date(a.created_at).toLocaleString()}</span>
+                    <RippleButton 
+                      type="button" 
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem("descall_token");
+                          const res = await fetch(`${API_BASE_URL}/api/admin/announcements/${a.id}`, {
+                            method: "DELETE",
+                            headers: { Authorization: `Bearer ${token}` },
+                          });
+                          if (res.ok) {
+                            await loadAnnouncements();
+                          }
+                        } catch (e) {
+                          console.error("Failed to delete announcement:", e);
+                        }
+                      }}
+                      className="admin-btn-red"
+                    >
+                      Delete
+                    </RippleButton>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </section>
         )}
 
