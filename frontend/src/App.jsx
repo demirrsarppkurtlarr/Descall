@@ -90,12 +90,15 @@ export default function App() {
     let cancelled = false;
     (async () => {
       try {
+        console.log("[App] Fetching me from /auth/me...");
         const { user } = await getMe(token);
+        console.log("[App] Fetched me:", user);
         if (!cancelled) {
           setUser(user);
           setMe(user);
         }
       } catch {
+        console.error("[App] Failed to fetch me");
         if (!cancelled) {
           clearToken();
           clearUser();
