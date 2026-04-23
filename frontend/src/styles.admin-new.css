@@ -1705,9 +1705,66 @@
   border-color: rgba(102, 120, 255, 0.5);
 }
 
+.msg-reply-btn {
+  padding: 4px 8px;
+  margin-top: 4px;
+  margin-left: 4px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s;
+}
+
+.dm-msg:hover .msg-reply-btn {
+  opacity: 1;
+}
+
+.msg-reply-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(102, 120, 255, 0.5);
+}
+
 .edited-indicator {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
   margin-left: 4px;
   font-style: italic;
+}
+
+/* Reply indicator in composer */
+.reply-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(102, 120, 255, 0.1);
+  border-left: 3px solid rgba(102, 120, 255, 0.5);
+  border-radius: 6px 6px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.reply-indicator-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-indicator-cancel {
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.reply-indicator-cancel:hover {
+  color: rgba(255, 255, 255, 0.9);
 }
