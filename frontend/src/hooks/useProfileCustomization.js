@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { API_BASE_URL } from "../config/api";
 
 const STORAGE_KEY = "descall_profile_customization";
 
@@ -103,7 +104,7 @@ export function useProfileCustomization() {
         const token = localStorage.getItem("descall_token");
         if (!token) return;
 
-        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || "https://descall-qzkg.onrender.com"}/api/user/profile`, {
+        const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",

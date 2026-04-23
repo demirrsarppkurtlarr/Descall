@@ -15,6 +15,7 @@ import { Avatar } from "./ui/Avatar";
 import Modal from "./ui/Modal";
 import { uploadFile } from "../api/media";
 import { getMediaUrl } from "../api/media";
+import { API_BASE_URL } from "../config/api";
 // Modern Group API
 import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGroup, renameGroup, inviteToGroup, getGroupMembers } from "../api/groups";
 import {
