@@ -1808,6 +1808,15 @@ export default function ChatLayout({
             className={`composer glass-composer ${inCall ? "composer-dimmed" : ""}`}
             onSubmit={(e) => { 
               e.preventDefault(); 
+              console.log("[Group Submit] Sending message:", groups.ui.groupComposer, "to group:", groups.active?.id, "socket connected:", socket?.connected);
+              if (!socket?.connected) {
+                console.error("[Group Submit] Socket not connected!");
+                return;
+              }
+              if (!groups.ui.groupComposer?.trim()) {
+                console.log("[Group Submit] Empty message, not sending");
+                return;
+              }
               groupActions.sendMessage(groups.ui.groupComposer);
               groupActions.setUI({ groupComposer: "" });
             }}
