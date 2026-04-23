@@ -124,11 +124,13 @@ export default function App() {
   // Refresh me when admin panel closes with changes
   useEffect(() => {
     if (!adminChanged) return;
+    console.log("[App] Admin changed, refreshing me...");
     const token = getToken();
     if (!token) return;
     (async () => {
       try {
         const { user } = await getMe(token);
+        console.log("[App] Refreshed me:", user);
         setMe(user);
         setUser(user);
       } catch {

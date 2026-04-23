@@ -381,13 +381,16 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
                           className="admin-btn-red"
                           onClick={() =>
                             act(async () => {
+                              console.log("[ADMIN] Removing admin for user:", u.id);
                               const token = localStorage.getItem("descall_token");
                               const res = await fetch(`${API_BASE_URL}/api/admin/remove-admin/${u.id}`, {
                                 method: "PUT",
                                 headers: { Authorization: `Bearer ${token}` },
                               });
+                              console.log("[ADMIN] Remove admin response:", res.status);
                               if (res.ok) {
                                 await loadAllUsers();
+                                console.log("[ADMIN] Calling onAdminChanged...");
                                 onAdminChanged?.();
                               }
                             })
@@ -401,13 +404,16 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
                           className="admin-btn-green"
                           onClick={() =>
                             act(async () => {
+                              console.log("[ADMIN] Making admin for user:", u.id);
                               const token = localStorage.getItem("descall_token");
                               const res = await fetch(`${API_BASE_URL}/api/admin/make-admin/${u.id}`, {
                                 method: "PUT",
                                 headers: { Authorization: `Bearer ${token}` },
                               });
+                              console.log("[ADMIN] Make admin response:", res.status);
                               if (res.ok) {
                                 await loadAllUsers();
+                                console.log("[ADMIN] Calling onAdminChanged...");
                                 onAdminChanged?.();
                               }
                             })
