@@ -358,6 +358,98 @@ app.put("/api/user/regional", requireAuth, async (req, res) => {
   }
 });
 
+// ========== ANNOUNCEMENTS ENDPOINTS ==========
+
+// Get all active announcements - GET /api/announcements
+app.get("/api/announcements", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("announcements")
+      .select("id, title, content, created_at, priority, color")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    return res.json({ success: true, announcements: data || [] });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Create announcement - POST /api/admin/announcements
+app.post("/api/admin/announcements", requireAuth, async (req, res) => {
+  try {
+    const { data: requester } = await supabase
+      .from("users")
+      .select("username, is_admin")
+      .eq("id", req.user.id)
+      .single();
+    
+    const isAdmin = requester?.is_admin || req.user.username === "admin";
+    
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, error: "Not authorized" });
+    }
+    
+    const { title, content, priority = "normal", color = "#6678ff" } = req.body;
+    
+    const { data, error } = await supabase
+      .from("announcements")
+      .insert({
+        title,
+        content,
+        created_by: req.user.id,
+        priority,
+        color,
+      })
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    // Broadcast to all connected users
+    const io = req.app.get("io");
+    io.emit("announcement:new", data);
+    
+    return res.json({ success: true, announcement: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Delete announcement - DELETE /api/admin/announcements/:id
+app.delete("/api/admin/announcements/:id", requireAuth, async (req, res) => {
+  try {
+    const { data: requester } = await supabase
+      .from("users")
+      .select("username, is_admin")
+      .eq("id", req.user.id)
+      .single();
+    
+    const isAdmin = requester?.is_admin || req.user.username === "admin";
+    
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, error: "Not authorized" });
+    }
+    
+    const { error } = await supabase
+      .from("announcements")
+      .update({ is_active: false })
+      .eq("id", req.params.id);
+    
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    
+    // Broadcast deletion
+    const io = req.app.get("io");
+    io.emit("announcement:deleted", { id: req.params.id });
+    
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ========== ADMIN ENDPOINTS ==========
 
 // Make user admin - PUT /api/admin/make-admin/:userId
@@ -482,6 +574,8 @@ console.log("  - /admin");
 console.log("  - /media");
 console.log("  - /groups");
 console.log("  - /api/feedback");
+console.log("  - /api/announcements");
+console.log("  - /api/admin/announcements");
 console.log("  - /api/user/profile");
 console.log("  - /api/user/notifications");
 console.log("  - /api/user/privacy");
