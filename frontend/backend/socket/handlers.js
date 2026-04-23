@@ -638,10 +638,11 @@ function registerSocketHandlers(io) {
           return;
         }
       } else if (conversationType === "group") {
-        // Check group membership via group handlers
-        console.log("[reaction:add] Checking group membership, conversationId:", conversationId);
+        // Check group membership - room has 'group:' prefix
+        const roomId = `group:${conversationId}`;
+        console.log("[reaction:add] Checking group membership, roomId:", roomId);
         console.log("[reaction:add] socket.rooms:", Array.from(socket.rooms));
-        const isMember = socket.rooms.has(conversationId);
+        const isMember = socket.rooms.has(roomId);
         console.log("[reaction:add] isMember:", isMember);
         if (!isMember) {
           console.log("[reaction:add] Not a member of this group, returning");
@@ -686,8 +687,8 @@ function registerSocketHandlers(io) {
           emitToUser(io, otherId, "reaction:update", reactionData);
           console.log("[reaction:add] Emitted to other user:", otherId);
         } else {
-          io.to(conversationId).emit("reaction:update", reactionData);
-          console.log("[reaction:add] Emitted to group room:", conversationId);
+          io.to(`group:${conversationId}`).emit("reaction:update", reactionData);
+          console.log("[reaction:add] Emitted to group room:", `group:${conversationId}`);
         }
         socket.emit("reaction:update", reactionData);
         console.log("[reaction:add] Emitted to sender");
@@ -731,7 +732,7 @@ function registerSocketHandlers(io) {
         if (conversationType === "dm" && otherId) {
           emitToUser(io, otherId, "reaction:update", reactionData);
         } else {
-          io.to(conversationId).emit("reaction:update", reactionData);
+          io.to(`group:${conversationId}`).emit("reaction:update", reactionData);
         }
         socket.emit("reaction:update", reactionData);
       } catch (err) {
