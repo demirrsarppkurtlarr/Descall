@@ -402,10 +402,11 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
                         <button
                           type="button"
                           className="admin-btn-green"
-                          onClick={() =>
-                            act(async () => {
-                              console.log("[ADMIN] Making admin for user:", u.id);
+                          onClick={async () => {
+                            console.log("[ADMIN] Make Admin button clicked for user:", u.id);
+                            try {
                               const token = localStorage.getItem("descall_token");
+                              console.log("[ADMIN] Token:", !!token);
                               const res = await fetch(`${API_BASE_URL}/api/admin/make-admin/${u.id}`, {
                                 method: "PUT",
                                 headers: { Authorization: `Bearer ${token}` },
@@ -415,9 +416,13 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
                                 await loadAllUsers();
                                 console.log("[ADMIN] Calling onAdminChanged...");
                                 onAdminChanged?.();
+                              } else {
+                                console.error("[ADMIN] Make admin failed:", res.status);
                               }
-                            })
-                          }
+                            } catch (err) {
+                              console.error("[ADMIN] Make admin error:", err);
+                            }
+                          }}
                         >
                           Make Admin
                         </button>
