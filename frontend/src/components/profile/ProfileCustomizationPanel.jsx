@@ -817,9 +817,7 @@ export default function ProfileCustomizationPanel({
         </RippleButton>
         <RippleButton
           onClick={() => {
-            // Save settings to localStorage
-            localStorage.setItem('descall-customization', JSON.stringify(customization));
-            console.log('[Settings] Saved customization:', customization);
+            // Settings are already auto-saved by useProfileCustomization hook
             onClose();
           }}
           className="btn-primary"
