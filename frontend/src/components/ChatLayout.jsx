@@ -54,6 +54,15 @@ function formatRelativeTime(iso) {
   } catch { return ""; }
 }
 
+// Click sound for UI interactions
+const clickSound = typeof Audio !== 'undefined' ? new Audio('/sounds/click.mp3') : null;
+function playClickSound() {
+  if (clickSound) {
+    clickSound.currentTime = 0;
+    clickSound.play().catch(() => {}); // Ignore autoplay errors
+  }
+}
+
 function groupDmRows(messages) {
   if (!messages || !Array.isArray(messages)) return [];
   return messages.map((msg, i) => {
@@ -732,12 +741,35 @@ export default function ChatLayout({
     // Reply listeners
     const onGroupMessageReplied = (data) => {
       console.log("[ChatLayout] Group message replied:", data);
-      // Add reply to message (will implement reply display later)
+      // Add reply as a regular message to the group
+      const replyMessage = {
+        id: data.id,
+        content: data.text,
+        sender: data.from,
+        created_at: data.timestamp,
+        replyTo: data.parentMessageId,
+        isReply: true
+      };
+      setGroups(g => ({
+        ...g,
+        messages: [...(g.messages || []), replyMessage]
+      }));
     };
     socket.on("group:message:replied", onGroupMessageReplied);
 
     const onDmMessageReplied = (data) => {
       console.log("[ChatLayout] DM message replied:", data);
+      // Add reply as a regular DM message
+      const replyMessage = {
+        id: data.id,
+        text: data.text,
+        from: data.from,
+        timestamp: data.timestamp,
+        replyTo: data.parentMessageId,
+        isReply: true,
+        to: activeDmUser?.id
+      };
+      setDmMessages(prev => [...prev, replyMessage]);
     };
     socket.on("dm:message:replied", onDmMessageReplied);
 
