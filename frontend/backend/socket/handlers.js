@@ -618,10 +618,13 @@ function registerSocketHandlers(io) {
       if (!messageId || !conversationType || !conversationId || !emoji) return;
       
       // Verify user is part of this conversation
+      let otherId = null;
       if (conversationType === "dm") {
-        const key = convKey(myId, conversationId.replace(myId, "").replace("::", ""));
-        const otherId = key.replace(myId, "").replace("::", "");
-        if (!friends.get(myId)?.has(otherId)) return;
+        // conversationId should be in format "smallerId::largerId"
+        const ids = conversationId.split("::");
+        if (ids.length !== 2) return;
+        otherId = ids[0] === myId ? ids[1] : ids[0];
+        if (!otherId || !friends.get(myId)?.has(otherId)) return;
       } else if (conversationType === "group") {
         // Check group membership via group handlers
         const isMember = socket.rooms.has(conversationId);
@@ -652,8 +655,7 @@ function registerSocketHandlers(io) {
           conversationId,
         };
 
-        if (conversationType === "dm") {
-          const otherId = conversationId.replace(myId, "").replace("::", "");
+        if (conversationType === "dm" && otherId) {
           emitToUser(io, otherId, "reaction:update", reactionData);
         } else {
           io.to(conversationId).emit("reaction:update", reactionData);
@@ -666,6 +668,15 @@ function registerSocketHandlers(io) {
 
     socket.on("reaction:remove", async ({ messageId, conversationType, conversationId, emoji } = {}) => {
       if (!messageId || !conversationType || !conversationId || !emoji) return;
+
+      // Get otherId for DM
+      let otherId = null;
+      if (conversationType === "dm") {
+        const ids = conversationId.split("::");
+        if (ids.length === 2) {
+          otherId = ids[0] === myId ? ids[1] : ids[0];
+        }
+      }
 
       try {
         const { error } = await supabase
@@ -687,8 +698,7 @@ function registerSocketHandlers(io) {
           conversationId,
         };
 
-        if (conversationType === "dm") {
-          const otherId = conversationId.replace(myId, "").replace("::", "");
+        if (conversationType === "dm" && otherId) {
           emitToUser(io, otherId, "reaction:update", reactionData);
         } else {
           io.to(conversationId).emit("reaction:update", reactionData);
