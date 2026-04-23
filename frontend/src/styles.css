@@ -1442,13 +1442,16 @@ html[data-reduce-motion="true"] *::after {
 .sidebar-section.grow {
   flex: 1;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.scroll-list {
+.sidebar-list {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  max-height: calc(100vh - 200px);
+  max-height: none;
 }
 
 .sidebar-mini-stats {
@@ -6791,4 +6794,13 @@ button, a, input, select, .clickable {
 .voice-activity,
 .tips-card {
   display: none;
+}
+
+/* DM and Group Lists - Scrollable */
+.dm-list,
+.group-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: none;
 }
