@@ -1542,17 +1542,22 @@ html[data-reduce-motion="true"] *::after {
   display: flex;
   flex-direction: column;
   flex: 1;
+  overflow: hidden;
 }
 
 .main-panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .main-panel .messages {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 .glass-composer {

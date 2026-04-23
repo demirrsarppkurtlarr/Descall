@@ -2350,6 +2350,7 @@ export default function ChatLayout({
           user={me}
         />
       )}
+    </section>
     </div>
   );
 }
