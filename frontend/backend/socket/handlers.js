@@ -639,8 +639,14 @@ function registerSocketHandlers(io) {
         }
       } else if (conversationType === "group") {
         // Check group membership via group handlers
+        console.log("[reaction:add] Checking group membership, conversationId:", conversationId);
+        console.log("[reaction:add] socket.rooms:", Array.from(socket.rooms));
         const isMember = socket.rooms.has(conversationId);
-        if (!isMember) return;
+        console.log("[reaction:add] isMember:", isMember);
+        if (!isMember) {
+          console.log("[reaction:add] Not a member of this group, returning");
+          return;
+        }
       }
 
       try {
