@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, X, TrendingUp, Loader2 } from "lucide-react";
 
 // Giphy API - Public beta key (for development)
-const GIPHY_API_KEY = "Glvg0F0M23GUCfSS0r9B4R24JhX8HRdQ";
+const GIPHY_API_KEY = "dtgxSdCkeVkjYcEeEpSYlqP4mmv4LQgi";
 const GIPHY_API_URL = "https://api.giphy.com/v1/gifs";
 
 export default function GiphyPicker({ isOpen, onClose, onSelectGif }) {
