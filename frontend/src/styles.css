@@ -612,7 +612,7 @@ select {
 }
 
 .nav-rail {
-  width: 56px;
+  width: 72px;
   min-height: 100vh;
   background: #0a0c0f;
   border-right: 1px solid var(--border);
@@ -1356,6 +1356,10 @@ select {
 @media (max-width: 960px) {
   .app-root {
     grid-template-columns: 56px 1fr;
+  }
+
+  .nav-rail {
+    width: 56px;
   }
 
   .sidebar-secondary {
