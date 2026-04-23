@@ -6,6 +6,7 @@ import { useProfileCustomization } from "../hooks/useProfileCustomization";
 import TypingIndicator from "./chat/TypingIndicator";
 import MessageReactions from "./chat/MessageReactions";
 import MessageEditUI from "./chat/MessageEditUI";
+import GiphyPicker from "./chat/GiphyPicker";
 import SettingsPanel from "./settings/SettingsPanel";
 import ProfileCustomizationPanel from "./profile/ProfileCustomizationPanel";
 import VideoConference from "./VideoConference";
@@ -441,6 +442,8 @@ export default function ChatLayout({
   const [customizationOpen, setCustomizationOpen] = useState(false);
   const [messageReactions, setMessageReactions] = useState({}); // { messageId: [{emoji, userId, username}] }
   const [editingMessage, setEditingMessage] = useState(null); // { id, text, type: 'dm'|'group' }
+  const [giphyPickerOpen, setGiphyPickerOpen] = useState(false);
+  const [giphyPickerForGroup, setGiphyPickerForGroup] = useState(false);
   const fileInputRef = useRef(null);
   const groupsList = asArray(groups.list);
   const groupsMessages = asArray(groups.messages);
@@ -983,6 +986,33 @@ export default function ChatLayout({
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
+  // Send GIF from Giphy
+  const handleSendGif = useCallback((gif) => {
+    if (giphyPickerForGroup && groups.active) {
+      // Send to group
+      socket?.emit("group:send", {
+        groupId: groups.active.id,
+        text: "",
+        mediaUrl: gif.url,
+        mediaType: "gif",
+        mimeType: "image/gif",
+        originalName: gif.title || "GIF"
+      });
+    } else if (activeDmUser) {
+      // Send to DM
+      socket?.emit("dm:send", {
+        toUserId: activeDmUser.id,
+        text: "",
+        mediaUrl: gif.url,
+        mediaType: "gif",
+        mimeType: "image/gif",
+        originalName: gif.title || "GIF"
+      });
+    }
+    requestAnimationFrame(() => scrollToBottom());
+    setGiphyPickerOpen(false);
+  }, [giphyPickerForGroup, groups.active, activeDmUser, socket, scrollToBottom]);
 
   const inCall = call?.mode === "active" || call?.mode === "outgoing";
   const isOnline = connectionLabel === "Online";
@@ -1760,6 +1790,14 @@ export default function ChatLayout({
             <RippleButton type="button" className="attach-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Attach file">
               {uploading ? <Clock size={18} /> : <Paperclip size={18} />}
             </RippleButton>
+            <button 
+              type="button" 
+              className="gif-btn"
+              onClick={() => { playClickSound(); setGiphyPickerForGroup(false); setGiphyPickerOpen(true); }}
+              title="Send GIF"
+            >
+              GIF
+            </button>
             <RippleButton type="submit"><Send size={18} /></RippleButton>
           </form>
         )}
@@ -1779,11 +1817,26 @@ export default function ChatLayout({
               value={groups.ui.groupComposer || ""}
               onChange={(e) => groupActions.setUI({ groupComposer: e.target.value })}
             />
+            <button 
+              type="button" 
+              className="gif-btn"
+              onClick={() => { playClickSound(); setGiphyPickerForGroup(true); setGiphyPickerOpen(true); }}
+              title="Send GIF"
+            >
+              GIF
+            </button>
             <RippleButton type="submit">Send</RippleButton>
           </form>
         )}
-      </section>
 
+        {/* Giphy Picker */}
+        <GiphyPicker 
+          isOpen={giphyPickerOpen}
+          onClose={() => setGiphyPickerOpen(false)}
+          onSelectGif={handleSendGif}
+        />
+
+        {/* User Feedback Button */}
 
       <AnimatePresence>
         {notificationsOpen && (

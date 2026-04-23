@@ -1711,3 +1711,317 @@
   margin-left: 4px;
   font-style: italic;
 }
+
+/* Giphy Picker Styles */
+.giphy-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.giphy-picker {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.giphy-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.giphy-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.giphy-text {
+  font-size: 20px;
+  font-weight: 800;
+  background: linear-gradient(45deg, #00ff88, #00d4aa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1px;
+}
+
+.giphy-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.giphy-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.giphy-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+}
+
+.search-icon {
+  color: rgba(255, 255, 255, 0.4);
+  position: absolute;
+  left: 32px;
+}
+
+.giphy-search-input {
+  flex: 1;
+  padding: 12px 44px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: white;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.15s;
+}
+
+.giphy-search-input:focus {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 255, 136, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+}
+
+.giphy-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.clear-search {
+  position: absolute;
+  right: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  padding: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.clear-search:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.giphy-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.giphy-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.giphy-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.giphy-tab.active {
+  background: linear-gradient(45deg, #00ff88, #00d4aa);
+  border-color: transparent;
+  color: #1a1a2e;
+  font-weight: 600;
+}
+
+.giphy-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-height: 300px;
+}
+
+.giphy-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 300px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.giphy-error,
+.giphy-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 300px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.giphy-error button {
+  padding: 10px 20px;
+  background: rgba(0, 255, 136, 0.2);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  border-radius: 8px;
+  color: #00ff88;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.giphy-error button:hover {
+  background: rgba(0, 255, 136, 0.3);
+}
+
+.giphy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 400px) {
+  .giphy-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.giphy-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
+}
+
+.giphy-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+.giphy-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.giphy-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.giphy-item:hover .giphy-overlay {
+  opacity: 1;
+}
+
+.giphy-select {
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: rgba(0, 255, 136, 0.9);
+  border-radius: 20px;
+}
+
+.giphy-footer {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.giphy-powered {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* GIF Button in Composer */
+.gif-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background: linear-gradient(45deg, #00ff88, #00d4aa);
+  border: none;
+  border-radius: 8px;
+  color: #1a1a2e;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.gif-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
+}
+
+.gif-message {
+  max-width: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.gif-message img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  display: block;
+}
