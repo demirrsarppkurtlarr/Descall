@@ -350,6 +350,7 @@ export default function AdminPanel({ socket, onClose }) {
                 <tr>
                   <th>Username</th>
                   <th>ID</th>
+                  <th>Status</th>
                   <th>Admin</th>
                   <th>Actions</th>
                 </tr>
@@ -359,6 +360,13 @@ export default function AdminPanel({ socket, onClose }) {
                   <motion.tr key={u.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <td>{u.username}</td>
                     <td className="mono">{u.id.slice(0, 8)}…</td>
+                    <td className="admin-status">
+                      {u.isOnline ? (
+                        <span className="status-badge online">Online</span>
+                      ) : (
+                        <span className="status-badge offline">Offline</span>
+                      )}
+                    </td>
                     <td className="admin-status">
                       {u.is_admin ? (
                         <span className="admin-badge">Admin</span>

@@ -2808,6 +2808,26 @@ html[data-theme="light"] body {
   font-size: 13px;
 }
 
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.status-badge.online {
+  background: rgba(35, 165, 90, 0.15);
+  color: #23a55a;
+  border: 1px solid rgba(35, 165, 90, 0.3);
+}
+
+.status-badge.offline {
+  background: rgba(157, 165, 181, 0.1);
+  color: var(--muted);
+  border: 1px solid rgba(157, 165, 181, 0.2);
+}
+
 .admin-badge {
   background: rgba(102, 120, 255, 0.2);
   color: #6678ff;
