@@ -13,6 +13,16 @@ export default function SettingsPanel({
   setReduceMotion,
   theme,
   setTheme,
+  fontSize,
+  setFontSize,
+  borderRadius,
+  setBorderRadius,
+  accentColor,
+  setAccentColor,
+  uiDensity,
+  setUiDensity,
+  messageBubbleStyle,
+  setMessageBubbleStyle,
   me,
   onLogout,
 }) {
@@ -74,6 +84,7 @@ export default function SettingsPanel({
         {activeTab === "appearance" && (
           <section className="settings-section">
             <h4>Appearance</h4>
+            
             <label className="settings-row check">
               <span>Theme</span>
               <select
@@ -83,21 +94,93 @@ export default function SettingsPanel({
               >
                 <option value="dark">Dark</option>
                 <option value="light">Light</option>
+                <option value="midnight">Midnight</option>
+                <option value="ocean">Ocean</option>
               </select>
             </label>
+
+            <label className="settings-row check">
+              <span>Accent Color</span>
+              <div className="color-picker-row">
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="color-picker"
+                />
+                <span className="color-value">{accentColor}</span>
+              </div>
+            </label>
+
+            <label className="settings-row check">
+              <span>Font Size</span>
+              <select
+                value={fontSize}
+                onChange={(e) => setFontSize(e.target.value)}
+                className="settings-select"
+              >
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+                <option value="xlarge">Extra Large</option>
+              </select>
+            </label>
+
+            <label className="settings-row check">
+              <span>Border Radius</span>
+              <select
+                value={borderRadius}
+                onChange={(e) => setBorderRadius(e.target.value)}
+                className="settings-select"
+              >
+                <option value="none">None</option>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+              </select>
+            </label>
+
+            <label className="settings-row check">
+              <span>UI Density</span>
+              <select
+                value={uiDensity}
+                onChange={(e) => setUiDensity(e.target.value)}
+                className="settings-select"
+              >
+                <option value="compact">Compact</option>
+                <option value="comfortable">Comfortable</option>
+                <option value="spacious">Spacious</option>
+              </select>
+            </label>
+
+            <label className="settings-row check">
+              <span>Message Bubble Style</span>
+              <select
+                value={messageBubbleStyle}
+                onChange={(e) => setMessageBubbleStyle(e.target.value)}
+                className="settings-select"
+              >
+                <option value="modern">Modern</option>
+                <option value="classic">Classic</option>
+                <option value="minimal">Minimal</option>
+                <option value="rounded">Rounded</option>
+              </select>
+            </label>
+
             <label className="settings-row">
-              <span>Glass blur</span>
+              <span>Glass Blur ({compactBlur}px)</span>
               <input
                 type="range"
                 min={4}
-                max={24}
+                max={40}
                 value={compactBlur}
                 onChange={(e) => setCompactBlur(Number(e.target.value))}
               />
             </label>
+
             <label className="settings-row check">
               <input type="checkbox" checked={reduceMotion} onChange={(e) => setReduceMotion(e.target.checked)} />
-              <span>Reduce motion</span>
+              <span>Reduce Motion</span>
             </label>
           </section>
         )}

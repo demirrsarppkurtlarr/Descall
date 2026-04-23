@@ -14,6 +14,52 @@
   --border: #ffffff17;
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   --glass-blur: 14px;
+  --font-size-multiplier: 1;
+  --border-radius-multiplier: 1;
+  --ui-density-padding: 12px;
+  --ui-density-gap: 8px;
+}
+
+/* Font Size Variations */
+[data-font-size="small"] { --font-size-multiplier: 0.875; }
+[data-font-size="medium"] { --font-size-multiplier: 1; }
+[data-font-size="large"] { --font-size-multiplier: 1.125; }
+[data-font-size="xlarge"] { --font-size-multiplier: 1.25; }
+
+/* Border Radius Variations */
+[data-border-radius="none"] { --border-radius-multiplier: 0; }
+[data-border-radius="small"] { --border-radius-multiplier: 0.5; }
+[data-border-radius="medium"] { --border-radius-multiplier: 1; }
+[data-border-radius="large"] { --border-radius-multiplier: 1.5; }
+
+/* UI Density Variations */
+[data-ui-density="compact"] { 
+  --ui-density-padding: 6px; 
+  --ui-density-gap: 4px; 
+}
+[data-ui-density="comfortable"] { 
+  --ui-density-padding: 12px; 
+  --ui-density-gap: 8px; 
+}
+[data-ui-density="spacious"] { 
+  --ui-density-padding: 20px; 
+  --ui-density-gap: 16px; 
+}
+
+/* Midnight Theme */
+[data-theme="midnight"] {
+  --bg: #0d1117;
+  --bg-soft: #161b22;
+  --panel: #21262d;
+  --panel-2: #1c2128;
+}
+
+/* Ocean Theme */
+[data-theme="ocean"] {
+  --bg: #0a1628;
+  --bg-soft: #0d1d33;
+  --panel: #132642;
+  --panel-2: #0f1f38;
 }
 
 * {
@@ -2065,6 +2111,37 @@ html[data-reduce-motion="true"] *::after {
   background: var(--accent);
   cursor: pointer;
   border: none;
+}
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-picker {
+  width: 40px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-picker::-webkit-color-swatch {
+  border: 2px solid var(--border);
+  border-radius: 6px;
+}
+
+.color-value {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
 }
 
 .settings-hint,
@@ -6629,4 +6706,54 @@ button, a, input, select, .clickable {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Message Bubble Style Variations */
+[data-bubble-style="modern"] .msg-row {
+  border-radius: calc(12px * var(--border-radius-multiplier));
+}
+
+[data-bubble-style="classic"] .msg-row {
+  border-radius: calc(4px * var(--border-radius-multiplier));
+  border: 1px solid var(--border);
+}
+
+[data-bubble-style="minimal"] .msg-row {
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+}
+
+[data-bubble-style="rounded"] .msg-row {
+  border-radius: calc(20px * var(--border-radius-multiplier));
+  padding: calc(12px * var(--ui-density-padding) / 12);
+}
+
+/* Font size scaling */
+[data-font-size="small"] body { font-size: 14px; }
+[data-font-size="medium"] body { font-size: 15px; }
+[data-font-size="large"] body { font-size: 17px; }
+[data-font-size="xlarge"] body { font-size: 19px; }
+
+/* UI Density application */
+[data-ui-density="compact"] .msg-row {
+  padding: 4px 6px;
+  margin-bottom: 2px;
+}
+
+[data-ui-density="comfortable"] .msg-row {
+  padding: 8px 10px;
+  margin-bottom: 4px;
+}
+
+[data-ui-density="spacious"] .msg-row {
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+/* Remove right-rail styles (section removed from ChatLayout) */
+.right-rail,
+.voice-activity,
+.tips-card {
+  display: none;
 }

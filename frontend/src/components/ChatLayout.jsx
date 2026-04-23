@@ -373,10 +373,29 @@ export default function ChatLayout({
   const [readAnnouncementIds, setReadAnnouncementIds] = useState(new Set());
   const [profileUser, setProfileUser] = useState(null);
   const [hoverCard, setHoverCard] = useState(null);
-  const [compactBlur, setCompactBlur] = useState(14);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [compactBlur, setCompactBlur] = useState(() => {
+    try { return Number(localStorage.getItem("descall_blur")) || 14; } catch { return 14; }
+  });
+  const [reduceMotion, setReduceMotion] = useState(() => {
+    try { return localStorage.getItem("descall_reduce_motion") === "true"; } catch { return false; }
+  });
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem("descall_theme") || "dark"; } catch { return "dark"; }
+  });
+  const [fontSize, setFontSize] = useState(() => {
+    try { return localStorage.getItem("descall_font_size") || "medium"; } catch { return "medium"; }
+  });
+  const [borderRadius, setBorderRadius] = useState(() => {
+    try { return localStorage.getItem("descall_border_radius") || "medium"; } catch { return "medium"; }
+  });
+  const [accentColor, setAccentColor] = useState(() => {
+    try { return localStorage.getItem("descall_accent_color") || "#6678ff"; } catch { return "#6678ff"; }
+  });
+  const [uiDensity, setUiDensity] = useState(() => {
+    try { return localStorage.getItem("descall_ui_density") || "comfortable"; } catch { return "comfortable"; }
+  });
+  const [messageBubbleStyle, setMessageBubbleStyle] = useState(() => {
+    try { return localStorage.getItem("descall_bubble_style") || "modern"; } catch { return "modern"; }
   });
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -421,11 +440,38 @@ export default function ChatLayout({
   }, []);
 
   useEffect(() => { document.documentElement.toggleAttribute("data-reduce-motion", reduceMotion); }, [reduceMotion]);
-  useEffect(() => { document.documentElement.style.setProperty("--glass-blur", `${compactBlur}px`); }, [compactBlur]);
+  useEffect(() => { 
+    document.documentElement.style.setProperty("--glass-blur", `${compactBlur}px`); 
+    try { localStorage.setItem("descall_blur", String(compactBlur)); } catch {}
+  }, [compactBlur]);
   useEffect(() => {
     try { localStorage.setItem("descall_theme", theme); } catch {}
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+  useEffect(() => {
+    try { localStorage.setItem("descall_reduce_motion", String(reduceMotion)); } catch {}
+  }, [reduceMotion]);
+  useEffect(() => {
+    try { localStorage.setItem("descall_font_size", fontSize); } catch {}
+    document.documentElement.setAttribute("data-font-size", fontSize);
+  }, [fontSize]);
+  useEffect(() => {
+    try { localStorage.setItem("descall_border_radius", borderRadius); } catch {}
+    document.documentElement.setAttribute("data-border-radius", borderRadius);
+  }, [borderRadius]);
+  useEffect(() => {
+    try { localStorage.setItem("descall_accent_color", accentColor); } catch {}
+    document.documentElement.style.setProperty("--accent", accentColor);
+    document.documentElement.style.setProperty("--accent-2", accentColor + "80"); // 50% opacity version
+  }, [accentColor]);
+  useEffect(() => {
+    try { localStorage.setItem("descall_ui_density", uiDensity); } catch {}
+    document.documentElement.setAttribute("data-ui-density", uiDensity);
+  }, [uiDensity]);
+  useEffect(() => {
+    try { localStorage.setItem("descall_bubble_style", messageBubbleStyle); } catch {}
+    document.documentElement.setAttribute("data-bubble-style", messageBubbleStyle);
+  }, [messageBubbleStyle]);
 
   useEffect(() => { scrollToBottom(); }, [activeDmUser, scrollToBottom]);
 
@@ -1526,28 +1572,6 @@ export default function ChatLayout({
         )}
       </section>
 
-      {/* Right Rail - Desktop Only */}
-      {!isMobile && (
-        <aside className="right-rail custom-scroll">
-          <div className="voice-activity glass">
-            <h4>Call</h4>
-            {call?.mode === "incoming" && call.peer && <p className="voice-hint">Incoming {call.callType} call from {call.peer.username}</p>}
-            {(call?.mode === "active" || call?.mode === "outgoing") && call.peer && (
-              <p className="voice-hint">{call.mode === "outgoing" ? "Calling" : "In call with"} {call.peer.username} ({call.callType})</p>
-            )}
-            {call?.mode === null && <p className="voice-hint">No active call</p>}
-          </div>
-          <div className="tips-card glass">
-            <h4>Shortcuts</h4>
-            <ul>
-              <li><kbd>Enter</kbd> send</li>
-              <li>Scroll up to load older messages</li>
-              <li>📎 button to share images/videos</li>
-              <li>📹 for video call, 📞 for voice</li>
-            </ul>
-          </div>
-        </aside>
-      )}
 
       <AnimatePresence>
         {notificationsOpen && (
@@ -1607,6 +1631,16 @@ export default function ChatLayout({
           setReduceMotion={setReduceMotion}
           theme={theme}
           setTheme={setTheme}
+          fontSize={fontSize}
+          setFontSize={setFontSize}
+          borderRadius={borderRadius}
+          setBorderRadius={setBorderRadius}
+          accentColor={accentColor}
+          setAccentColor={setAccentColor}
+          uiDensity={uiDensity}
+          setUiDensity={setUiDensity}
+          messageBubbleStyle={messageBubbleStyle}
+          setMessageBubbleStyle={setMessageBubbleStyle}
           me={me}
           onLogout={() => { setSettingsOpen(false); onLogout(); }}
         />
