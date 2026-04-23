@@ -2804,6 +2804,64 @@ html[data-theme="light"] body {
   gap: 8px;
 }
 
+.admin-status {
+  font-size: 13px;
+}
+
+.admin-badge {
+  background: rgba(102, 120, 255, 0.2);
+  color: #6678ff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(102, 120, 255, 0.3);
+}
+
+.admin-badge-false {
+  background: rgba(157, 165, 181, 0.1);
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(157, 165, 181, 0.2);
+}
+
+.admin-btn-green {
+  background: rgba(35, 165, 90, 0.15);
+  color: #23a55a;
+  border: 1px solid rgba(35, 165, 90, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-btn-green:hover {
+  background: rgba(35, 165, 90, 0.25);
+  border-color: rgba(35, 165, 90, 0.5);
+}
+
+.admin-btn-red {
+  background: rgba(242, 63, 67, 0.15);
+  color: #f23f43;
+  border: 1px solid rgba(242, 63, 67, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-btn-red:hover {
+  background: rgba(242, 63, 67, 0.25);
+  border-color: rgba(242, 63, 67, 0.5);
+}
+
 /* Error Log Section */
 .error-stats {
   display: flex;
