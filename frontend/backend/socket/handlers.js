@@ -740,6 +740,64 @@ function registerSocketHandlers(io) {
       }
     });
 
+    // Message Edit - DM
+    socket.on("dm:message:edit", async ({ messageId, newText, toUserId } = {}) => {
+      if (!messageId || !newText || !toUserId) return;
+      
+      // Verify friendship
+      if (!friends.get(myId)?.has(toUserId)) return;
+      
+      const convKey = [myId, toUserId].sort().join("::");
+      const arr = dmHistory.get(convKey) || [];
+      const msg = arr.find(m => m.id === messageId && m.from === myId);
+      
+      if (!msg) return;
+      
+      // Save old version to edit history
+      if (!msg.editHistory) msg.editHistory = [];
+      msg.editHistory.push({
+        text: msg.text,
+        editedAt: new Date().toISOString()
+      });
+      
+      msg.text = newText;
+      msg.editedAt = new Date().toISOString();
+      
+      // Broadcast to other user
+      emitToUser(io, toUserId, "dm:message:edited", {
+        messageId,
+        newText,
+        editedAt: msg.editedAt,
+        from: myId
+      });
+      
+      socket.emit("dm:message:edited", {
+        messageId,
+        newText,
+        editedAt: msg.editedAt
+      });
+    });
+
+    // Message Edit - Group
+    socket.on("group:message:edit", async ({ messageId, newText, groupId } = {}) => {
+      if (!messageId || !newText || !groupId) return;
+      
+      // Check membership
+      if (!socket.rooms.has(`group:${groupId}`)) return;
+      
+      // Find message in group messages (via group handlers context or fetch)
+      // For now, emit edit event to group room
+      const editData = {
+        messageId,
+        newText,
+        editedAt: new Date().toISOString(),
+        editedBy: myId,
+        username: me.username
+      };
+      
+      io.to(`group:${groupId}`).emit("group:message:edited", editData);
+    });
+
     socket.on("disconnect", () => {
       const sessStart = userSessionStartMs.get(myId);
       if (sessStart) {

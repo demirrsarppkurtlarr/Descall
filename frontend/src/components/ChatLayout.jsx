@@ -430,6 +430,7 @@ export default function ChatLayout({
   const [activeMobileView, setActiveMobileView] = useState("dms"); // "dms", "groups", "calls", "profile"
   const [customizationOpen, setCustomizationOpen] = useState(false);
   const [messageReactions, setMessageReactions] = useState({}); // { messageId: [{emoji, userId, username}] }
+  const [editingMessage, setEditingMessage] = useState(null); // { id, text, type: 'dm'|'group' }
   const fileInputRef = useRef(null);
   const groupsList = asArray(groups.list);
   const groupsMessages = asArray(groups.messages);
@@ -443,6 +444,37 @@ export default function ChatLayout({
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, []);
+
+  // Message edit functions
+  const startEditingMessage = useCallback((msg, type) => {
+    setEditingMessage({ id: msg.id, text: msg.text || msg.content, type });
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setEditingMessage(null);
+  }, []);
+
+  const saveEditedMessage = useCallback((newText) => {
+    if (!editingMessage || !newText.trim()) return;
+    
+    const { id, type } = editingMessage;
+    
+    if (type === 'dm' && activeDmUser) {
+      socket?.emit("dm:message:edit", {
+        messageId: id,
+        newText: newText.trim(),
+        toUserId: activeDmUser.id
+      });
+    } else if (type === 'group' && groups.active) {
+      socket?.emit("group:message:edit", {
+        messageId: id,
+        newText: newText.trim(),
+        groupId: groups.active.id
+      });
+    }
+    
+    setEditingMessage(null);
+  }, [editingMessage, activeDmUser, groups.active, socket]);
 
   useEffect(() => { document.documentElement.toggleAttribute("data-reduce-motion", reduceMotion); }, [reduceMotion]);
   useEffect(() => { 
@@ -627,11 +659,32 @@ export default function ChatLayout({
     };
     socket.on("reaction:update", onReactionUpdate);
 
+    // Message edit listeners
+    const onGroupMessageEdited = (data) => {
+      setGroups(g => ({
+        ...g,
+        messages: (g.messages || []).map(m => 
+          m.id === data.messageId 
+            ? { ...m, content: data.newText, editedAt: data.editedAt, isEdited: true }
+            : m
+        )
+      }));
+    };
+    socket.on("group:message:edited", onGroupMessageEdited);
+
+    const onDmMessageEdited = (data) => {
+      // Update DM messages if needed (handled via state in parent)
+      console.log("[ChatLayout] DM message edited:", data);
+    };
+    socket.on("dm:message:edited", onDmMessageEdited);
+
     return () => {
       socket.off("group:message", onGroupMessage);
       socket.off("group:call:left", onCallEnded);
       socket.off("group:call:ended", onCallEnded);
       socket.off("reaction:update", onReactionUpdate);
+      socket.off("group:message:edited", onGroupMessageEdited);
+      socket.off("dm:message:edited", onDmMessageEdited);
     };
   }, [socket, groups.active?.id, groupsList]);
 
@@ -1556,7 +1609,46 @@ export default function ChatLayout({
                         </span>
                       )}
                       {msg.media && <MediaMessage media={msg.media} onOpenLightbox={setLightboxUrl} />}
-                      {msg.text && <p className="dm-msg-text">{msg.text}</p>}
+                      
+                      {/* Message text or edit UI */}
+                      {editingMessage?.id === msg.id ? (
+                        <div className="message-edit-ui">
+                          <input
+                            type="text"
+                            defaultValue={editingMessage.text}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveEditedMessage(e.target.value);
+                              if (e.key === 'Escape') cancelEditing();
+                            }}
+                            autoFocus
+                          />
+                          <div className="edit-actions">
+                            <button onClick={(e) => saveEditedMessage(e.target.previousSibling.value)}>Save</button>
+                            <button onClick={cancelEditing}>Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {msg.text && (
+                            <p className="dm-msg-text">
+                              {msg.text}
+                              {msg.editedAt && <span className="edited-indicator"> (edited)</span>}
+                            </p>
+                          )}
+                        </>
+                      )}
+                      
+                      {/* Edit button for own messages */}
+                      {fromSelf && !editingMessage && (
+                        <button 
+                          className="msg-edit-btn" 
+                          onClick={() => startEditingMessage(msg, 'dm')}
+                          title="Edit message"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      
                       {fromSelf && (
                         <div className="dm-ack" aria-label="Delivery status">
                           {msg.readAt ? <span className="ack-read">Read</span> : msg.deliveredAt ? <span className="ack-delivered">Delivered</span> : <span className="ack-sent">Sent</span>}
@@ -1606,7 +1698,41 @@ export default function ChatLayout({
                           {formatTime(msg.created_at)}
                         </span>
                       </div>
-                      <p className="dm-msg-text">{msg.content}</p>
+                      {/* Message text or edit UI */}
+                      {editingMessage?.id === msg.id ? (
+                        <div className="message-edit-ui">
+                          <input
+                            type="text"
+                            defaultValue={editingMessage.text}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveEditedMessage(e.target.value);
+                              if (e.key === 'Escape') cancelEditing();
+                            }}
+                            autoFocus
+                          />
+                          <div className="edit-actions">
+                            <button onClick={(e) => saveEditedMessage(e.target.previousSibling.value)}>Save</button>
+                            <button onClick={cancelEditing}>Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="dm-msg-text">
+                          {msg.content}
+                          {msg.isEdited && <span className="edited-indicator"> (edited)</span>}
+                        </p>
+                      )}
+                      
+                      {/* Edit button for own messages */}
+                      {fromSelf && !editingMessage && (
+                        <button 
+                          className="msg-edit-btn" 
+                          onClick={() => startEditingMessage({ id: msg.id, text: msg.content }, 'group')}
+                          title="Edit message"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      
                       <MessageReactions
                         messageId={msg.id}
                         conversationType="group"
