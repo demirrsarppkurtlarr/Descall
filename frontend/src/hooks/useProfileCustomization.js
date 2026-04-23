@@ -88,7 +88,7 @@ export function useProfileCustomization() {
     });
   }, []);
 
-  const updateProfile = useCallback((updates) => {
+  const updateProfile = useCallback(async (updates) => {
     setCustomization((prev) => {
       const next = { ...prev, profile: { ...prev.profile, ...updates } };
       try {
@@ -96,6 +96,32 @@ export function useProfileCustomization() {
       } catch {}
       return next;
     });
+
+    // Also update backend if avatarUrl or bannerUrl is included
+    if (updates.avatarUrl || updates.bannerUrl) {
+      try {
+        const token = localStorage.getItem("descall_token");
+        if (!token) return;
+
+        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || "https://descall-qzkg.onrender.com"}/api/user/profile`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            avatarUrl: updates.avatarUrl,
+            bannerUrl: updates.bannerUrl,
+          }),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to update profile on backend");
+        }
+      } catch (err) {
+        console.error("Error updating profile on backend:", err);
+      }
+    }
   }, []);
 
   const updateNotifications = useCallback((updates) => {

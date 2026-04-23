@@ -251,7 +251,7 @@ app.delete("/api/feedback/:id", requireAuth, async (req, res) => {
 // Update profile - PUT /api/user/profile
 app.put("/api/user/profile", requireAuth, async (req, res) => {
   try {
-    const { displayName, bio, customStatus, accentColor, fontSize, uiDensity, bubbleStyle } = req.body;
+    const { displayName, bio, customStatus, accentColor, fontSize, uiDensity, bubbleStyle, avatarUrl, bannerUrl } = req.body;
     
     const updateData = {};
     if (displayName !== undefined) updateData.display_name = displayName;
@@ -261,6 +261,8 @@ app.put("/api/user/profile", requireAuth, async (req, res) => {
     if (fontSize !== undefined) updateData.font_size = fontSize;
     if (uiDensity !== undefined) updateData.ui_density = uiDensity;
     if (bubbleStyle !== undefined) updateData.bubble_style = bubbleStyle;
+    if (avatarUrl !== undefined) updateData.avatar_url = avatarUrl;
+    if (bannerUrl !== undefined) updateData.banner_url = bannerUrl;
     
     const { data, error } = await supabase
       .from("users")
