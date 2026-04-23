@@ -785,17 +785,39 @@ function registerSocketHandlers(io) {
       // Check membership
       if (!socket.rooms.has(`group:${groupId}`)) return;
       
-      // Find message in group messages (via group handlers context or fetch)
-      // For now, emit edit event to group room
-      const editData = {
-        messageId,
-        newText,
-        editedAt: new Date().toISOString(),
-        editedBy: myId,
-        username: me.username
-      };
+      const editedAt = new Date().toISOString();
       
-      io.to(`group:${groupId}`).emit("group:message:edited", editData);
+      try {
+        // Update message in Supabase
+        const { error } = await supabase
+          .from("group_messages")
+          .update({
+            content: newText,
+            edited_at: editedAt,
+            edited_by: myId,
+            is_edited: true
+          })
+          .eq("id", messageId)
+          .eq("sender_id", myId); // Only edit own messages
+        
+        if (error) {
+          console.error("[group:message:edit] Error updating message:", error);
+          return;
+        }
+        
+        // Broadcast edit to group room
+        const editData = {
+          messageId,
+          newText,
+          editedAt,
+          editedBy: myId,
+          username: me.username
+        };
+        
+        io.to(`group:${groupId}`).emit("group:message:edited", editData);
+      } catch (err) {
+        console.error("[group:message:edit] Error:", err);
+      }
     });
 
     socket.on("disconnect", () => {
