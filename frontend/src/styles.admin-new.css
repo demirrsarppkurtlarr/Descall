@@ -1735,17 +1735,24 @@
   font-style: italic;
 }
 
-/* Reply indicator in composer */
+/* Reply indicator in composer - Discord style */
 .reply-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(102, 120, 255, 0.1);
-  border-left: 3px solid rgba(102, 120, 255, 0.5);
-  border-radius: 6px 6px 0 0;
-  font-size: 12px;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: -12px -16px 8px -16px;
+  background: rgba(102, 120, 255, 0.08);
+  border-left: 2px solid rgba(102, 120, 255, 0.6);
+  border-radius: 0;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.7);
+}
+
+.reply-indicator::before {
+  content: "↳";
+  color: rgba(102, 120, 255, 0.8);
+  font-size: 16px;
 }
 
 .reply-indicator-text {
@@ -1755,16 +1762,24 @@
   white-space: nowrap;
 }
 
+.reply-indicator-text strong {
+  color: rgba(102, 120, 255, 0.9);
+  font-weight: 600;
+}
+
 .reply-indicator-cancel {
-  padding: 2px 6px;
-  background: transparent;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.08);
   border: none;
+  border-radius: 4px;
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
+  transition: all 0.15s;
 }
 
 .reply-indicator-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
   color: rgba(255, 255, 255, 0.9);
 }
