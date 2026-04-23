@@ -251,7 +251,8 @@ export default function App() {
     });
 
     socket.on("connected", (payload) => {
-      if (payload?.user) { setUser(payload.user); setMe(payload.user); }
+      // Don't override me from socket connected, use the me from /auth/me which has is_admin
+      if (payload?.user) { setUser(payload.user); }
     });
 
     socket.on("sync:state", (state) => {
