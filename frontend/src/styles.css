@@ -4705,6 +4705,65 @@ html[data-theme="light"] body {
   transform: scale(1.1);
 }
 
+/* Announcement Cards */
+.announcement-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.announcement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.announcement-header h5 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #dce3f0;
+}
+
+.announcement-content {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #c5ccda;
+  line-height: 1.4;
+}
+
+.announcement-date {
+  font-size: 11px;
+  color: #8b9bb4;
+}
+
+.priority-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.priority-badge.normal {
+  background: rgba(103, 120, 255, 0.2);
+  color: #a8b4ff;
+}
+
+.priority-badge.important {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.priority-badge.urgent {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
 /* Empty state */
 .empty-state {
   text-align: center;

@@ -24,7 +24,7 @@ import {
   Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
   Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid,
   ChevronLeft, ChevronRight, MoreVertical, Trash2,
-  Menu, Palette, Sparkles, User
+  Menu, Palette, Sparkles, User, Megaphone
 } from "lucide-react";
 
 function asArray(value) {
@@ -367,6 +367,7 @@ export default function ChatLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
   const [profileUser, setProfileUser] = useState(null);
   const [hoverCard, setHoverCard] = useState(null);
   const [compactBlur, setCompactBlur] = useState(14);
@@ -440,6 +441,39 @@ export default function ChatLayout({
       })
       .catch(() => setGroups(g => ({ ...g, list: [] })));
   }, [me]);
+
+  // Fetch announcements on mount
+  useEffect(() => {
+    if (!me) return;
+    const token = localStorage.getItem("descall_token");
+    fetch(`${API_BASE_URL}/api/announcements`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setAnnouncements(data.announcements || []))
+      .catch(() => setAnnouncements([]));
+  }, [me]);
+
+  // Socket event listeners for announcements
+  useEffect(() => {
+    if (!socket) return;
+
+    const onNewAnnouncement = (announcement) => {
+      setAnnouncements((prev) => [announcement, ...prev]);
+    };
+
+    const onDeletedAnnouncement = ({ id }) => {
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+    };
+
+    socket.on("announcement:new", onNewAnnouncement);
+    socket.on("announcement:deleted", onDeletedAnnouncement);
+
+    return () => {
+      socket.off("announcement:new", onNewAnnouncement);
+      socket.off("announcement:deleted", onDeletedAnnouncement);
+    };
+  }, [socket]);
 
   // Socket event listeners for groups
   useEffect(() => {
@@ -733,6 +767,10 @@ export default function ChatLayout({
             <motion.button type="button" className={`rail-btn ${sidebarView === "friends" ? "active" : ""}`} title="Friends" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("friends")}>
               <UserPlus size={22} />
             </motion.button>
+            <motion.button type="button" className={`rail-btn ${sidebarView === "announcements" ? "active" : ""}`} title="Announcements" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSidebarView("announcements")}>
+              <Megaphone size={22} />
+              {announcements.length > 0 && <span className="rail-badge">{announcements.length}</span>}
+            </motion.button>
             <motion.button type="button" className={`rail-btn ${notificationsOpen ? "active" : ""}`} title="Notifications" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setNotificationsOpen((o) => !o)}>
               <Bell size={22} />
               {globalUnread > 0 && <span className="rail-badge">{globalUnread > 99 ? "99+" : globalUnread}</span>}
@@ -922,6 +960,31 @@ export default function ChatLayout({
                   </div>
                 ))}
                 {onlineUsers.length === 0 && <p className="muted small">No one is online.</p>}
+              </div>
+            </div>
+          )}
+
+          {sidebarView === "announcements" && (
+            <div className="sidebar-section grow">
+              <h4>Announcements</h4>
+              <div className="scroll-list custom-scroll">
+                {announcements.length === 0 && <p className="muted small">No announcements yet.</p>}
+                {announcements.map((a) => (
+                  <motion.div
+                    key={a.id}
+                    className="announcement-card"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ borderLeft: `4px solid ${a.color}` }}
+                  >
+                    <div className="announcement-header">
+                      <h5>{a.title}</h5>
+                      <span className={`priority-badge ${a.priority}`}>{a.priority}</span>
+                    </div>
+                    <p className="announcement-content">{a.content}</p>
+                    <span className="announcement-date">{new Date(a.created_at).toLocaleString()}</span>
+                  </motion.div>
+                ))}
               </div>
             </div>
           )}
