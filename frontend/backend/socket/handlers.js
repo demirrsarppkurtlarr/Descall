@@ -615,16 +615,28 @@ function registerSocketHandlers(io) {
 
     // Emoji Reactions
     socket.on("reaction:add", async ({ messageId, conversationType, conversationId, emoji } = {}) => {
-      if (!messageId || !conversationType || !conversationId || !emoji) return;
+      console.log("[reaction:add] Received:", { messageId, conversationType, conversationId, emoji, myId });
+      if (!messageId || !conversationType || !conversationId || !emoji) {
+        console.log("[reaction:add] Missing params, returning");
+        return;
+      }
       
       // Verify user is part of this conversation
       let otherId = null;
       if (conversationType === "dm") {
         // conversationId should be in format "smallerId::largerId"
         const ids = conversationId.split("::");
-        if (ids.length !== 2) return;
+        console.log("[reaction:add] DM ids:", ids);
+        if (ids.length !== 2) {
+          console.log("[reaction:add] Invalid conversationId format");
+          return;
+        }
         otherId = ids[0] === myId ? ids[1] : ids[0];
-        if (!otherId || !friends.get(myId)?.has(otherId)) return;
+        console.log("[reaction:add] otherId:", otherId, "isFriend:", friends.get(myId)?.has(otherId));
+        if (!otherId || !friends.get(myId)?.has(otherId)) {
+          console.log("[reaction:add] Not friends, returning");
+          return;
+        }
       } else if (conversationType === "group") {
         // Check group membership via group handlers
         const isMember = socket.rooms.has(conversationId);
@@ -643,7 +655,12 @@ function registerSocketHandlers(io) {
           }, { onConflict: "message_id,user_id,emoji" })
           .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error("[reaction:add] Supabase error:", error);
+          throw error;
+        }
+
+        console.log("[reaction:add] Saved to DB:", data);
 
         // Broadcast to all users in conversation
         const reactionData = {
@@ -655,12 +672,19 @@ function registerSocketHandlers(io) {
           conversationId,
         };
 
+        console.log("[reaction:add] Broadcasting:", reactionData);
+
         if (conversationType === "dm" && otherId) {
+          const otherPresence = presence.get(otherId);
+          console.log("[reaction:add] Other user presence:", otherPresence);
           emitToUser(io, otherId, "reaction:update", reactionData);
+          console.log("[reaction:add] Emitted to other user:", otherId);
         } else {
           io.to(conversationId).emit("reaction:update", reactionData);
+          console.log("[reaction:add] Emitted to group room:", conversationId);
         }
         socket.emit("reaction:update", reactionData);
+        console.log("[reaction:add] Emitted to sender");
       } catch (err) {
         console.error("[reaction:add] Error:", err);
       }

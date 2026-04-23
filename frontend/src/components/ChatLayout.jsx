@@ -605,6 +605,7 @@ export default function ChatLayout({
     socket.on("group:call:ended", onCallEnded);
 
     // Real-time reactions listener
+    console.log("[ChatLayout] Setting up reaction listener, socket connected:", socket?.connected);
     const onReactionUpdate = (data) => {
       console.log("[ChatLayout] Reaction update received:", data);
       setMessageReactions(prev => {

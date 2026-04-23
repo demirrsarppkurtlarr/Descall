@@ -41,6 +41,7 @@ export default function MessageReactions({
       conversationId,
       emoji,
     };
+    console.log("[MessageReactions] Adding reaction:", reactionData, "socket:", socket?.id);
 
     // Optimistic update
     setLocalReactions(prev => {
@@ -49,7 +50,12 @@ export default function MessageReactions({
       return [...prev, { emoji, userId: currentUserId, messageId }];
     });
 
-    socket?.emit("reaction:add", reactionData);
+    if (socket) {
+      socket.emit("reaction:add", reactionData);
+      console.log("[MessageReactions] Emitted reaction:add");
+    } else {
+      console.log("[MessageReactions] Socket not available!");
+    }
     onReact?.(reactionData);
     setShowPicker(false);
   }, [messageId, conversationType, conversationId, currentUserId, socket, onReact]);
