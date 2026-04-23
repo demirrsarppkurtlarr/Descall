@@ -173,7 +173,6 @@ export default function ProfileCustomizationPanel({
       className="profile-customization-panel"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
     >
       {/* Header */}
       <div className="customization-header">

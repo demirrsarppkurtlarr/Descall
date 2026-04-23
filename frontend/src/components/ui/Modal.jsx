@@ -10,13 +10,14 @@ export default function Modal({ open, onClose, title, children, wide }) {
   }, [open, onClose]);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {open && (
         <motion.div
           className="modal-backdrop"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           onClick={() => onClose?.()}
         >
           <motion.div

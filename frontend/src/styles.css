@@ -1991,6 +1991,12 @@ html[data-reduce-motion="true"] *::after {
   justify-content: center;
   z-index: 1200;
   padding: 16px;
+  pointer-events: auto;
+}
+
+/* Ensure backdrop doesn't block clicks when hidden/animating out */
+.modal-backdrop[style*="opacity: 0"] {
+  pointer-events: none;
 }
 
 .modal-card {
