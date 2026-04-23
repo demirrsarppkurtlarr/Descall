@@ -21,7 +21,7 @@ router.get("/conversation/:type/:id", requireAuth, async (req, res) => {
       console.log("[reactions] Checking group membership for user:", userId, "group:", id);
       const { data: member, error: memberError } = await supabase
         .from("group_members")
-        .select("id")
+        .select("group_id")
         .eq("group_id", id)
         .eq("user_id", userId)
         .maybeSingle();
