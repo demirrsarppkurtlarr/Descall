@@ -900,6 +900,9 @@ export default function ChatLayout({
                 <PanelLeftClose size={20} />
               </motion.div>
             </motion.button>
+            <motion.button type="button" className={`rail-btn subtle ${customizationOpen ? "active" : ""}`} title="Customize" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setCustomizationOpen(true)}>
+              <Palette size={20} />
+            </motion.button>
             <motion.button type="button" className="rail-btn subtle" title="Settings" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setSettingsOpen(true)}>
               <Settings size={20} />
             </motion.button>
