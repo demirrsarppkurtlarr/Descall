@@ -526,6 +526,38 @@ export default function ChatLayout({
 
   useEffect(() => { scrollToBottom(); }, [activeDmUser, scrollToBottom]);
 
+  // ========== URL ROUTING ==========
+  // Sync sidebarView with URL
+  useEffect(() => {
+    // Read initial path from URL and set sidebarView
+    const path = window.location.pathname.replace(/^\//, "");
+    const validViews = ["dms", "groups", "friends", "announcements", "notifications", "online"];
+    if (validViews.includes(path)) {
+      setSidebarView(path);
+    }
+  }, []);
+
+  // Update URL when sidebarView changes
+  useEffect(() => {
+    if (sidebarView) {
+      const newUrl = `/${sidebarView}`;
+      window.history.pushState({ view: sidebarView }, "", newUrl);
+    }
+  }, [sidebarView]);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = (e) => {
+      const path = window.location.pathname.replace(/^\//, "");
+      const validViews = ["dms", "groups", "friends", "announcements", "notifications", "online"];
+      if (validViews.includes(path)) {
+        setSidebarView(path);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   // ========== MODERN GROUP SYSTEM ==========
   
   // Fetch groups on mount + PREFETCH all group data
@@ -1500,6 +1532,11 @@ export default function ChatLayout({
           </div>
           <div className="panel-header-right">
             <span className={`connection-chip ${isOnline ? "online" : "reconnect"}`}>{connectionLabel}</span>
+            {me && (
+              <div className="header-feedback-btn">
+                <UserFeedbackButton socket={socket} user={me} />
+              </div>
+            )}
           </div>
         </header>
 
@@ -2438,13 +2475,6 @@ export default function ChatLayout({
         </>
       )}
 
-      {/* User Feedback Button */}
-      {me && (
-        <UserFeedbackButton 
-          socket={socket} 
-          user={me}
-        />
-      )}
     </section>
     </div>
   );

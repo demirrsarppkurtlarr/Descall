@@ -575,6 +575,17 @@ select {
   border-color: #6678ff55;
 }
 
+/* Header feedback button positioning */
+.panel-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-feedback-btn {
+  margin-left: 8px;
+}
+
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: 1fr;
