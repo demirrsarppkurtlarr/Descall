@@ -23,6 +23,11 @@ export function useGroupCall(socket) {
   const [duration, setDuration] = useState(0);
   const [participants, setParticipants] = useState([]);
   const [incomingCall, setIncomingCall] = useState(null);
+  // Audio device selection states
+  const [audioInputDevices, setAudioInputDevices] = useState([]);
+  const [audioOutputDevices, setAudioOutputDevices] = useState([]);
+  const [selectedAudioInput, setSelectedAudioInput] = useState("");
+  const [selectedAudioOutput, setSelectedAudioOutput] = useState("");
 
   const socketRef = useRef(socket);
   const localStreamRef = useRef(null);
@@ -37,6 +42,30 @@ export function useGroupCall(socket) {
   const screenSenderRef = useRef(null);
 
   useEffect(() => { socketRef.current = socket; }, [socket]);
+
+  // Enumerate audio devices on mount
+  useEffect(() => {
+    const getDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const inputs = devices.filter(d => d.kind === 'audioinput');
+        const outputs = devices.filter(d => d.kind === 'audiooutput');
+        setAudioInputDevices(inputs);
+        setAudioOutputDevices(outputs);
+        if (!selectedAudioInput && inputs.length > 0) {
+          setSelectedAudioInput(inputs[0].deviceId);
+        }
+        if (!selectedAudioOutput && outputs.length > 0) {
+          setSelectedAudioOutput(outputs[0].deviceId);
+        }
+      } catch (err) {
+        console.error("[GroupCall] Failed to enumerate devices:", err);
+      }
+    };
+    getDevices();
+    navigator.mediaDevices.addEventListener('devicechange', getDevices);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', getDevices);
+  }, []);
 
   useEffect(() => {
     if (!isInCall) return;
@@ -395,6 +424,10 @@ export function useGroupCall(socket) {
   const startScreenShare = useCallback(async () => {
     try {
       console.log("[GroupCall] Starting screen share...", { isScreenSharing, activeGroupId, localStreamRef: !!localStreamRef.current });
+      if (isScreenSharing) {
+        console.log("[GroupCall] Already screen sharing, skipping");
+        return;
+      }
       
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { cursor: "always", width: 1920, height: 1080 },
@@ -515,7 +548,7 @@ export function useGroupCall(socket) {
     if (socketRef.current?.connected) {
       socketRef.current.emit("group:screen:stop", { groupId: activeGroupId });
     }
-  }, [isScreenSharing, activeGroupId]);
+  }, [activeGroupId]);
 
   useEffect(() => {
     if (!socket) return;
@@ -897,6 +930,53 @@ export function useGroupCall(socket) {
     return `${m}:${sec}`;
   };
 
+  // Change audio input device
+  const setAudioInput = useCallback(async (deviceId) => {
+    console.log("[GroupCall] Setting audio input:", deviceId);
+    setSelectedAudioInput(deviceId);
+    if (localStreamRef.current) {
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: { exact: deviceId } },
+          video: localStreamRef.current.getVideoTracks().length > 0
+        });
+        const newAudioTrack = newStream.getAudioTracks()[0];
+        if (newAudioTrack) {
+          pcMapRef.current.forEach(async (peerData) => {
+            const sender = peerData.pc.getSenders().find(s => s.track?.kind === 'audio');
+            if (sender) {
+              await sender.replaceTrack(newAudioTrack);
+              console.log("[GroupCall] Replaced audio track for peer");
+            }
+          });
+          // Stop old audio tracks
+          localStreamRef.current.getAudioTracks().forEach(t => t.stop());
+          // Add new audio track to local stream
+          localStreamRef.current.addTrack(newAudioTrack);
+          setLocalStream(localStreamRef.current);
+        }
+      } catch (err) {
+        console.error("[GroupCall] Failed to change audio input:", err);
+      }
+    }
+  }, []);
+
+  // Change audio output device
+  const setAudioOutput = useCallback((deviceId) => {
+    console.log("[GroupCall] Setting audio output:", deviceId);
+    setSelectedAudioOutput(deviceId);
+    remoteAudioRefs.current.forEach(async (audioEl, userId) => {
+      try {
+        if (audioEl.setSinkId) {
+          await audioEl.setSinkId(deviceId);
+          console.log(`[GroupCall] Set sink for ${userId} to ${deviceId}`);
+        }
+      } catch (err) {
+        console.error(`[GroupCall] Failed to set sink for ${userId}:`, err);
+      }
+    });
+  }, []);
+
   return {
     isInCall,
     isInitiator,
@@ -925,5 +1005,12 @@ export function useGroupCall(socket) {
     stopScreenShare,
     formatDuration,
     cleanup,
+    // Audio device selection
+    audioInputDevices,
+    audioOutputDevices,
+    selectedAudioInput,
+    selectedAudioOutput,
+    setAudioInput,
+    setAudioOutput,
   };
 }
