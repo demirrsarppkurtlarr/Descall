@@ -393,10 +393,8 @@ export function useGroupCall(socket) {
   }, [isCameraOn]);
 
   const startScreenShare = useCallback(async () => {
-    if (isScreenSharing) return;
-    
     try {
-      console.log("[GroupCall] Starting screen share");
+      console.log("[GroupCall] Starting screen share...", { isScreenSharing, activeGroupId, localStreamRef: !!localStreamRef.current });
       
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { cursor: "always", width: 1920, height: 1080 },
@@ -457,7 +455,10 @@ export function useGroupCall(socket) {
         socketRef.current.emit("group:screen:start", { groupId: activeGroupId });
       }
     } catch (err) {
-      console.error("[GroupCall] Screen share error:", err);
+      console.error("[GroupCall] Screen share error:", err.name, err.message);
+      if (err.name === 'NotAllowedError') {
+        console.log("[GroupCall] User denied screen share permission");
+      }
     }
   }, [isScreenSharing, activeGroupId]);
 
@@ -757,19 +758,21 @@ export function useGroupCall(socket) {
 
     const onCallStarted = ({ groupId, fromUserId, fromUser, callType }) => {
       if (!fromUserId || fromUserId === myId) return;
-      console.log(`[GroupCall] Call started by ${fromUserId}, syncing participant`);
+      console.log(`[GroupCall] Call started by ${fromUserId}, fromUser:`, JSON.stringify(fromUser, null, 2));
       
       // Add participant to list if not already there
       setParticipants((prev) => {
         const exists = prev.find((p) => p.id === fromUserId);
         if (!exists) {
-          return [...prev, {
+          const participant = {
             id: fromUserId,
             username: fromUser?.username || "Member",
             avatar_url: fromUser?.avatar_url,
             hasVideo: callType === "video",
             hasAudio: true,
-          }];
+          };
+          console.log("[GroupCall] Adding participant:", participant);
+          return [...prev, participant];
         }
         return prev;
       });

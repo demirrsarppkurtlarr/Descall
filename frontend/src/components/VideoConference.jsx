@@ -45,7 +45,7 @@ export default function VideoConference({
   const remoteStreamMap = remoteStreams?.current instanceof Map ? remoteStreams.current : new Map();
   
   // DEBUG: Log participants data
-  console.log("[VideoConference] Participants:", safeParticipants.map(p => ({ id: p.id, username: p.username, user: p.user })));
+  console.log("[VideoConference] Participants raw:", JSON.stringify(safeParticipants, null, 2));
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "focus"
   const [showControls, setShowControls] = useState(true);
   const [fullscreenParticipant, setFullscreenParticipant] = useState(null); // null | 'local' | userId
