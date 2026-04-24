@@ -1,18 +1,16 @@
 {
   "name": "descall",
-  "version": "1.1.0",
+  "version": "1.1.302",
   "description": "Modern messaging and video conferencing app",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
   "homepage": "./",
-
   "scripts": {
     "dev": "vite",
     "build": "set VITE_API_BASE_URL=https://descall-qzkg.onrender.com && vite build",
     "build:prod": "vite build",
     "preview": "vite preview",
-
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:start": "electron .",
     "electron:build": "npm run build:prod && electron-builder",
@@ -23,11 +21,9 @@
     "electron:pack": "npm run build:prod && electron-builder --dir",
     "electron:publish": "npm run build:prod && electron-builder --publish=always"
   },
-
   "engines": {
     "node": ">=20"
   },
-
   "dependencies": {
     "framer-motion": "^11.11.17",
     "react": "^18.3.1",
@@ -47,7 +43,6 @@
     "electron-log": "^5.0.1",
     "auto-launch": "^5.0.6"
   },
-
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "vite": "^5.4.10",
@@ -56,7 +51,6 @@
     "concurrently": "^8.2.2",
     "wait-on": "^7.2.0"
   },
-
   "build": {
     "appId": "com.descall.app",
     "productName": "Descall",
@@ -88,11 +82,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/icon.png",
@@ -103,11 +101,17 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "public/icon.png",
@@ -120,11 +124,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/icon.png",
