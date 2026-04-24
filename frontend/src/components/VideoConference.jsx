@@ -43,6 +43,9 @@ export default function VideoConference({
 }) {
   const safeParticipants = Array.isArray(participants) ? participants : [];
   const remoteStreamMap = remoteStreams?.current instanceof Map ? remoteStreams.current : new Map();
+  
+  // DEBUG: Log participants data
+  console.log("[VideoConference] Participants:", safeParticipants.map(p => ({ id: p.id, username: p.username, user: p.user })));
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "focus"
   const [showControls, setShowControls] = useState(true);
   const [fullscreenParticipant, setFullscreenParticipant] = useState(null); // null | 'local' | userId
@@ -351,7 +354,7 @@ export default function VideoConference({
                         src={participant.avatarUrl || "/default-avatar.png"} 
                         alt={participant.username}
                       />
-                      <span>{participant.username}</span>
+                      <span>{participant.username || participant.user?.username || "Unknown"}</span>
                     </div>
                   )}
                   
@@ -424,7 +427,7 @@ export default function VideoConference({
                     src={focusParticipant?.avatarUrl || "/default-avatar.png"}
                     alt={focusParticipant?.username}
                   />
-                  <span>{focusParticipant?.username}</span>
+                  <span>{focusParticipant?.username || focusParticipant?.user?.username || "Unknown"}</span>
                 </div>
               )}
               
@@ -484,7 +487,7 @@ export default function VideoConference({
                         <img src={p.avatarUrl || "/default-avatar.png"} alt={p.username} />
                       </div>
                     )}
-                    <span className="vc-thumb-name">{p.username}</span>
+                    <span className="vc-thumb-name">{p.username || p.user?.username || "Unknown"}</span>
                   </div>
                 );
               })}

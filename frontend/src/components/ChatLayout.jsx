@@ -2450,6 +2450,16 @@ export default function ChatLayout({
         setFocusedParticipant={groupCall?.setFocusedParticipant}
         remoteStreams={groupCall?.remoteStreams}
         duration={groupCall?.duration || 0}
+        selectedAudioInput={groupCall?.selectedAudioInput || ""}
+        selectedAudioOutput={groupCall?.selectedAudioOutput || ""}
+        onAudioInputChange={(deviceId) => {
+          console.log("[ChatLayout] Audio input changed:", deviceId);
+          groupCall?.setAudioInput?.(deviceId);
+        }}
+        onAudioOutputChange={(deviceId) => {
+          console.log("[ChatLayout] Audio output changed:", deviceId);
+          groupCall?.setAudioOutput?.(deviceId);
+        }}
       />
 
       {/* Profile Customization Modal */}
