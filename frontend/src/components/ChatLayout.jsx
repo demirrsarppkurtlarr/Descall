@@ -988,37 +988,43 @@ export default function ChatLayout({
   };
 
   // Send GIF from Giphy
-  const handleSendGif = useCallback((gif) => {
+  const handleSendGif = useCallback(async (gif) => {
     console.log("[handleSendGif] Called with gif:", gif, "forGroup:", giphyPickerForGroup, "group:", groups.active?.id, "dmUser:", activeDmUser?.id);
     
-    if (giphyPickerForGroup && groups.active) {
-      console.log("[handleSendGif] Sending GIF to group:", groups.active.id);
-      // Send to group
-      socket?.emit("group:send", {
-        groupId: groups.active.id,
-        text: "",
-        mediaUrl: gif.url,
-        mediaType: "gif",
-        mimeType: "image/gif",
-        originalName: gif.title || "GIF"
-      });
-    } else if (activeDmUser) {
-      console.log("[handleSendGif] Sending GIF to DM:", activeDmUser.id);
-      // Send to DM
-      socket?.emit("dm:send", {
-        toUserId: activeDmUser.id,
-        text: "",
-        mediaUrl: gif.url,
-        mediaType: "gif",
-        mimeType: "image/gif",
-        originalName: gif.title || "GIF"
-      });
-    } else {
-      console.error("[handleSendGif] No valid target! Neither group nor DM user found.");
+    try {
+      if (giphyPickerForGroup && groups.active) {
+        console.log("[handleSendGif] Sending GIF to group via API:", groups.active.id);
+        // Send to group via API
+        const result = await sendGroupMessage(groups.active.id, { 
+          content: "", 
+          mediaUrl: gif.url, 
+          mediaType: "gif" 
+        });
+        if (result?.message) {
+          setGroups(g => ({ ...g, messages: [...g.messages, result.message] }));
+        }
+      } else if (activeDmUser && socket?.connected) {
+        console.log("[handleSendGif] Sending GIF to DM via socket:", activeDmUser.id);
+        // Send to DM via socket (dm:send exists)
+        socket.emit("dm:send", {
+          toUserId: activeDmUser.id,
+          text: "",
+          mediaUrl: gif.url,
+          mediaType: "gif",
+          mimeType: "image/gif",
+          originalName: gif.title || "GIF"
+        });
+      } else {
+        console.error("[handleSendGif] No valid target! Neither group nor DM user found.");
+      }
+    } catch (err) {
+      console.error("[handleSendGif] Error sending GIF:", err);
+      toast(err.message || "Failed to send GIF", "error");
     }
+    
     requestAnimationFrame(() => scrollToBottom());
     setGiphyPickerOpen(false);
-  }, [giphyPickerForGroup, groups.active, activeDmUser, socket, scrollToBottom]);
+  }, [giphyPickerForGroup, groups.active, activeDmUser, socket, scrollToBottom, setGroups, toast]);
 
   const inCall = call?.mode === "active" || call?.mode === "outgoing";
   const isOnline = connectionLabel === "Online";
