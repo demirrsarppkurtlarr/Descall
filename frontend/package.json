@@ -81,7 +81,8 @@
       "owner": "demirrsarppkurtlarr",
       "repo": "descall",
       "releaseType": "release",
-      "private": false
+      "private": false,
+      "channel": "latest"
     },
     "win": {
       "target": [

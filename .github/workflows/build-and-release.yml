@@ -1,0 +1,146 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Get version and commit info
+      id: get_info
+      shell: bash
+      run: |
+        # Get current version from package.json
+        VERSION=$(node -p "require('./frontend/package.json').version")
+        
+        # Count commits to create build number
+        COMMIT_COUNT=$(git rev-list --count HEAD)
+        
+        # Create new version: major.minor.commit_count
+        NEW_VERSION="${VERSION}.${COMMIT_COUNT}"
+        
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+        echo "commit_count=${COMMIT_COUNT}" >> $GITHUB_OUTPUT
+        echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "commit_message=$(git log -1 --pretty=%B | head -n 1)" >> $GITHUB_OUTPUT
+        
+        echo "Current version: ${VERSION}"
+        echo "New version: ${NEW_VERSION}"
+
+    - name: Update package.json version
+      shell: bash
+      run: |
+        cd frontend
+        npm version ${{ steps.get_info.outputs.new_version }} --no-git-tag-version
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build Electron app
+      run: |
+        cd frontend
+        npm run electron:build:win
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VITE_API_BASE_URL: https://descall-qzkg.onrender.com
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build
+        path: |
+          frontend/release/*.exe
+          frontend/release/*.yml
+          frontend/release/*.yaml
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.get_info.outputs.new_version }}
+        release_name: Descall v${{ steps.get_info.outputs.new_version }}
+        body: |
+          ## 🚀 Otomatik Build
+          
+          **Versiyon:** ${{ steps.get_info.outputs.new_version }}
+          **Commit:** ${{ steps.get_info.outputs.short_sha }}
+          **Mesaj:** ${{ steps.get_info.outputs.commit_message }}
+          
+          ### 📦 İndirme
+          
+          | Dosya | Açıklama |
+          |-------|----------|
+          | `Descall-Setup-*.exe` | Kurulum dosyası (Önerilen) |
+          | `Descall-Portable-*.exe` | Taşınabilir sürüm |
+          
+          ### 🆕 Yeni Özellikler
+          Bu sürüm otomatik olarak oluşturulmuştur.
+          
+          ### 📝 Kurulum
+          1. `Descall-Setup-*.exe` indirin
+          2. Çalıştırın ve kurulumu tamamlayın
+          3. Masaüstünden başlatın
+          
+          ### 🔄 Otomatik Güncelleme
+          Uygulama açıldığında yeni sürümleri otomatik kontrol eder.
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: frontend/release/Descall-Setup-${{ steps.get_info.outputs.new_version }}.exe
+        asset_name: Descall-Setup-${{ steps.get_info.outputs.new_version }}.exe
+        asset_content_type: application/x-msdownload
+
+    - name: Upload Portable Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: frontend/release/Descall-Portable-${{ steps.get_info.outputs.new_version }}.exe
+        asset_name: Descall-Portable-${{ steps.get_info.outputs.new_version }}.exe
+        asset_content_type: application/x-msdownload
+
+    - name: Update latest.yml for auto-updater
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: frontend/release/latest.yml
+        asset_name: latest.yml
+        asset_content_type: application/x-yaml
+
+    - name: Commit version bump
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add frontend/package.json
+        git commit -m "Bump version to ${{ steps.get_info.outputs.new_version }} [skip ci]" || exit 0
+        git push || exit 0
