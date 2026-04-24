@@ -582,6 +582,63 @@ export default function ChatLayout({
         setGroups(g => ({ ...g, list: [], isLoading: false }));
       }
       
+      // ========== PREFETCH: DM Conversations ==========
+      try {
+        const token = localStorage.getItem("descall_token");
+        const res = await fetch(`${API_BASE_URL}/api/friends/list`, { 
+          headers: { Authorization: `Bearer ${token}` } 
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const friends = data.friends || [];
+          
+          // Get all DM conversations (both accepted friends and pending conversations)
+          const dmPromises = friends.map(async (friend) => {
+            try {
+              const convRes = await fetch(
+                `${API_BASE_URL}/api/messages/history?userId=${friend.id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              
+              if (convRes.ok) {
+                const convData = await convRes.json();
+                return {
+                  userId: friend.id,
+                  messages: convData.messages || []
+                };
+              }
+            } catch (e) {
+              console.error("[Prefetch] Failed to load DM for:", friend.id);
+            }
+            return null;
+          });
+          
+          const dmResults = await Promise.allSettled(dmPromises);
+          const dmCache = {};
+          
+          dmResults.forEach((result) => {
+            if (result.status === "fulfilled" && result.value) {
+              dmCache[result.value.userId] = result.value.messages;
+            }
+          });
+          
+          console.log("[Prefetch] Loaded DM conversations:", Object.keys(dmCache).length);
+          
+          // Store in localStorage for quick access
+          try {
+            localStorage.setItem("descall_dm_cache", JSON.stringify({
+              data: dmCache,
+              timestamp: Date.now()
+            }));
+          } catch (e) {
+            console.error("[Prefetch] Failed to cache DMs");
+          }
+        }
+      } catch (err) {
+        console.error("[Prefetch] Failed to load DMs:", err);
+      }
+      
       // ========== PREFETCH: Announcements ==========
       try {
         const token = localStorage.getItem("descall_token");
@@ -795,6 +852,37 @@ export default function ChatLayout({
     };
     socket.on("dm:message:edited", onDmMessageEdited);
 
+    // Real-time DM messages - with duplicate prevention
+    const onDmMessage = (data) => {
+      console.log("[ChatLayout] DM message received:", data);
+      const { from, text, mediaUrl, mediaType, timestamp, messageId } = data;
+      
+      // Check if this is for currently active DM conversation
+      if (activeDmUser && (from === activeDmUser.id || from === me?.id)) {
+        setActiveDmMessages(prev => {
+          // Prevent duplicates by checking messageId or timestamp+text combination
+          const exists = prev.some(m => 
+            m.id === messageId || 
+            (m.timestamp === timestamp && m.text === text && m.from === from)
+          );
+          if (exists) {
+            console.log("[ChatLayout] Duplicate DM message prevented");
+            return prev;
+          }
+          return [...prev, {
+            id: messageId || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            from,
+            text,
+            mediaUrl,
+            mediaType,
+            timestamp,
+            isMe: from === me?.id
+          }];
+        });
+      }
+    };
+    socket.on("dm:message", onDmMessage);
+
     return () => {
       socket.off("group:message", onGroupMessage);
       socket.off("group:call:left", onCallEnded);
@@ -802,8 +890,9 @@ export default function ChatLayout({
       socket.off("reaction:update", onReactionUpdate);
       socket.off("group:message:edited", onGroupMessageEdited);
       socket.off("dm:message:edited", onDmMessageEdited);
+      socket.off("dm:message", onDmMessage);
     };
-  }, [socket, groups.active?.id, groupsList]);
+  }, [socket, groups.active?.id, groupsList, activeDmUser, me?.id]);
 
   useEffect(() => {
     if (groupCall?.isInCall) return;
