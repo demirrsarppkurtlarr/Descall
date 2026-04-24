@@ -1738,6 +1738,19 @@ export default function ChatLayout({
                           {formatTime(msg.created_at)}
                         </span>
                       </div>
+                      
+                      {/* Media (GIFs, images) */}
+                      {(msg.mediaUrl || msg.media) && (
+                        <div className="gif-message">
+                          <img 
+                            src={msg.mediaUrl || msg.media?.url} 
+                            alt={msg.mediaType || msg.media?.type || "Media"}
+                            onClick={() => setLightboxUrl(msg.mediaUrl || msg.media?.url)}
+                            style={{ cursor: "pointer" }}
+                          />
+                        </div>
+                      )}
+                      
                       {/* Message text or edit UI */}
                       {editingMessage?.id === msg.id ? (
                         <MessageEditUI 
@@ -1746,10 +1759,12 @@ export default function ChatLayout({
                           onCancel={cancelEditing}
                         />
                       ) : (
-                        <p className="dm-msg-text">
-                          {msg.content}
-                          {msg.isEdited && <span className="edited-indicator"> (edited)</span>}
-                        </p>
+                        msg.content && (
+                          <p className="dm-msg-text">
+                            {msg.content}
+                            {msg.isEdited && <span className="edited-indicator"> (edited)</span>}
+                          </p>
+                        )
                       )}
                       
                       {/* Edit button for own messages */}
