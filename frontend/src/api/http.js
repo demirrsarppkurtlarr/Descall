@@ -7,7 +7,13 @@ export async function httpRequest(path, options = {}) {
     );
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const url = `${API_BASE_URL}${path}`;
+  const bodyText = options.body || '{}';
+  
+  console.log(`[HTTP] ${options.method || 'GET'} ${url}`);
+  console.log(`[HTTP] Body:`, bodyText.slice(0, 200));
+
+  const response = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -22,6 +28,8 @@ export async function httpRequest(path, options = {}) {
     body = {};
   }
 
+  console.log(`[HTTP] Response ${response.status}:`, body);
+
   if (!response.ok) {
     if (
       typeof body?.message === "string" &&
@@ -31,7 +39,7 @@ export async function httpRequest(path, options = {}) {
         "Wrong API base URL. VITE_API_BASE_URL must point to your Node backend (Render), not Supabase.",
       );
     }
-    throw new Error(body.error || body.message || "Request failed");
+    throw new Error(body.error || body.message || `HTTP ${response.status}`);
   }
 
   return body;
