@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users, Minimize2 } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users, Minimize2, Volume2, Headphones, ChevronDown, Settings } from "lucide-react";
 import RippleButton from "./ui/RippleButton";
 
 /**
@@ -33,14 +33,25 @@ export default function VideoConference({
   setFocusedParticipant,
   duration = 0,
   remoteStreams,
+  // Audio device selection props
+  audioInputDevices = [],
+  audioOutputDevices = [],
+  selectedAudioInput = "",
+  selectedAudioOutput = "",
+  onAudioInputChange = () => {},
+  onAudioOutputChange = () => {},
 }) {
   const safeParticipants = Array.isArray(participants) ? participants : [];
   const remoteStreamMap = remoteStreams?.current instanceof Map ? remoteStreams.current : new Map();
   const [viewMode, setViewMode] = useState("grid"); // "grid" | "focus"
   const [showControls, setShowControls] = useState(true);
   const [fullscreenParticipant, setFullscreenParticipant] = useState(null); // null | 'local' | userId
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [localAudioInputs, setLocalAudioInputs] = useState([]);
+  const [localAudioOutputs, setLocalAudioOutputs] = useState([]);
   const controlsTimeoutRef = useRef(null);
   const containerRef = useRef(null);
+  const audioSettingsRef = useRef(null);
 
   // Auto-hide controls
   const resetControlsTimer = useCallback(() => {
@@ -49,6 +60,36 @@ export default function VideoConference({
     controlsTimeoutRef.current = setTimeout(() => {
       setShowControls(false);
     }, 3000);
+  }, []);
+
+  // Enumerate audio devices
+  useEffect(() => {
+    const getDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const inputs = devices.filter(d => d.kind === 'audioinput');
+        const outputs = devices.filter(d => d.kind === 'audiooutput');
+        setLocalAudioInputs(inputs);
+        setLocalAudioOutputs(outputs);
+      } catch (err) {
+        console.error("[VideoConference] Failed to enumerate devices:", err);
+      }
+    };
+    
+    getDevices();
+    navigator.mediaDevices.addEventListener('devicechange', getDevices);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', getDevices);
+  }, []);
+
+  // Close audio settings when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (audioSettingsRef.current && !audioSettingsRef.current.contains(e.target)) {
+        setShowAudioSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -459,6 +500,73 @@ export default function VideoConference({
         animate={{ y: showControls ? 0 : 20, opacity: showControls ? 1 : 0 }}
       >
         <div className="vc-control-group">
+          {/* Audio Settings Button with Dropdown */}
+          <div className="vc-audio-settings-container" ref={audioSettingsRef}>
+            <RippleButton
+              className={`vc-btn ${showAudioSettings ? 'active' : ''}`}
+              onClick={() => setShowAudioSettings(!showAudioSettings)}
+              title="Audio Settings"
+            >
+              <Settings size={20} />
+              <ChevronDown size={14} className={`vc-dropdown-icon ${showAudioSettings ? 'open' : ''}`} />
+            </RippleButton>
+            
+            {/* Audio Settings Panel */}
+            <AnimatePresence>
+              {showAudioSettings && (
+                <motion.div
+                  className="vc-audio-settings-panel"
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <div className="vc-audio-section">
+                    <div className="vc-audio-label">
+                      <Mic size={14} />
+                      <span>Mikrofon</span>
+                    </div>
+                    <select 
+                      className="vc-audio-select"
+                      value={selectedAudioInput}
+                      onChange={(e) => onAudioInputChange(e.target.value)}
+                    >
+                      {localAudioInputs.map(device => (
+                        <option key={device.deviceId} value={device.deviceId}>
+                          {device.label || `Mikrofon ${device.deviceId.slice(0, 5)}`}
+                        </option>
+                      ))}
+                      {localAudioInputs.length === 0 && (
+                        <option value="">Mikrofon bulunamadı</option>
+                      )}
+                    </select>
+                  </div>
+                  
+                  <div className="vc-audio-section">
+                    <div className="vc-audio-label">
+                      <Headphones size={14} />
+                      <span>Cihaz</span>
+                    </div>
+                    <select 
+                      className="vc-audio-select"
+                      value={selectedAudioOutput}
+                      onChange={(e) => onAudioOutputChange(e.target.value)}
+                    >
+                      {localAudioOutputs.map(device => (
+                        <option key={device.deviceId} value={device.deviceId}>
+                          {device.label || `Hoparlör ${device.deviceId.slice(0, 5)}`}
+                        </option>
+                      ))}
+                      {localAudioOutputs.length === 0 && (
+                        <option value="">Varsayılan cihaz</option>
+                      )}
+                    </select>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <RippleButton
             className={`vc-btn ${isMuted ? 'danger' : ''}`}
             onClick={toggleMute}

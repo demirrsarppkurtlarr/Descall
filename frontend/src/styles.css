@@ -6832,3 +6832,124 @@ button, a, input, select, .clickable {
   min-height: 0;
   max-height: none;
 }
+
+/* ========================================
+   VIDEO CONFERENCE AUDIO SETTINGS
+   ======================================== */
+
+.vc-audio-settings-container {
+  position: relative;
+  display: inline-block;
+}
+
+.vc-dropdown-icon {
+  transition: transform 0.2s;
+  margin-left: 2px;
+}
+
+.vc-dropdown-icon.open {
+  transform: rotate(180deg);
+}
+
+.vc-audio-settings-panel {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(145deg, #1a1d29, #0d0f17);
+  border: 1px solid rgba(102, 120, 255, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  min-width: 280px;
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(102, 120, 255, 0.1),
+    0 0 30px rgba(102, 120, 255, 0.15);
+  z-index: 1000;
+  backdrop-filter: blur(20px);
+}
+
+.vc-audio-settings-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(102, 120, 255, 0.3);
+}
+
+.vc-audio-section {
+  margin-bottom: 16px;
+}
+
+.vc-audio-section:last-child {
+  margin-bottom: 0;
+}
+
+.vc-audio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8b92a8;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.vc-audio-select {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(102, 120, 255, 0.2);
+  border-radius: 10px;
+  color: #e0e6ed;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b92a8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+}
+
+.vc-audio-select:hover {
+  border-color: rgba(102, 120, 255, 0.4);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.vc-audio-select:focus {
+  border-color: rgba(102, 120, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(102, 120, 255, 0.1);
+}
+
+.vc-audio-select option {
+  background: #1a1d29;
+  color: #e0e6ed;
+  padding: 8px;
+}
+
+/* Participant name display */
+.vc-participant-name {
+  font-weight: 600;
+  color: #e0e6ed;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.vc-thumb-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e0e6ed;
+  text-align: center;
+  margin-top: 6px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
