@@ -115,6 +115,24 @@ function createMainWindow() {
     }
   });
 
+  // Set CSP headers to allow Supabase and API connections
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; " +
+          "connect-src 'self' https://descall-qzkg.onrender.com https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://descall-qzkg.onrender.com http://localhost:5173; " +
+          "img-src 'self' https://*.supabase.co https://*.supabase.in data: blob:; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "font-src 'self'; " +
+          "media-src 'self' blob:;"
+        ]
+      }
+    });
+  });
+
   // Load app
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
