@@ -792,13 +792,49 @@ export default function ChatLayout({
   useEffect(() => {
     if (!socket) return;
 
-    // Real-time group messages
+    // Real-time group messages - with duplicate prevention
     const onGroupMessage = ({ groupId, message }) => {
       if (groupId === groups.active?.id) {
-        setGroups(g => ({
-          ...g,
-          messages: [...(g.messages || []).filter(m => m.id !== message.id), message]
-        }));
+        setGroups(g => {
+          const currentMessages = g.messages || [];
+          
+          // Check for duplicates by ID
+          const existsById = currentMessages.some(m => m.id === message.id);
+          if (existsById) {
+            console.log("[ChatLayout] Duplicate group message prevented (by ID):", message.id);
+            return g;
+          }
+          
+          // Check for duplicates by content + timestamp (for messages without ID)
+          const existsByContent = currentMessages.some(m => 
+            m.content === message.content && 
+            m.sender_id === message.sender_id && 
+            m.created_at === message.created_at
+          );
+          if (existsByContent) {
+            console.log("[ChatLayout] Duplicate group message prevented (by content)");
+            return g;
+          }
+          
+          // Check for recent duplicate (within 2 seconds, same sender and content)
+          const now = new Date();
+          const isRecentDuplicate = currentMessages.some(m => {
+            const msgTime = new Date(m.created_at || m.timestamp);
+            const timeDiff = now - msgTime;
+            return timeDiff < 2000 && 
+                   m.sender_id === message.sender_id && 
+                   m.content === message.content;
+          });
+          if (isRecentDuplicate) {
+            console.log("[ChatLayout] Duplicate group message prevented (recent)");
+            return g;
+          }
+          
+          return {
+            ...g,
+            messages: [...currentMessages, message]
+          };
+        });
       }
     };
 
