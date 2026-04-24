@@ -534,12 +534,12 @@ export default function VideoConference({
                       value={selectedAudioInput}
                       onChange={(e) => onAudioInputChange(e.target.value)}
                     >
-                      {localAudioInputs.map(device => (
+                      {audioInputDevices.map(device => (
                         <option key={device.deviceId} value={device.deviceId}>
                           {device.label || `Mikrofon ${device.deviceId.slice(0, 5)}`}
                         </option>
                       ))}
-                      {localAudioInputs.length === 0 && (
+                      {audioInputDevices.length === 0 && (
                         <option value="">Mikrofon bulunamadı</option>
                       )}
                     </select>
@@ -555,12 +555,12 @@ export default function VideoConference({
                       value={selectedAudioOutput}
                       onChange={(e) => onAudioOutputChange(e.target.value)}
                     >
-                      {localAudioOutputs.map(device => (
+                      {audioOutputDevices.map(device => (
                         <option key={device.deviceId} value={device.deviceId}>
                           {device.label || `Hoparlör ${device.deviceId.slice(0, 5)}`}
                         </option>
                       ))}
-                      {localAudioOutputs.length === 0 && (
+                      {audioOutputDevices.length === 0 && (
                         <option value="">Varsayılan cihaz</option>
                       )}
                     </select>

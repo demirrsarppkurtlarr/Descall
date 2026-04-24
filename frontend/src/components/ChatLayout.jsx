@@ -2454,6 +2454,8 @@ export default function ChatLayout({
         duration={groupCall?.duration || 0}
         selectedAudioInput={groupCall?.selectedAudioInput || ""}
         selectedAudioOutput={groupCall?.selectedAudioOutput || ""}
+        audioInputDevices={groupCall?.audioInputDevices || []}
+        audioOutputDevices={groupCall?.audioOutputDevices || []}
         onAudioInputChange={(deviceId) => {
           console.log("[ChatLayout] Audio input changed:", deviceId);
           groupCall?.setAudioInput?.(deviceId);
