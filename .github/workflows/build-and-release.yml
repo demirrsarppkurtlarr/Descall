@@ -29,11 +29,14 @@ jobs:
         # Get current version from package.json
         VERSION=$(node -p "require('./frontend/package.json').version")
         
+        # Parse major.minor from version (remove patch)
+        MAJOR_MINOR=$(echo $VERSION | cut -d. -f1,2)
+        
         # Count commits to create build number
         COMMIT_COUNT=$(git rev-list --count HEAD)
         
-        # Create new version: major.minor.commit_count
-        NEW_VERSION="${VERSION}.${COMMIT_COUNT}"
+        # Create new version: major.minor.commit_count (valid semver)
+        NEW_VERSION="${MAJOR_MINOR}.${COMMIT_COUNT}"
         
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
         echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
