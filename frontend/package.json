@@ -141,7 +141,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Descall",
-      "include": "build/installer.nsh",
+      "include": "electron/installer.nsh",
       "artifactName": "Descall-Setup-${version}.exe"
     },
     "portable": {
