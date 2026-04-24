@@ -23,6 +23,7 @@ import AdminErrorLogs from "./AdminErrorLogs";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: BarChart3 },
+  { id: "activity", label: "Activity", icon: ActivityIcon },
   { id: "users", label: "Users", icon: Users },
   { id: "messages", label: "Messages", icon: MessageSquare },
   { id: "dm", label: "DM", icon: Mail },
@@ -145,6 +146,13 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
   const [liveMessages, setLiveMessages] = useState([]);
   const [systemAlerts, setSystemAlerts] = useState([]);
   const [activeSessions, setActiveSessions] = useState([]);
+  
+  // Activity States - Last 24h tracking
+  const [recentRegistrations, setRecentRegistrations] = useState([]);
+  const [recentOnlineUsers, setRecentOnlineUsers] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityLastUpdated, setActivityLastUpdated] = useState(null);
+  const [activitySubTab, setActivitySubTab] = useState("registrations"); // "registrations" | "online"
 
   const loadStats = useCallback(async () => {
     const d = await adminFetch("/stats");
@@ -218,6 +226,36 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
     setErrorUsers(d?.usersWithErrors || []);
   }, []);
 
+  // Load activity data - recent registrations and online users (last 24h)
+  const loadActivity = useCallback(async () => {
+    setActivityLoading(true);
+    try {
+      // Fetch all users and filter for last 24h
+      const d = await adminFetch("/users");
+      const allUsers = d.users || [];
+      const now = new Date();
+      const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
+      // Filter registrations in last 24h
+      const recentRegs = allUsers
+        .filter(u => u.created_at && new Date(u.created_at) >= last24h)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Most recent first
+      
+      // Filter users who were online in last 24h
+      const recentOnline = allUsers
+        .filter(u => u.last_seen && new Date(u.last_seen) >= last24h)
+        .sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen)); // Most recent first
+      
+      setRecentRegistrations(recentRegs);
+      setRecentOnlineUsers(recentOnline);
+      setActivityLastUpdated(new Date());
+    } catch (e) {
+      console.error("[ADMIN] Failed to load activity:", e);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     adminFetch("/snapshot")
       .then(setSnapshot)
@@ -250,13 +288,25 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
 
   useEffect(() => {
     if (tab === "users") loadAllUsers().catch((e) => setErr(e.message));
+    if (tab === "activity") loadActivity().catch((e) => setErr(e.message));
     if (tab === "messages") loadMessages().catch((e) => setErr(e.message));
     if (tab === "dm") loadDm().catch((e) => setErr(e.message));
     if (tab === "audit") loadAudit().catch((e) => setErr(e.message));
     if (tab === "system") loadSystem().catch((e) => setErr(e.message));
     if (tab === "announcements") loadAnnouncements().catch((e) => setErr(e.message));
     // feedback and errors tabs use their own components with internal loading
-  }, [tab, loadAllUsers, loadMessages, loadDm, loadAudit, loadSystem, loadAnnouncements]);
+  }, [tab, loadAllUsers, loadActivity, loadMessages, loadDm, loadAudit, loadSystem, loadAnnouncements]);
+
+  // Auto-refresh activity every hour
+  useEffect(() => {
+    if (tab !== "activity") return;
+    
+    const interval = setInterval(() => {
+      loadActivity().catch(console.error);
+    }, 60 * 60 * 1000); // Every hour
+    
+    return () => clearInterval(interval);
+  }, [tab, loadActivity]);
 
   const act = async (fn) => {
     try {
@@ -269,6 +319,22 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
       setBusy(false);
     }
   };
+
+// Helper function to format time ago
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString();
+}
 
   return (
     <motion.div
@@ -342,6 +408,215 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
                 <h3>Live socket snapshot</h3>
                 <pre className="admin-pre">{JSON.stringify(snapshot, null, 2)}</pre>
               </div>
+            )}
+          </section>
+        )}
+
+        {tab === "activity" && (
+          <section className="admin-section admin-activity-section">
+            {/* Activity Header with Stats */}
+            <div className="activity-header">
+              <div className="activity-title-section">
+                <h2>24-Hour Activity Monitor</h2>
+                <p className="activity-subtitle">
+                  Real-time tracking of user registrations and online activity
+                </p>
+              </div>
+              <div className="activity-stats-grid">
+                <motion.div 
+                  className="activity-stat-card registrations"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <div className="stat-icon-wrapper">
+                    <UserCheck size={24} />
+                  </div>
+                  <div className="stat-content">
+                    <span className="stat-number">{recentRegistrations.length}</span>
+                    <span className="stat-label">New Registrations</span>
+                    <span className="stat-time">Last 24h</span>
+                  </div>
+                </motion.div>
+                <motion.div 
+                  className="activity-stat-card online"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="stat-icon-wrapper">
+                    <Wifi size={24} />
+                  </div>
+                  <div className="stat-content">
+                    <span className="stat-number">{recentOnlineUsers.length}</span>
+                    <span className="stat-label">Active Users</span>
+                    <span className="stat-time">Last 24h</span>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Last Updated Info */}
+            <div className="activity-toolbar">
+              <div className="last-updated">
+                <Clock size={14} />
+                <span>
+                  Last updated: {activityLastUpdated 
+                    ? activityLastUpdated.toLocaleTimeString() 
+                    : "Never"}
+                </span>
+              </div>
+              <RippleButton 
+                type="button" 
+                onClick={() => act(loadActivity)} 
+                disabled={activityLoading}
+                className="refresh-btn"
+              >
+                <RefreshCw size={16} className={activityLoading ? "spin" : ""} />
+                {activityLoading ? "Loading..." : "Refresh Now"}
+              </RippleButton>
+            </div>
+
+            {/* Sub-tab Navigation */}
+            <div className="activity-sub-tabs">
+              <button
+                type="button"
+                className={`sub-tab ${activitySubTab === "registrations" ? "active" : ""}`}
+                onClick={() => setActivitySubTab("registrations")}
+              >
+                <UserCheck size={16} />
+                New Registrations
+                <span className="badge">{recentRegistrations.length}</span>
+              </button>
+              <button
+                type="button"
+                className={`sub-tab ${activitySubTab === "online" ? "active" : ""}`}
+                onClick={() => setActivitySubTab("online")}
+              >
+                <Wifi size={16} />
+                Online Activity
+                <span className="badge">{recentOnlineUsers.length}</span>
+              </button>
+            </div>
+
+            {/* Registrations Tab Content */}
+            {activitySubTab === "registrations" && (
+              <motion.div 
+                className="activity-content"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {recentRegistrations.length === 0 ? (
+                  <div className="empty-state">
+                    <Users size={48} className="empty-icon" />
+                    <h3>No New Registrations</h3>
+                    <p>No users registered in the last 24 hours</p>
+                  </div>
+                ) : (
+                  <div className="activity-timeline">
+                    {recentRegistrations.map((user, index) => {
+                      const timeAgo = getTimeAgo(new Date(user.created_at));
+                      return (
+                        <motion.div
+                          key={user.id}
+                          className="timeline-item"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <div className="timeline-marker registration">
+                            <UserCheck size={14} />
+                          </div>
+                          <div className="timeline-content">
+                            <div className="user-info">
+                              <img 
+                                src={user.avatar_url || "/default-avatar.png"} 
+                                alt={user.username}
+                                className="user-avatar"
+                              />
+                              <div className="user-details">
+                                <span className="username">{user.username}</span>
+                                <span className="user-id">{user.id.slice(0, 8)}...</span>
+                              </div>
+                            </div>
+                            <div className="time-info">
+                              <span className="time-badge">{timeAgo}</span>
+                              <span className="exact-time">
+                                {new Date(user.created_at).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Online Users Tab Content */}
+            {activitySubTab === "online" && (
+              <motion.div 
+                className="activity-content"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {recentOnlineUsers.length === 0 ? (
+                  <div className="empty-state">
+                    <WifiOff size={48} className="empty-icon" />
+                    <h3>No Online Activity</h3>
+                    <p>No users were online in the last 24 hours</p>
+                  </div>
+                ) : (
+                  <div className="activity-timeline">
+                    {recentOnlineUsers.map((user, index) => {
+                      const timeAgo = getTimeAgo(new Date(user.last_seen));
+                      const isCurrentlyOnline = user.isOnline;
+                      return (
+                        <motion.div
+                          key={user.id}
+                          className={`timeline-item ${isCurrentlyOnline ? "online-now" : ""}`}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <div className={`timeline-marker ${isCurrentlyOnline ? "online" : "offline"}`}>
+                            {isCurrentlyOnline ? <Wifi size={14} /> : <Clock size={14} />}
+                          </div>
+                          <div className="timeline-content">
+                            <div className="user-info">
+                              <img 
+                                src={user.avatar_url || "/default-avatar.png"} 
+                                alt={user.username}
+                                className="user-avatar"
+                              />
+                              <div className="user-details">
+                                <span className="username">
+                                  {user.username}
+                                  {isCurrentlyOnline && (
+                                    <span className="online-indicator">● Online Now</span>
+                                  )}
+                                </span>
+                                <span className="user-id">{user.id.slice(0, 8)}...</span>
+                              </div>
+                            </div>
+                            <div className="time-info">
+                              <span className={`time-badge ${isCurrentlyOnline ? "online" : ""}`}>
+                                {isCurrentlyOnline ? "Currently Online" : timeAgo}
+                              </span>
+                              <span className="exact-time">
+                                {new Date(user.last_seen).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
             )}
           </section>
         )}
