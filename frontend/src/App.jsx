@@ -414,12 +414,15 @@ export default function App() {
       setAuthLoading(true);
       setAuthError("");
       await verifyBackendEndpoint();
+      console.log("[Login] Attempting login for:", payload.username);
       const data = await login(payload);
+      console.log("[Login] Success, token received:", !!data.token);
       transportFallbackStepRef.current = 0;
       setToken(data.token);
       setUser(data.user);
       setMe(data.user);
     } catch (error) {
+      console.error("[Login] Failed:", error.message);
       setAuthError(error.message);
     } finally {
       setAuthLoading(false);
