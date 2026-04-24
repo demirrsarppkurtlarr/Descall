@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, protocol } = require('electron');
+const AutoLaunch = require('auto-launch');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const path = require('path');
@@ -254,6 +255,33 @@ ipcMain.handle('close-window', () => {
   if (mainWindow) mainWindow.close();
 });
 
+// Auto-start IPC handlers
+ipcMain.handle('auto-start:get', async () => {
+  try {
+    const isEnabled = await descallAutoLauncher.isEnabled();
+    return { success: true, enabled: isEnabled };
+  } catch (err) {
+    log.error('Auto-start get error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('auto-start:set', async (event, enabled) => {
+  try {
+    if (enabled) {
+      await descallAutoLauncher.enable();
+      log.info('Auto-start enabled');
+    } else {
+      await descallAutoLauncher.disable();
+      log.info('Auto-start disabled');
+    }
+    return { success: true };
+  } catch (err) {
+    log.error('Auto-start set error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 // Security: Handle downloads
 ipcMain.on('download-file', async (event, { url, filename }) => {
   try {
@@ -272,6 +300,12 @@ ipcMain.on('download-file', async (event, { url, filename }) => {
     log.error('Download error:', error);
     return { success: false, error: error.message };
   }
+});
+
+// Auto-launch configuration
+const descallAutoLauncher = new AutoLaunch({
+  name: 'Descall',
+  path: app.getPath('exe'),
 });
 
 // Register custom protocol for sounds
