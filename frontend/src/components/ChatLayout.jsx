@@ -613,31 +613,91 @@ export default function ChatLayout({
         console.error("[Prefetch] Failed to load groups:", err);
         setGroups(g => ({ ...g, list: [], isLoading: false }));
       }
+      
+      // ========== PREFETCH: Announcements ==========
+      try {
+        const token = localStorage.getItem("descall_token");
+        const [announcementsRes, unreadRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/announcements`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE_URL}/api/announcements/unread/count`, { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        
+        if (announcementsRes.ok) {
+          const data = await announcementsRes.json();
+          setAnnouncements(data.announcements || []);
+          console.log("[Prefetch] Loaded announcements:", data.announcements?.length || 0);
+        }
+        
+        if (unreadRes.ok) {
+          const data = await unreadRes.json();
+          setUnreadAnnouncements(data.count || 0);
+        }
+      } catch (err) {
+        console.error("[Prefetch] Failed to load announcements:", err);
+      }
+      
+      // ========== PREFETCH: Notifications ==========
+      try {
+        // Notifications are passed as prop, but we can refresh them
+        if (onNotificationReadAll) {
+          console.log("[Prefetch] Notifications ready from props");
+        }
+      } catch (err) {
+        console.error("[Prefetch] Notifications check failed:", err);
+      }
+      
+      // ========== PREFETCH: Admin Data (if admin) ==========
+      if (me?.role === "admin" || me?.isAdmin) {
+        try {
+          const token = localStorage.getItem("descall_token");
+          const [usersRes, statsRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE_URL}/admin/stats`, { headers: { Authorization: `Bearer ${token}` } })
+          ]);
+          
+          if (usersRes.ok) {
+            const data = await usersRes.json();
+            console.log("[Prefetch] Loaded admin users:", data.users?.length || 0);
+          }
+          
+          if (statsRes.ok) {
+            const data = await statsRes.json();
+            console.log("[Prefetch] Loaded admin stats");
+          }
+        } catch (err) {
+          console.error("[Prefetch] Failed to load admin data:", err);
+        }
+      }
+      
+      console.log("[Prefetch] === ALL DATA LOADED ===");
     };
     
     loadAllData();
   }, [me]);
 
-  // Fetch announcements on mount
+  // Fetch announcements on mount (backup - will be skipped if prefetch succeeded)
   useEffect(() => {
     if (!me) return;
     const token = localStorage.getItem("descall_token");
     
-    // Fetch announcements
-    fetch(`${API_BASE_URL}/api/announcements`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setAnnouncements(data.announcements || []))
-      .catch(() => setAnnouncements([]));
+    // Only fetch if not already loaded by prefetch
+    if (announcements.length === 0) {
+      fetch(`${API_BASE_URL}/api/announcements`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => setAnnouncements(data.announcements || []))
+        .catch(() => setAnnouncements([]));
+    }
     
-    // Fetch unread count
-    fetch(`${API_BASE_URL}/api/announcements/unread/count`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setUnreadAnnouncements(data.count || 0))
-      .catch(() => setUnreadAnnouncements(0));
+    if (unreadAnnouncements === 0) {
+      fetch(`${API_BASE_URL}/api/announcements/unread/count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => setUnreadAnnouncements(data.count || 0))
+        .catch(() => setUnreadAnnouncements(0));
+    }
   }, [me]);
 
   // Mark announcements as read when viewing announcements tab
