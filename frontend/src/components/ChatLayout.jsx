@@ -1050,16 +1050,25 @@ export default function ChatLayout({
 
     // Leave group
     leave: async (groupId) => {
-      if (!confirm("Leave this group?")) return;
+      console.log("[Leave] Function called with groupId:", groupId);
+      if (!confirm("Leave this group?")) {
+        console.log("[Leave] User cancelled");
+        return;
+      }
       try {
+        console.log("[Leave] Calling API...");
         await leaveGroup(groupId);
+        console.log("[Leave] API success, updating state");
         setGroups(g => ({
           ...g,
           list: (g.list || []).filter(grp => grp.id !== groupId),
-          active: g.active?.id === groupId ? null : g.active
+          active: g.active?.id === groupId ? null : g.active,
+          messages: g.active?.id === groupId ? [] : g.messages,
         }));
         toast?.success?.("Left group");
+        console.log("[Leave] Success toast shown");
       } catch (err) {
+        console.error("[Leave] Error:", err);
         toast?.error?.(err.message || "Failed to leave group");
       }
     },
@@ -1640,7 +1649,7 @@ export default function ChatLayout({
                     <RippleButton 
                       type="button" 
                       className="group-action-btn primary" 
-                      onClick={() => groupActions.setUI({ inviteOpen: true })} 
+                      onClick={() => { playClickSound(); console.log("[Invite] Opening invite modal"); groupActions.setUI({ inviteOpen: true }); }} 
                       title="Invite friend"
                     >
                       <div className="action-btn-content">
@@ -1668,7 +1677,7 @@ export default function ChatLayout({
                     <RippleButton 
                       type="button" 
                       className="group-action-btn danger" 
-                      onClick={() => groupActions.leave(groups.active.id)} 
+                      onClick={() => { playClickSound(); console.log("[Leave] Leaving group:", groups.active?.id); groupActions.leave(groups.active.id); }} 
                       title="Leave group"
                     >
                       <div className="action-btn-content">
