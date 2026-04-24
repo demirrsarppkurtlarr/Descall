@@ -1,0 +1,291 @@
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage } = require('electron');
+const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
+const path = require('path');
+const fs = require('fs');
+
+// Logging
+log.transports.file.level = 'info';
+log.info('App starting...');
+
+// Auto-updater logging
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+
+// Paths
+const isDev = process.env.NODE_ENV === 'development';
+const isPackaged = app.isPackaged;
+
+let mainWindow = null;
+let splashWindow = null;
+
+// Create splash window
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 500,
+    height: 300,
+    frame: false,
+    alwaysOnTop: true,
+    transparent: true,
+    resizable: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  splashWindow.loadURL(`data:text/html,
+    <html>
+      <head>
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            width: 500px;
+            height: 300px;
+            background: linear-gradient(135deg, #6678ff 0%, #8b5cf6 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            overflow: hidden;
+            border-radius: 20px;
+          }
+          .logo {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+          }
+          .loading {
+            font-size: 16px;
+            opacity: 0.9;
+          }
+          .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-top: 20px;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+          .version {
+            position: absolute;
+            bottom: 20px;
+            font-size: 12px;
+            opacity: 0.7;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="logo">Descall</div>
+        <div class="loading">Yükleniyor...</div>
+        <div class="spinner"></div>
+        <div class="version">v${app.getVersion()}</div>
+      </body>
+    </html>
+  `);
+
+  splashWindow.center();
+}
+
+// Create main window
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 1200,
+    minHeight: 700,
+    show: false,
+    titleBarStyle: 'default',
+    icon: path.join(__dirname, '../public/favicon.ico'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      preload: path.join(__dirname, 'preload.cjs'),
+      webSecurity: true
+    }
+  });
+
+  // Load app
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  }
+
+  // Show window when ready
+  mainWindow.once('ready-to-show', () => {
+    if (splashWindow) {
+      splashWindow.close();
+      splashWindow = null;
+    }
+    mainWindow.show();
+    mainWindow.focus();
+
+    // Check for updates after window shows
+    if (isPackaged) {
+      autoUpdater.checkForUpdatesAndNotify();
+    }
+  });
+
+  // Window events
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
+  // Handle external links
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  // Security: Prevent navigation to external sites
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.includes('localhost') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+}
+
+// App events
+app.whenReady().then(() => {
+  createSplashWindow();
+  
+  // Small delay for splash effect
+  setTimeout(() => {
+    createMainWindow();
+  }, 1500);
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow();
+    }
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+// Auto-updater events
+autoUpdater.on('checking-for-update', () => {
+  log.info('Checking for update...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available:', info);
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Güncelleme Mevcut',
+    message: 'Yeni bir sürüm mevcut. İndirip kurulacak.',
+    buttons: ['Tamam']
+  });
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  log.info('Update not available:', info);
+});
+
+autoUpdater.on('error', (err) => {
+  log.error('Auto-updater error:', err);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let logMessage = `Download speed: ${progressObj.bytesPerSecond}`;
+  logMessage += ` - Downloaded ${progressObj.percent}%`;
+  logMessage += ` (${progressObj.transferred}/${progressObj.total})`;
+  log.info(logMessage);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Update downloaded:', info);
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Güncelleme Hazır',
+    message: 'Yeni sürüm indirildi. Yeniden başlatmak ister misiniz?',
+    buttons: ['Şimdi Yeniden Başlat', 'Daha Sonra'],
+    defaultId: 0
+  }).then((returnValue) => {
+    if (returnValue.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+});
+
+// IPC handlers
+ipcMain.handle('app-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  if (isPackaged) {
+    await autoUpdater.checkForUpdates();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('minimize-window', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.handle('maximize-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.handle('close-window', () => {
+  if (mainWindow) mainWindow.close();
+});
+
+// Security: Handle downloads
+ipcMain.on('download-file', async (event, { url, filename }) => {
+  try {
+    const { default: fetch } = await import('node-fetch');
+    const response = await fetch(url);
+    const buffer = await response.buffer();
+    
+    const downloadsPath = app.getPath('downloads');
+    const filePath = path.join(downloadsPath, filename);
+    
+    fs.writeFileSync(filePath, buffer);
+    
+    shell.showItemInFolder(filePath);
+    return { success: true, path: filePath };
+  } catch (error) {
+    log.error('Download error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Single instance lock
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
+log.info('Electron main process initialized');
