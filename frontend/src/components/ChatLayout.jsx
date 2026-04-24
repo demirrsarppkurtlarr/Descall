@@ -1740,12 +1740,12 @@ export default function ChatLayout({
                       </div>
                       
                       {/* Media (GIFs, images) */}
-                      {(msg.mediaUrl || msg.media) && (
+                      {(msg.mediaUrl || msg.media_url || msg.media) && (
                         <div className="gif-message">
                           <img 
-                            src={msg.mediaUrl || msg.media?.url} 
-                            alt={msg.mediaType || msg.media?.type || "Media"}
-                            onClick={() => setLightboxUrl(msg.mediaUrl || msg.media?.url)}
+                            src={msg.mediaUrl || msg.media_url || msg.media?.url} 
+                            alt={msg.mediaType || msg.media_type || msg.media?.type || "Media"}
+                            onClick={() => setLightboxUrl(msg.mediaUrl || msg.media_url || msg.media?.url)}
                             style={{ cursor: "pointer" }}
                           />
                         </div>
