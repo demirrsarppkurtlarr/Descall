@@ -8,6 +8,9 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
+      packages: write
     
     steps:
     - name: Checkout code
@@ -80,14 +83,11 @@ jobs:
           frontend/release/*.yml
           frontend/release/*.yaml
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release and Upload Assets
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: v${{ steps.get_info.outputs.new_version }}
-        release_name: Descall v${{ steps.get_info.outputs.new_version }}
+        name: Descall v${{ steps.get_info.outputs.new_version }}
         body: |
           ## 🚀 Otomatik Build
           
@@ -114,36 +114,12 @@ jobs:
           Uygulama açıldığında yeni sürümleri otomatik kontrol eder.
         draft: false
         prerelease: false
-
-    - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
+        files: |
+          frontend/release/Descall-Setup-${{ steps.get_info.outputs.new_version }}.exe
+          frontend/release/Descall-Portable-${{ steps.get_info.outputs.new_version }}.exe
+          frontend/release/latest.yml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: frontend/release/Descall-Setup-${{ steps.get_info.outputs.new_version }}.exe
-        asset_name: Descall-Setup-${{ steps.get_info.outputs.new_version }}.exe
-        asset_content_type: application/x-msdownload
-
-    - name: Upload Portable Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: frontend/release/Descall-Portable-${{ steps.get_info.outputs.new_version }}.exe
-        asset_name: Descall-Portable-${{ steps.get_info.outputs.new_version }}.exe
-        asset_content_type: application/x-msdownload
-
-    - name: Update latest.yml for auto-updater
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: frontend/release/latest.yml
-        asset_name: latest.yml
-        asset_content_type: application/x-yaml
 
     - name: Commit version bump
       run: |
