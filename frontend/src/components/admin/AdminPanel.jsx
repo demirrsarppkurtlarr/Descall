@@ -251,24 +251,53 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
   const loadActivity = useCallback(async () => {
     setActivityLoading(true);
     try {
-      // Fetch all users and filter for last 24h
+      console.log("[ADMIN] Loading activity data...");
+      
+      // Fetch all users
       const d = await adminFetch("/users");
+      console.log("[ADMIN] Users data:", d);
+      
       const allUsers = d.users || [];
+      console.log("[ADMIN] Total users:", allUsers.length);
+      
       const now = new Date();
       const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       
       // Filter registrations in last 24h
       const recentRegs = allUsers
-        .filter(u => u.created_at && new Date(u.created_at) >= last24h)
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Most recent first
+        .filter(u => {
+          if (!u.created_at) return false;
+          const createdDate = new Date(u.created_at);
+          return createdDate >= last24h;
+        })
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       
-      // Filter users who were online in last 24h
-      const recentOnline = allUsers
-        .filter(u => u.last_seen && new Date(u.last_seen) >= last24h)
-        .sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen)); // Most recent first
+      console.log("[ADMIN] Recent registrations (24h):", recentRegs.length);
+      
+      // Get ALL currently online users (isOnline flag) + recently active
+      const currentlyOnline = allUsers.filter(u => u.isOnline === true);
+      console.log("[ADMIN] Currently online:", currentlyOnline.length);
+      
+      // Filter users who were active in last 24h (including online now)
+      const recentActive = allUsers
+        .filter(u => {
+          if (!u.last_seen) return false;
+          const lastSeenDate = new Date(u.last_seen);
+          return lastSeenDate >= last24h;
+        })
+        .sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen));
+      
+      console.log("[ADMIN] Recent active (24h):", recentActive.length);
+      
+      // Merge online users with recent active (remove duplicates)
+      const onlineIds = new Set(currentlyOnline.map(u => u.id));
+      const mergedOnline = [
+        ...currentlyOnline,
+        ...recentActive.filter(u => !onlineIds.has(u.id))
+      ];
       
       setRecentRegistrations(recentRegs);
-      setRecentOnlineUsers(recentOnline);
+      setRecentOnlineUsers(mergedOnline);
       setActivityLastUpdated(new Date());
     } catch (e) {
       console.error("[ADMIN] Failed to load activity:", e);
