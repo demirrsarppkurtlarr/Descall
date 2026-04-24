@@ -418,21 +418,22 @@ export default function ChatLayout({
   const [groups, setGroups] = useState({
     list: [],
     active: null,
-    messages: [],
-    members: [],
-    call: {
-      minimized: false,
-    },
+    messages: [], // current active group messages (for backward compatibility)
+    messagesCache: {}, // { [groupId]: messages[] } - prefetched messages for all groups
+    membersCache: {}, // { [groupId]: members[] } - prefetched members for all groups
+    members: [], // current active group members
+    isLoading: false, // global loading state
     ui: {
       createOpen: false,
-      renameOpen: false,
-      inviteOpen: false,
       newGroupName: "",
       selectedMembers: [],
+      renameOpen: false,
       renameValue: "",
+      inviteOpen: false,
       inviteUsername: "",
       groupComposer: "",
-    }
+    },
+    call: { minimized: false },
   });
   // ========== MOBILE & CUSTOMIZATION ==========
   const { isMobile, isPortrait, touchSupported, vibrate } = useMobile();
@@ -527,18 +528,62 @@ export default function ChatLayout({
 
   // ========== MODERN GROUP SYSTEM ==========
   
-  // Fetch groups on mount
+  // Fetch groups on mount + PREFETCH all group data
   useEffect(() => {
     if (!me) return;
-    getMyGroups()
-      .then((data) => {
+    
+    const loadAllData = async () => {
+      try {
+        const data = await getMyGroups();
         const normalized =
           Array.isArray(data) ? data :
           Array.isArray(data?.groups) ? data.groups :
           [];
-        setGroups((g) => ({ ...g, list: normalized }));
-      })
-      .catch(() => setGroups(g => ({ ...g, list: [] })));
+        
+        setGroups((g) => ({ ...g, list: normalized, isLoading: true }));
+        
+        // PREFETCH: Load messages and members for all groups in background
+        if (normalized.length > 0) {
+          console.log("[Prefetch] Starting to load data for", normalized.length, "groups");
+          
+          const prefetchPromises = normalized.map(async (group) => {
+            if (!group?.id) return;
+            
+            try {
+              const [messagesRes, membersRes] = await Promise.all([
+                getGroupMessages(group.id),
+                getGroupMembers(group.id)
+              ]);
+              
+              const messages = messagesRes?.messages || [];
+              const members = asArray(membersRes?.members);
+              
+              // Update cache for this group
+              setGroups(g => ({
+                ...g,
+                messagesCache: { ...g.messagesCache, [group.id]: messages },
+                membersCache: { ...g.membersCache, [group.id]: members }
+              }));
+              
+              console.log("[Prefetch] Loaded group:", group.name, "-", messages.length, "messages");
+            } catch (err) {
+              console.error("[Prefetch] Failed to load group:", group.name, err);
+            }
+          });
+          
+          // Wait for all prefetch to complete
+          await Promise.allSettled(prefetchPromises);
+          console.log("[Prefetch] All group data loaded");
+        }
+        
+        setGroups((g) => ({ ...g, isLoading: false }));
+      } catch (err) {
+        console.error("[Prefetch] Failed to load groups:", err);
+        setGroups(g => ({ ...g, list: [], isLoading: false }));
+      }
+    };
+    
+    loadAllData();
   }, [me]);
 
   // Fetch announcements on mount
@@ -717,53 +762,67 @@ export default function ChatLayout({
 
   // Group actions
   const groupActions = {
-    // Open group
+    // Open group - INSTANT from cache, then background refresh
     open: async (group) => {
       console.log("[ChatLayout] Opening group:", group);
-      // Clear active DM when opening a group
       onClearDm?.();
-      setGroups(g => ({ ...g, active: group }));
-      // Also save to localStorage
+      
+      // INSTANT: Show cached data immediately
+      const cachedMessages = groups.messagesCache[group.id];
+      const cachedMembers = groups.membersCache[group.id];
+      
+      setGroups(g => ({ 
+        ...g, 
+        active: group,
+        messages: cachedMessages || [], // Instant from cache
+        members: cachedMembers || [] // Instant from cache
+      }));
+      
+      // Save to localStorage
       try {
         localStorage.setItem("descall_active_group", JSON.stringify({ id: group.id, name: group.name }));
       } catch {}
-      try {
-        const result = await getGroupMessages(group.id);
-        console.log("[ChatLayout] Group messages loaded:", result);
-        setGroups(g => ({ ...g, messages: result?.messages || [] }));
-      } catch (err) {
-        console.error("[ChatLayout] Failed to load group messages:", err);
-        setGroups(g => ({ ...g, messages: [] }));
-      }
-      // Fetch group members
-      try {
-        const result = await getGroupMembers(group.id);
-        setGroups(g => ({ ...g, members: asArray(result?.members) }));
-      } catch (err) {
-        console.error("[ChatLayout] Failed to load group members:", err);
-        setGroups(g => ({ ...g, members: [] }));
-      }
-      // Fetch reactions for this group
-      try {
-        const token = localStorage.getItem("descall_token");
-        console.log("[ChatLayout] Fetching reactions for group:", group.id);
-        const res = await fetch(`${API_BASE_URL}/reactions/conversation/group/${group.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log("[ChatLayout] Reactions response status:", res.status, res.ok);
-        if (res.ok) {
-          const data = await res.json();
-          console.log("[ChatLayout] Reactions loaded:", data);
-          setMessageReactions(data.reactions || {});
-          console.log("[ChatLayout] Set messageReactions:", data.reactions || {});
-        } else {
-          const errorText = await res.text();
-          console.error("[ChatLayout] Failed to load reactions:", res.status, errorText);
+      
+      // BACKGROUND: Fetch fresh data
+      setTimeout(async () => {
+        try {
+          const [messagesRes, membersRes] = await Promise.all([
+            getGroupMessages(group.id),
+            getGroupMembers(group.id)
+          ]);
+          
+          const messages = messagesRes?.messages || [];
+          const members = asArray(membersRes?.members);
+          
+          // Update cache
+          setGroups(g => ({
+            ...g,
+            messagesCache: { ...g.messagesCache, [group.id]: messages },
+            membersCache: { ...g.membersCache, [group.id]: members },
+            // Only update current view if this group is still active
+            messages: g.active?.id === group.id ? messages : g.messages,
+            members: g.active?.id === group.id ? members : g.members
+          }));
+          
+          console.log("[ChatLayout] Background refresh complete for group:", group.id);
+        } catch (err) {
+          console.error("[ChatLayout] Background refresh failed:", err);
         }
-      } catch (err) {
-        console.error("[ChatLayout] Error loading reactions:", err);
-      }
-      // Socket join handled by useGroupCall hook
+        
+        // Fetch reactions
+        try {
+          const token = localStorage.getItem("descall_token");
+          const res = await fetch(`${API_BASE_URL}/reactions/conversation/group/${group.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setMessageReactions(data.reactions || {});
+          }
+        } catch (err) {
+          console.error("[ChatLayout] Reactions fetch failed:", err);
+        }
+      }, 0);
     },
 
     // Send message
