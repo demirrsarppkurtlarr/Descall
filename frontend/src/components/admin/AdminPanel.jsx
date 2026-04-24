@@ -24,6 +24,9 @@ import AdminErrorLogs from "./AdminErrorLogs";
 const TABS = [
   { id: "overview", label: "Overview", icon: BarChart3 },
   { id: "activity", label: "Activity", icon: ActivityIcon },
+  { id: "engagement", label: "Engagement", icon: Zap },
+  { id: "growth", label: "Growth", icon: TrendingUp },
+  { id: "topusers", label: "Top Users", icon: Star },
   { id: "users", label: "Users", icon: Users },
   { id: "messages", label: "Messages", icon: MessageSquare },
   { id: "dm", label: "DM", icon: Mail },
@@ -153,6 +156,24 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityLastUpdated, setActivityLastUpdated] = useState(null);
   const [activitySubTab, setActivitySubTab] = useState("registrations"); // "registrations" | "online"
+  
+  // Engagement States - User interaction stats
+  const [engagementStats, setEngagementStats] = useState(null);
+  const [engagementLoading, setEngagementLoading] = useState(false);
+  const [engagementLastUpdated, setEngagementLastUpdated] = useState(null);
+  const [engagementSubTab, setEngagementSubTab] = useState("overview"); // "overview" | "messages" | "calls"
+  
+  // Growth States - User growth analytics
+  const [growthData, setGrowthData] = useState([]);
+  const [growthLoading, setGrowthLoading] = useState(false);
+  const [growthLastUpdated, setGrowthLastUpdated] = useState(null);
+  const [growthPeriod, setGrowthPeriod] = useState("7d"); // "24h" | "7d" | "30d"
+  
+  // Top Users States - Leaderboard
+  const [topUsers, setTopUsers] = useState([]);
+  const [topUsersLoading, setTopUsersLoading] = useState(false);
+  const [topUsersLastUpdated, setTopUsersLastUpdated] = useState(null);
+  const [topUsersMetric, setTopUsersMetric] = useState("messages"); // "messages" | "calls" | "activity"
 
   const loadStats = useCallback(async () => {
     const d = await adminFetch("/stats");
@@ -256,6 +277,147 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
     }
   }, []);
 
+  // Load engagement stats - user interactions
+  const loadEngagement = useCallback(async () => {
+    setEngagementLoading(true);
+    try {
+      // Fetch messages for stats
+      const messagesRes = await adminFetch("/messages");
+      const allMessages = messagesRes.messages || [];
+      
+      // Fetch users for activity data
+      const usersRes = await adminFetch("/users");
+      const allUsers = usersRes.users || [];
+      
+      // Calculate engagement stats
+      const totalMessages = allMessages.length;
+      const messagesLast24h = allMessages.filter(m => {
+        const msgDate = new Date(m.timestamp);
+        return msgDate >= new Date(Date.now() - 24 * 60 * 60 * 1000);
+      }).length;
+      
+      const messagesLast7d = allMessages.filter(m => {
+        const msgDate = new Date(m.timestamp);
+        return msgDate >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      }).length;
+      
+      // Active users (sent at least one message)
+      const activeUserIds = new Set(allMessages.map(m => m.user_id || m.from));
+      const activeUsers = activeUserIds.size;
+      
+      // Most active hours
+      const hourCounts = {};
+      allMessages.forEach(m => {
+        const hour = new Date(m.timestamp).getHours();
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      });
+      const peakHours = Object.entries(hourCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([hour, count]) => ({ hour: parseInt(hour), count }));
+      
+      setEngagementStats({
+        totalMessages,
+        messagesLast24h,
+        messagesLast7d,
+        activeUsers,
+        totalUsers: allUsers.length,
+        peakHours,
+        avgMessagesPerUser: allUsers.length > 0 ? (totalMessages / allUsers.length).toFixed(1) : 0
+      });
+      setEngagementLastUpdated(new Date());
+    } catch (e) {
+      console.error("[ADMIN] Failed to load engagement:", e);
+    } finally {
+      setEngagementLoading(false);
+    }
+  }, []);
+
+  // Load growth data - user registration trends
+  const loadGrowth = useCallback(async () => {
+    setGrowthLoading(true);
+    try {
+      const d = await adminFetch("/users");
+      const allUsers = d.users || [];
+      
+      // Generate daily growth data based on registration dates
+      const dailyData = {};
+      const now = new Date();
+      
+      // Initialize last 30 days
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateKey = date.toISOString().split('T')[0];
+        dailyData[dateKey] = { date: dateKey, newUsers: 0, totalUsers: 0 };
+      }
+      
+      // Count registrations per day
+      allUsers.forEach(u => {
+        if (u.created_at) {
+          const dateKey = new Date(u.created_at).toISOString().split('T')[0];
+          if (dailyData[dateKey]) {
+            dailyData[dateKey].newUsers++;
+          }
+        }
+      });
+      
+      // Calculate cumulative totals
+      let runningTotal = allUsers.length - Object.values(dailyData).reduce((sum, d) => sum + d.newUsers, 0);
+      Object.keys(dailyData).sort().forEach(dateKey => {
+        runningTotal += dailyData[dateKey].newUsers;
+        dailyData[dateKey].totalUsers = runningTotal;
+      });
+      
+      setGrowthData(Object.values(dailyData));
+      setGrowthLastUpdated(new Date());
+    } catch (e) {
+      console.error("[ADMIN] Failed to load growth:", e);
+    } finally {
+      setGrowthLoading(false);
+    }
+  }, []);
+
+  // Load top users - leaderboard
+  const loadTopUsers = useCallback(async () => {
+    setTopUsersLoading(true);
+    try {
+      // Fetch messages
+      const messagesRes = await adminFetch("/messages");
+      const allMessages = messagesRes.messages || [];
+      
+      // Fetch users
+      const usersRes = await adminFetch("/users");
+      const allUsers = usersRes.users || [];
+      
+      // Calculate message counts per user
+      const userMessageCounts = {};
+      allMessages.forEach(m => {
+        const userId = m.user_id || m.from;
+        if (userId) {
+          userMessageCounts[userId] = (userMessageCounts[userId] || 0) + 1;
+        }
+      });
+      
+      // Create leaderboard
+      const leaderboard = allUsers
+        .map(u => ({
+          ...u,
+          messageCount: userMessageCounts[u.id] || 0,
+          lastActive: u.last_seen ? new Date(u.last_seen) : null
+        }))
+        .sort((a, b) => b.messageCount - a.messageCount)
+        .slice(0, 50); // Top 50
+      
+      setTopUsers(leaderboard);
+      setTopUsersLastUpdated(new Date());
+    } catch (e) {
+      console.error("[ADMIN] Failed to load top users:", e);
+    } finally {
+      setTopUsersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     adminFetch("/snapshot")
       .then(setSnapshot)
@@ -289,13 +451,16 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
   useEffect(() => {
     if (tab === "users") loadAllUsers().catch((e) => setErr(e.message));
     if (tab === "activity") loadActivity().catch((e) => setErr(e.message));
+    if (tab === "engagement") loadEngagement().catch((e) => setErr(e.message));
+    if (tab === "growth") loadGrowth().catch((e) => setErr(e.message));
+    if (tab === "topusers") loadTopUsers().catch((e) => setErr(e.message));
     if (tab === "messages") loadMessages().catch((e) => setErr(e.message));
     if (tab === "dm") loadDm().catch((e) => setErr(e.message));
     if (tab === "audit") loadAudit().catch((e) => setErr(e.message));
     if (tab === "system") loadSystem().catch((e) => setErr(e.message));
     if (tab === "announcements") loadAnnouncements().catch((e) => setErr(e.message));
     // feedback and errors tabs use their own components with internal loading
-  }, [tab, loadAllUsers, loadActivity, loadMessages, loadDm, loadAudit, loadSystem, loadAnnouncements]);
+  }, [tab, loadAllUsers, loadActivity, loadEngagement, loadGrowth, loadTopUsers, loadMessages, loadDm, loadAudit, loadSystem, loadAnnouncements]);
 
   // Auto-refresh activity every hour
   useEffect(() => {
@@ -307,6 +472,39 @@ export default function AdminPanel({ socket, onClose, onAdminChanged }) {
     
     return () => clearInterval(interval);
   }, [tab, loadActivity]);
+
+  // Auto-refresh engagement every hour
+  useEffect(() => {
+    if (tab !== "engagement") return;
+    
+    const interval = setInterval(() => {
+      loadEngagement().catch(console.error);
+    }, 60 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [tab, loadEngagement]);
+
+  // Auto-refresh growth every hour
+  useEffect(() => {
+    if (tab !== "growth") return;
+    
+    const interval = setInterval(() => {
+      loadGrowth().catch(console.error);
+    }, 60 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [tab, loadGrowth]);
+
+  // Auto-refresh top users every hour
+  useEffect(() => {
+    if (tab !== "topusers") return;
+    
+    const interval = setInterval(() => {
+      loadTopUsers().catch(console.error);
+    }, 60 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [tab, loadTopUsers]);
 
   const act = async (fn) => {
     try {
@@ -618,6 +816,302 @@ function getTimeAgo(date) {
                 )}
               </motion.div>
             )}
+          </section>
+        )}
+
+        {tab === "engagement" && (
+          <section className="admin-section admin-engagement-section">
+            {/* Engagement Header */}
+            <div className="activity-header">
+              <div className="activity-title-section">
+                <h2>User Engagement Analytics</h2>
+                <p className="activity-subtitle">
+                  Message activity and user interaction statistics
+                </p>
+              </div>
+              <div className="activity-stats-grid">
+                <motion.div 
+                  className="activity-stat-card messages"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <div className="stat-icon-wrapper">
+                    <MessageSquare size={24} />
+                  </div>
+                  <div className="stat-content">
+                    <span className="stat-number">{engagementStats?.totalMessages || 0}</span>
+                    <span className="stat-label">Total Messages</span>
+                  </div>
+                </motion.div>
+                <motion.div 
+                  className="activity-stat-card active-users"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="stat-icon-wrapper">
+                    <Users size={24} />
+                  </div>
+                  <div className="stat-content">
+                    <span className="stat-number">{engagementStats?.activeUsers || 0}</span>
+                    <span className="stat-label">Active Users</span>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="activity-toolbar">
+              <div className="last-updated">
+                <Clock size={14} />
+                <span>
+                  Last updated: {engagementLastUpdated 
+                    ? engagementLastUpdated.toLocaleTimeString() 
+                    : "Never"}
+                </span>
+              </div>
+              <RippleButton 
+                type="button" 
+                onClick={() => act(loadEngagement)} 
+                disabled={engagementLoading}
+                className="refresh-btn"
+              >
+                <RefreshCw size={16} className={engagementLoading ? "spin" : ""} />
+                {engagementLoading ? "Loading..." : "Refresh"}
+              </RippleButton>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="engagement-stats-grid">
+              <div className="stat-card">
+                <h4>Messages (24h)</h4>
+                <span className="big-number">{engagementStats?.messagesLast24h || 0}</span>
+              </div>
+              <div className="stat-card">
+                <h4>Messages (7d)</h4>
+                <span className="big-number">{engagementStats?.messagesLast7d || 0}</span>
+              </div>
+              <div className="stat-card">
+                <h4>Avg Messages/User</h4>
+                <span className="big-number">{engagementStats?.avgMessagesPerUser || 0}</span>
+              </div>
+              <div className="stat-card peak-hours">
+                <h4>Peak Activity Hours</h4>
+                <div className="peak-hours-list">
+                  {(engagementStats?.peakHours || []).slice(0, 3).map((peak, i) => (
+                    <div key={i} className="peak-hour-item">
+                      <span className="hour">{peak.hour}:00</span>
+                      <div className="bar-container">
+                        <div 
+                          className="bar" 
+                          style={{ width: `${Math.min(100, (peak.count / (engagementStats?.peakHours[0]?.count || 1)) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="count">{peak.count} msgs</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {tab === "growth" && (
+          <section className="admin-section admin-growth-section">
+            {/* Growth Header */}
+            <div className="activity-header">
+              <div className="activity-title-section">
+                <h2>User Growth Analytics</h2>
+                <p className="activity-subtitle">
+                  Daily registration trends and growth metrics
+                </p>
+              </div>
+              <div className="period-selector">
+                <button 
+                  className={growthPeriod === "24h" ? "active" : ""}
+                  onClick={() => setGrowthPeriod("24h")}
+                >
+                  24h
+                </button>
+                <button 
+                  className={growthPeriod === "7d" ? "active" : ""}
+                  onClick={() => setGrowthPeriod("7d")}
+                >
+                  7 Days
+                </button>
+                <button 
+                  className={growthPeriod === "30d" ? "active" : ""}
+                  onClick={() => setGrowthPeriod("30d")}
+                >
+                  30 Days
+                </button>
+              </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="activity-toolbar">
+              <div className="last-updated">
+                <Clock size={14} />
+                <span>
+                  Last updated: {growthLastUpdated 
+                    ? growthLastUpdated.toLocaleTimeString() 
+                    : "Never"}
+                </span>
+              </div>
+              <RippleButton 
+                type="button" 
+                onClick={() => act(loadGrowth)} 
+                disabled={growthLoading}
+                className="refresh-btn"
+              >
+                <RefreshCw size={16} className={growthLoading ? "spin" : ""} />
+                {growthLoading ? "Loading..." : "Refresh"}
+              </RippleButton>
+            </div>
+
+            {/* Growth Chart */}
+            <div className="growth-chart-container">
+              <h3>Daily New Registrations</h3>
+              <div className="growth-chart">
+                {growthData.slice(-7).map((day, index) => {
+                  const maxUsers = Math.max(...growthData.slice(-7).map(d => d.newUsers), 1);
+                  const height = day.newUsers > 0 ? (day.newUsers / maxUsers) * 100 : 0;
+                  return (
+                    <div key={day.date} className="chart-bar-wrapper">
+                      <div className="chart-bar-container">
+                        <motion.div 
+                          className="chart-bar"
+                          initial={{ height: 0 }}
+                          animate={{ height: `${height}%` }}
+                          transition={{ delay: index * 0.1, duration: 0.5 }}
+                        >
+                          {day.newUsers > 0 && (
+                            <span className="bar-value">{day.newUsers}</span>
+                          )}
+                        </motion.div>
+                      </div>
+                      <span className="bar-label">
+                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Growth Stats */}
+            <div className="growth-summary">
+              <div className="summary-card">
+                <span className="summary-label">New (7 days)</span>
+                <span className="summary-value">
+                  {growthData.slice(-7).reduce((sum, d) => sum + d.newUsers, 0)}
+                </span>
+              </div>
+              <div className="summary-card">
+                <span className="summary-label">New (30 days)</span>
+                <span className="summary-value">
+                  {growthData.slice(-30).reduce((sum, d) => sum + d.newUsers, 0)}
+                </span>
+              </div>
+              <div className="summary-card">
+                <span className="summary-label">Total Users</span>
+                <span className="summary-value">
+                  {growthData[growthData.length - 1]?.totalUsers || 0}
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {tab === "topusers" && (
+          <section className="admin-section admin-topusers-section">
+            {/* Top Users Header */}
+            <div className="activity-header">
+              <div className="activity-title-section">
+                <h2>Top Active Users</h2>
+                <p className="activity-subtitle">
+                  Leaderboard of most engaged users
+                </p>
+              </div>
+              <div className="metric-selector">
+                <button 
+                  className={topUsersMetric === "messages" ? "active" : ""}
+                  onClick={() => setTopUsersMetric("messages")}
+                >
+                  <MessageSquare size={14} />
+                  By Messages
+                </button>
+                <button 
+                  className={topUsersMetric === "activity" ? "active" : ""}
+                  onClick={() => setTopUsersMetric("activity")}
+                >
+                  <ActivityIcon size={14} />
+                  By Activity
+                </button>
+              </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="activity-toolbar">
+              <div className="last-updated">
+                <Clock size={14} />
+                <span>
+                  Last updated: {topUsersLastUpdated 
+                    ? topUsersLastUpdated.toLocaleTimeString() 
+                    : "Never"}
+                </span>
+              </div>
+              <RippleButton 
+                type="button" 
+                onClick={() => act(loadTopUsers)} 
+                disabled={topUsersLoading}
+                className="refresh-btn"
+              >
+                <RefreshCw size={16} className={topUsersLoading ? "spin" : ""} />
+                {topUsersLoading ? "Loading..." : "Refresh"}
+              </RippleButton>
+            </div>
+
+            {/* Top Users List */}
+            <div className="top-users-list">
+              {topUsers.slice(0, 20).map((user, index) => (
+                <motion.div
+                  key={user.id}
+                  className="top-user-item"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <div className={`rank-badge ${index < 3 ? 'top-three' : ''}`}>
+                    {index + 1}
+                  </div>
+                  <img 
+                    src={user.avatar_url || "/default-avatar.png"} 
+                    alt={user.username}
+                    className="user-avatar"
+                  />
+                  <div className="user-details">
+                    <span className="username">{user.username}</span>
+                    <span className="user-meta">
+                      {user.messageCount} messages • {user.lastActive ? getTimeAgo(user.lastActive) + ' ago' : 'Never active'}
+                    </span>
+                  </div>
+                  <div className="user-stats">
+                    <div className="stat-badge messages">
+                      <MessageSquare size={12} />
+                      {user.messageCount}
+                    </div>
+                    {user.isOnline && (
+                      <div className="stat-badge online">
+                        <Wifi size={12} />
+                        Online
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </section>
         )}
 
