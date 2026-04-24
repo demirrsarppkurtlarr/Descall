@@ -989,7 +989,10 @@ export default function ChatLayout({
 
   // Send GIF from Giphy
   const handleSendGif = useCallback((gif) => {
+    console.log("[handleSendGif] Called with gif:", gif, "forGroup:", giphyPickerForGroup, "group:", groups.active?.id, "dmUser:", activeDmUser?.id);
+    
     if (giphyPickerForGroup && groups.active) {
+      console.log("[handleSendGif] Sending GIF to group:", groups.active.id);
       // Send to group
       socket?.emit("group:send", {
         groupId: groups.active.id,
@@ -1000,6 +1003,7 @@ export default function ChatLayout({
         originalName: gif.title || "GIF"
       });
     } else if (activeDmUser) {
+      console.log("[handleSendGif] Sending GIF to DM:", activeDmUser.id);
       // Send to DM
       socket?.emit("dm:send", {
         toUserId: activeDmUser.id,
@@ -1009,6 +1013,8 @@ export default function ChatLayout({
         mimeType: "image/gif",
         originalName: gif.title || "GIF"
       });
+    } else {
+      console.error("[handleSendGif] No valid target! Neither group nor DM user found.");
     }
     requestAnimationFrame(() => scrollToBottom());
     setGiphyPickerOpen(false);
