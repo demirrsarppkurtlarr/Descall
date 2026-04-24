@@ -575,15 +575,16 @@ select {
   border-color: #6678ff55;
 }
 
-/* Header feedback button positioning */
-.panel-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* Feedback button inside chat area - top right */
+.messages-feedback-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
 }
 
-.header-feedback-btn {
-  margin-left: 8px;
+.messages-wrap {
+  position: relative;
 }
 
 @media (max-width: 960px) {

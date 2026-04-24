@@ -1592,11 +1592,6 @@ export default function ChatLayout({
           </div>
           <div className="panel-header-right">
             <span className={`connection-chip ${isOnline ? "online" : "reconnect"}`}>{connectionLabel}</span>
-            {me && (
-              <div className="header-feedback-btn">
-                <UserFeedbackButton socket={socket} user={me} />
-              </div>
-            )}
           </div>
         </header>
 
@@ -1609,6 +1604,13 @@ export default function ChatLayout({
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.22 }}
           >
+            {/* Feedback Button - Top Right of Chat Area */}
+            {me && (
+              <div className="messages-feedback-btn">
+                <UserFeedbackButton socket={socket} user={me} />
+              </div>
+            )}
+            
             <div className="messages custom-scroll" ref={messagesRef} onScroll={handleMessagesScroll}>
               {loadingOlderDm && activeDmUser && <div className="load-older-banner">Loading older messages…</div>}
 
