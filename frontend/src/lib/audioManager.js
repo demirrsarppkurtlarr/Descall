@@ -13,15 +13,27 @@
 
 import { getSoundSettings, setSoundSettings } from "./storage";
 
+// Detect Electron environment
+const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron;
+
+// Get correct sound path based on environment
+function getSoundPath(filename) {
+  if (isElectron) {
+    // In Electron, use relative path from the app root
+    // Sounds are in the resources/sounds folder
+    return `sounds/${filename}`;
+  }
+  // Web: use absolute path from public
+  return `/sounds/${filename}`;
+}
+
 // Default sound URLs - can be replaced with actual file paths
 const DEFAULT_SOUNDS = {
-  // Using simple beep/data URI sounds as placeholders
-  // Replace with actual files: /assets/sounds/incoming-call.mp3
-  incomingCall: "/sounds/incoming-call.mp3",
-  outgoingCall: "/sounds/outgoing-call.mp3",
-  callStart: "/sounds/outgoing-call.mp3",
-  message: "/sounds/message.mp3",
-  notification: "/sounds/notification.mp3"
+  incomingCall: getSoundPath("incoming-call.mp3"),
+  outgoingCall: getSoundPath("outgoing-call.mp3"),
+  callStart: getSoundPath("outgoing-call.mp3"), // Same as outgoing
+  message: getSoundPath("message.mp3"),
+  notification: getSoundPath("notification.mp3")
 };
 
 // Cooldown configuration (ms)

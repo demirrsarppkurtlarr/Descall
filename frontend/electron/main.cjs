@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, protocol } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const path = require('path');
@@ -272,6 +272,15 @@ ipcMain.on('download-file', async (event, { url, filename }) => {
     log.error('Download error:', error);
     return { success: false, error: error.message };
   }
+});
+
+// Register custom protocol for sounds
+app.on('ready', () => {
+  protocol.registerFileProtocol('app', (request, callback) => {
+    const url = request.url.substr(6); // Remove 'app://'
+    const filePath = path.join(__dirname, '..', url);
+    callback({ path: filePath });
+  });
 });
 
 // Single instance lock

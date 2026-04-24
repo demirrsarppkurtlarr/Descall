@@ -55,8 +55,10 @@ function formatRelativeTime(iso) {
   } catch { return ""; }
 }
 
-// Click sound for UI interactions
-const clickSound = typeof Audio !== 'undefined' ? new Audio('/sounds/click.mp3') : null;
+// Click sound for UI interactions - dynamic path for web/electron
+const isElectronEnv = typeof window !== 'undefined' && window.electronAPI?.isElectron;
+const clickSoundPath = isElectronEnv ? 'sounds/click.mp3' : '/sounds/click.mp3';
+const clickSound = typeof Audio !== 'undefined' ? new Audio(clickSoundPath) : null;
 function playClickSound() {
   if (clickSound) {
     clickSound.currentTime = 0;

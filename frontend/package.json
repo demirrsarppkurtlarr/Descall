@@ -95,7 +95,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "public/icon.ico",
+      "icon": "public/icon.png",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
@@ -110,7 +110,7 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "icon": "public/icon.icns",
+      "icon": "public/icon.png",
       "category": "public.app-category.social-networking",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
