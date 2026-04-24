@@ -55,6 +55,11 @@ jobs:
         cd frontend
         npm ci
 
+    - name: Install Electron app deps
+      run: |
+        cd frontend
+        npx electron-builder install-app-deps
+
     - name: Build Electron app
       run: |
         cd frontend

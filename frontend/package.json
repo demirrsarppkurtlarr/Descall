@@ -21,8 +21,7 @@
     "electron:build:mac": "npm run build:prod && electron-builder --mac",
     "electron:build:linux": "npm run build:prod && electron-builder --linux",
     "electron:pack": "npm run build:prod && electron-builder --dir",
-    "electron:publish": "npm run build:prod && electron-builder --publish=always",
-    "postinstall": "electron-builder install-app-deps"
+    "electron:publish": "npm run build:prod && electron-builder --publish=always"
   },
 
   "engines": {
