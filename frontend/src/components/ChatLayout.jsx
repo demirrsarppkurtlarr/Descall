@@ -26,7 +26,7 @@ import { getMyGroups, createGroup, sendGroupMessage, getGroupMessages, leaveGrou
 import {
   MessageSquare, Users, UserPlus, Bell, Circle,
   PanelLeftClose, Settings, Send, Paperclip,
-  Phone, Video, X, Plus, Clock, Check, CheckCheck,
+  Phone, Video, X, Plus, Clock, Check, CheckCheck, Play,
   Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
   Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid,
   ChevronLeft, ChevronRight, MoreVertical, Trash2,
