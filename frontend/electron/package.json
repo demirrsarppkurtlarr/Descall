@@ -6,6 +6,10 @@
   "author": "Descall Team",
   "license": "MIT",
   "homepage": "https://descall-1.onrender.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/demirrsarppkurtlarr/descall.git"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
