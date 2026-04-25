@@ -38,7 +38,10 @@
     "files": [
       "main.cjs",
       "preload.cjs",
-      "../dist/**/*",
+      "../dist/index.html",
+      "../dist/assets/**/*",
+      "../dist/sounds/**/*",
+      "../dist/*.png",
       "node_modules/**/*"
     ],
     "asar": true,

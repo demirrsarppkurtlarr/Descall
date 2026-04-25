@@ -62,6 +62,18 @@ jobs:
         working-directory: frontend/electron
         run: npm install
 
+      - name: Verify dist folder exists
+        working-directory: frontend
+        shell: cmd
+        run: |
+          echo "=== Checking frontend/dist ==="
+          dir dist /s
+          if not exist dist\index.html (
+            echo "ERROR: dist\index.html not found!"
+            exit 1
+          )
+          echo "dist\index.html exists"
+
       - name: Build Electron app
         working-directory: frontend/electron
         run: npm run build:${{ matrix.platform }}
