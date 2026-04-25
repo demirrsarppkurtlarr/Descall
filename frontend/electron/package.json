@@ -2,7 +2,7 @@
   "name": "descall-electron",
   "version": "1.0.0",
   "description": "Descall - Discord-like chat application",
-  "main": "main.js",
+  "main": "main.cjs",
   "author": "Descall Team",
   "license": "MIT",
   "homepage": "https://descall-1.onrender.com",
@@ -31,8 +31,8 @@
       "buildResources": "build"
     },
     "files": [
-      "main.js",
-      "preload.js",
+      "main.cjs",
+      "preload.cjs",
       "../dist/**/*"
     ],
     "win": {

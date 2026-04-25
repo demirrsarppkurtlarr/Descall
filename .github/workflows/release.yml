@@ -39,6 +39,14 @@ jobs:
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
+      - name: Debug - Check dist contents
+        working-directory: frontend
+        run: |
+          echo "=== dist folder contents ==="
+          dir dist /s
+          echo "=== Checking assets ==="
+          if exist dist\assets\*.js (echo "JS files found") else (echo "ERROR: No JS files in assets!")
+
       - name: Install Electron dependencies
         working-directory: frontend/electron
         run: npm install
