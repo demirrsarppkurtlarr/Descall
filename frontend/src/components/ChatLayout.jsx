@@ -503,7 +503,7 @@ export default function ChatLayout({
       resetRecording();
     } catch (error) {
       console.error('Failed to send voice message:', error);
-      toast({ type: 'error', message: 'Ses mesajı gönderilemedi' });
+      toast('Ses mesajı gönderilemedi', 'error');
     } finally {
       setUploading(false);
     }
@@ -531,7 +531,7 @@ export default function ChatLayout({
       resetRecording();
     } catch (error) {
       console.error('Failed to send group voice message:', error);
-      toast({ type: 'error', message: 'Ses mesajı gönderilemedi' });
+      toast('Ses mesajı gönderilemedi', 'error');
     } finally {
       setUploading(false);
     }
