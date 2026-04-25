@@ -92,7 +92,7 @@ router.get("/users", async (req, res) => {
     const from = page * limit;
     const to = from + limit - 1;
 
-    let query = supabase.from("users").select("id, username", { count: "exact" });
+    let query = supabase.from("users").select("id, username, created_at, avatar_url", { count: "exact" });
     if (q) {
       query = query.ilike("username", `%${q}%`);
     }
@@ -101,7 +101,8 @@ router.get("/users", async (req, res) => {
 
     const rows = (data || []).map((u) => ({
       ...u,
-      online: state.presence.has(u.id),
+      isOnline: state.presence.has(u.id),
+      last_seen: state.userLastLoginAt.get(u.id) || u.last_seen || null,
       banned: state.bannedUserIds.has(u.id),
       role: state.userRoles.get(u.id) || "user",
       lastLoginAt: state.userLastLoginAt.get(u.id) || null,
