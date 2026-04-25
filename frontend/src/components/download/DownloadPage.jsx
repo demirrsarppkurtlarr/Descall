@@ -23,9 +23,14 @@ import {
 } from 'lucide-react';
 import './DownloadPage.css';
 
-// This will be updated by GitHub Actions on each release
+// Manual setup distribution - update these links when you have new builds
 const LATEST_VERSION = "v1.0.0";
-const GITHUB_REPO = "demirrsarppkurtlarr/descall";
+// Add your download links here (Google Drive, Dropbox, or any direct link)
+const DOWNLOAD_LINKS = {
+  windows: null, // e.g., "https://drive.google.com/file/d/.../view"
+  mac: null,     // e.g., "https://drive.google.com/file/d/.../view"  
+  linux: null,   // e.g., "https://drive.google.com/file/d/.../view"
+};
 
 const features = [
   { icon: MessageCircle, title: "Real-time Chat", desc: "Instant messaging with typing indicators" },
@@ -73,7 +78,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isInstalled, setIsInstalled] = useState(false);
   const [latestRelease, setLatestRelease] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // No API loading needed
   const [showLogin, setShowLogin] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
@@ -82,23 +87,8 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
   const downloadIntervalRef = useRef(null);
 
   useEffect(() => {
-    fetchLatestRelease();
     detectPlatform();
   }, []);
-
-  const fetchLatestRelease = async () => {
-    try {
-      const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
-      if (response.ok) {
-        const data = await response.json();
-        setLatestRelease(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch latest release:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const detectPlatform = () => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -108,6 +98,13 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
   };
 
   const handleDownload = async () => {
+    const downloadUrl = DOWNLOAD_LINKS[selectedPlatform];
+    
+    if (!downloadUrl) {
+      setReleaseError('Setup file not available yet. Please check back later.');
+      return;
+    }
+
     setDownloading(true);
     setDownloadProgress(0);
 
@@ -124,19 +121,8 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
       });
     }, 200);
 
-    // Actual download
-    const platform = platforms.find(p => p.id === selectedPlatform);
-    const releaseUrl = latestRelease?.assets?.find(asset => 
-      asset.name.toLowerCase().includes(platform.id)
-    )?.browser_download_url;
-
-    if (releaseUrl) {
-      window.open(releaseUrl, '_blank');
-    } else {
-      setReleaseError('No release found for this platform');
-      clearInterval(downloadIntervalRef.current);
-      setDownloading(false);
-    }
+    // Open download link
+    window.open(downloadUrl, '_blank');
   };
 
   // Cleanup interval on unmount
@@ -175,7 +161,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
             transition={{ delay: 0.3, type: "spring" }}
           >
             <Sparkles size={14} />
-            <span>{latestRelease?.tag_name || LATEST_VERSION} Now Available</span>
+            <span>{LATEST_VERSION} Now Available</span>
           </motion.div>
 
           <motion.h1 
@@ -344,14 +330,10 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
 
           {/* Additional Links */}
           <div className="additional-links">
-            <a href={`https://github.com/${GITHUB_REPO}/releases`} target="_blank" rel="noopener noreferrer">
-              <Github size={16} />
-              <span>View All Releases</span>
-            </a>
-            <a href={`https://github.com/${GITHUB_REPO}`} target="_blank" rel="noopener noreferrer">
-              <Star size={16} />
-              <span>Star on GitHub</span>
-            </a>
+            {/* Add manual download links here if needed */}
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
+              Download links will be available soon
+            </span>
           </div>
         </motion.div>
       </section>

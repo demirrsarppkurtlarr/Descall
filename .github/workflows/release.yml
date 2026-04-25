@@ -1,10 +1,13 @@
-name: Build and Release Descall Electron
+# DISABLED: Manual build only
+# name: Build and Release Descall Electron
+#
+# on:
+#   push:
+#     branches: [main, master]
+#     tags:
+#       - "v*"
 
-on:
-  push:
-    branches: [main, master]
-    tags:
-      - "v*"
+# Workflow disabled - builds are done manually
 
 permissions:
   contents: write
