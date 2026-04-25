@@ -53,7 +53,11 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Descall"
+      "shortcutName": "Descall",
+      "artifactName": "Descall-Setup-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "Descall-Portable-${version}.exe"
     },
     "mac": {
       "target": [
