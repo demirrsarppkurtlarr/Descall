@@ -2186,11 +2186,14 @@ export default function ChatLayout({
               </div>
             ) : audioBlob ? (
               <div className="voice-preview-ui">
-                <VoiceMessagePlayer audioUrl={URL.createObjectURL(audioBlob)} duration={recordingDuration} />
-                <button type="button" className="voice-cancel-btn" onClick={resetRecording} title="İptal">
+                <div className="voice-inline-preview">
+                  <Play size={16} />
+                  <span className="voice-duration-text">{recordingDuration}s</span>
+                </div>
+                <button type="button" className="voice-cancel-btn" onClick={resetRecording} title="Cancel">
                   <X size={18} />
                 </button>
-                <button type="button" className="voice-send-btn" onClick={sendVoiceMessage} disabled={uploading} title="Gönder">
+                <button type="button" className="voice-send-btn" onClick={sendVoiceMessage} disabled={uploading} title="Send">
                   {uploading ? <Clock size={18} /> : <Send size={18} />}
                 </button>
               </div>
@@ -2261,11 +2264,14 @@ export default function ChatLayout({
               </div>
             ) : audioBlob ? (
               <div className="voice-preview-ui">
-                <VoiceMessagePlayer audioUrl={URL.createObjectURL(audioBlob)} duration={recordingDuration} />
-                <button type="button" className="voice-cancel-btn" onClick={resetRecording} title="İptal">
+                <div className="voice-inline-preview">
+                  <Play size={16} />
+                  <span className="voice-duration-text">{recordingDuration}s</span>
+                </div>
+                <button type="button" className="voice-cancel-btn" onClick={resetRecording} title="Cancel">
                   <X size={18} />
                 </button>
-                <button type="button" className="voice-send-btn" onClick={sendGroupVoiceMessage} disabled={uploading} title="Gönder">
+                <button type="button" className="voice-send-btn" onClick={sendGroupVoiceMessage} disabled={uploading} title="Send">
                   {uploading ? <Clock size={18} /> : <Send size={18} />}
                 </button>
               </div>

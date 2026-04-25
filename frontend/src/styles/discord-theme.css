@@ -855,6 +855,27 @@
   flex: 1;
 }
 
+.voice-inline-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--discord-embed);
+  border-radius: 16px;
+  color: var(--discord-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.voice-inline-preview svg {
+  color: #5865f2;
+}
+
+.voice-duration-text {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Voice Message Player */
 .voice-message-player {
   display: flex;
