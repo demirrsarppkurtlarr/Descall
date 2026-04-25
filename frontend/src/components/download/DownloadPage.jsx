@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Download, 
@@ -78,6 +78,8 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [releaseError, setReleaseError] = useState(null);
+  const downloadIntervalRef = useRef(null);
 
   useEffect(() => {
     fetchLatestRelease();
@@ -110,10 +112,10 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
     setDownloadProgress(0);
 
     // Simulate download progress
-    const interval = setInterval(() => {
+    downloadIntervalRef.current = setInterval(() => {
       setDownloadProgress(prev => {
         if (prev >= 100) {
-          clearInterval(interval);
+          clearInterval(downloadIntervalRef.current);
           setIsInstalled(true);
           setDownloading(false);
           return 100;
@@ -130,8 +132,21 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
 
     if (releaseUrl) {
       window.open(releaseUrl, '_blank');
+    } else {
+      setReleaseError('No release found for this platform');
+      clearInterval(downloadIntervalRef.current);
+      setDownloading(false);
     }
   };
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (downloadIntervalRef.current) {
+        clearInterval(downloadIntervalRef.current);
+      }
+    };
+  }, []);
 
   const currentPlatform = platforms.find(p => p.id === selectedPlatform);
 
@@ -186,7 +201,12 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
           {/* Login Button */}
           <motion.button
             className="login-btn"
-            onClick={() => setShowLogin(true)}
+            onClick={() => {
+              setShowLogin(true);
+              setIsRegistering(false);
+              setUsername('');
+              setPassword('');
+            }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45 }}
@@ -268,7 +288,11 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
               <div className="requirements">
                 <div className="req-item">
                   <CheckCircle2 size={16} />
-                  <span>Windows 10/11 or newer</span>
+                  <span>
+                    {selectedPlatform === 'windows' && 'Windows 10/11 or newer'}
+                    {selectedPlatform === 'mac' && 'macOS 10.15 or newer'}
+                    {selectedPlatform === 'linux' && 'Ubuntu 18.04+ / Debian 10+'}
+                  </span>
                 </div>
                 <div className="req-item">
                   <CheckCircle2 size={16} />
@@ -281,6 +305,9 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
               </div>
 
               {/* Download Button */}
+              {releaseError && (
+                <div className="release-error">{releaseError}</div>
+              )}
               <motion.button
                 className={`download-btn ${downloading ? 'downloading' : ''} ${isInstalled ? 'installed' : ''}`}
                 onClick={handleDownload}
@@ -398,8 +425,15 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
       </footer>
 
       {/* Login Modal */}
+      <AnimatePresence>
       {showLogin && (
-        <div className="login-modal-overlay" onClick={() => setShowLogin(false)}>
+        <motion.div 
+          className="login-modal-overlay" 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowLogin(false)}
+        >
           <motion.div 
             className="login-modal"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -416,12 +450,21 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
             
             {authError && <div className="auth-error">{authError}</div>}
             
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
-              if (isRegistering) {
-                onRegister?.({ username, password });
-              } else {
-                onLogin?.({ username, password });
+              try {
+                if (isRegistering) {
+                  await onRegister?.({ username, password });
+                } else {
+                  await onLogin?.({ username, password });
+                }
+                // Close modal on success
+                setShowLogin(false);
+                setUsername('');
+                setPassword('');
+              } catch (err) {
+                // Error is handled by authError prop
+                console.error('Login/Register failed:', err);
               }
             }}>
               <div className="form-group">
@@ -466,8 +509,9 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
               </button>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

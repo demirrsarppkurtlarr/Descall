@@ -566,26 +566,14 @@ export default function App() {
 
   if (!sessionChecked) return <div className="session-boot" aria-busy="true" />;
 
-  // Show download page at root for non-logged-in users
-  if (!me && window.location.pathname === "/") {
+  // Show download page for all non-logged-in users
+  if (!me) {
     return (
       <DownloadPage 
         onLogin={handleLogin}
         onRegister={handleRegister}
         authLoading={authLoading}
         authError={authError}
-      />
-    );
-  }
-
-  // Login/Register page
-  if (!me) {
-    return (
-      <AuthView
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-        loading={authLoading}
-        error={authError}
       />
     );
   }
