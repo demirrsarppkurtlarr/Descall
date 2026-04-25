@@ -23,14 +23,8 @@ import {
 } from 'lucide-react';
 import './DownloadPage.css';
 
-// Manual setup distribution - update these links when you have new builds
-const LATEST_VERSION = "v1.0.0";
-// Add your download links here (Google Drive, Dropbox, or any direct link)
-const DOWNLOAD_LINKS = {
-  windows: null, // e.g., "https://drive.google.com/file/d/.../view"
-  mac: null,     // e.g., "https://drive.google.com/file/d/.../view"  
-  linux: null,   // e.g., "https://drive.google.com/file/d/.../view"
-};
+const GITHUB_REPO = 'demirrsarppkurtlarr/descall';
+const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
 const features = [
   { icon: MessageCircle, title: "Real-time Chat", desc: "Instant messaging with typing indicators" },
@@ -78,17 +72,52 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isInstalled, setIsInstalled] = useState(false);
   const [latestRelease, setLatestRelease] = useState(null);
-  const [loading, setLoading] = useState(false); // No API loading needed
+  const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [releaseError, setReleaseError] = useState(null);
+  const [downloadLinks, setDownloadLinks] = useState({ windows: null, mac: null, linux: null });
   const downloadIntervalRef = useRef(null);
 
   useEffect(() => {
     detectPlatform();
+    fetchLatestRelease();
   }, []);
+
+  const fetchLatestRelease = async () => {
+    try {
+      const response = await fetch(GITHUB_API);
+      if (!response.ok) throw new Error('Failed to fetch release');
+      const data = await response.json();
+      
+      setLatestRelease(data);
+      
+      // Parse assets for download links
+      const links = { windows: null, mac: null, linux: null };
+      
+      if (data.assets && Array.isArray(data.assets)) {
+        data.assets.forEach(asset => {
+          const name = asset.name.toLowerCase();
+          if (name.includes('win') && name.includes('.exe')) {
+            links.windows = asset.browser_download_url;
+          } else if (name.includes('dmg') || name.includes('mac')) {
+            links.mac = asset.browser_download_url;
+          } else if (name.includes('appimage') || name.includes('deb') || name.includes('linux')) {
+            links.linux = asset.browser_download_url;
+          }
+        });
+      }
+      
+      setDownloadLinks(links);
+    } catch (error) {
+      console.error('Failed to fetch release:', error);
+      setReleaseError('Failed to load download links. Please check back later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const detectPlatform = () => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -98,7 +127,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
   };
 
   const handleDownload = async () => {
-    const downloadUrl = DOWNLOAD_LINKS[selectedPlatform];
+    const downloadUrl = downloadLinks[selectedPlatform];
     
     if (!downloadUrl) {
       setReleaseError('Setup file not available yet. Please check back later.');
@@ -161,7 +190,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
             transition={{ delay: 0.3, type: "spring" }}
           >
             <Sparkles size={14} />
-            <span>{LATEST_VERSION} Now Available</span>
+            <span>{latestRelease?.tag_name || 'Loading...'} Now Available</span>
           </motion.div>
 
           <motion.h1 
