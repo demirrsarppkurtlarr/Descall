@@ -108,6 +108,13 @@ function MediaMessage({ media, onOpenLightbox }) {
       </div>
     );
   }
+  if (media.mediaType === "audio") {
+    return (
+      <div className="dm-message-voice">
+        <VoiceMessagePlayer audioUrl={url} duration={media.duration || 0} />
+      </div>
+    );
+  }
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className="dm-media-file">
       📎 {media.originalName || "file"}
@@ -1986,6 +1993,16 @@ export default function ChatLayout({
                       )}
                       {msg.media && <MediaMessage media={msg.media} onOpenLightbox={setLightboxUrl} />}
                       
+                      {/* Voice message from mediaUrl */}
+                      {(msg.mediaUrl || msg.media_url) && (msg.mediaType === 'audio' || msg.media_type === 'audio') && (
+                        <div className="dm-message-voice">
+                          <VoiceMessagePlayer 
+                            audioUrl={msg.mediaUrl || msg.media_url} 
+                            duration={msg.duration || 0} 
+                          />
+                        </div>
+                      )}
+                      
                       {/* Message text or edit UI */}
                       {editingMessage?.id === msg.id ? (
                         <MessageEditUI 
@@ -2065,16 +2082,27 @@ export default function ChatLayout({
                         </span>
                       </div>
                       
-                      {/* Media (GIFs, images) */}
+                      {/* Media (GIFs, images, audio) */}
                       {(msg.mediaUrl || msg.media_url || msg.media) && (
-                        <div className="gif-message">
-                          <img 
-                            src={msg.mediaUrl || msg.media_url || msg.media?.url} 
-                            alt={msg.mediaType || msg.media_type || msg.media?.type || "Media"}
-                            onClick={() => setLightboxUrl(msg.mediaUrl || msg.media_url || msg.media?.url)}
-                            style={{ cursor: "pointer" }}
-                          />
-                        </div>
+                        <>
+                          {(msg.mediaType === 'audio' || msg.media_type === 'audio' || msg.media?.type === 'audio') ? (
+                            <div className="dm-message-voice">
+                              <VoiceMessagePlayer 
+                                audioUrl={msg.mediaUrl || msg.media_url || msg.media?.url} 
+                                duration={msg.duration || msg.media?.duration || 0} 
+                              />
+                            </div>
+                          ) : (
+                            <div className="gif-message">
+                              <img 
+                                src={msg.mediaUrl || msg.media_url || msg.media?.url} 
+                                alt={msg.mediaType || msg.media_type || msg.media?.type || "Media"}
+                                onClick={() => setLightboxUrl(msg.mediaUrl || msg.media_url || msg.media?.url)}
+                                style={{ cursor: "pointer" }}
+                              />
+                            </div>
+                          )}
+                        </>
                       )}
                       
                       {/* Message text or edit UI */}

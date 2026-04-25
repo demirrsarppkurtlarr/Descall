@@ -914,9 +914,65 @@
 /* Voice Message in Chat */
 .dm-message-voice,
 .group-message-voice {
-  background: var(--discord-embed);
-  border-radius: 12px;
+  background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+  border-radius: 18px;
   padding: 12px 16px;
   margin: 4px 0;
-  max-width: 320px;
+  max-width: 340px;
+  box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+}
+
+.dm-message-voice .voice-message-player,
+.group-message-voice .voice-message-player {
+  background: transparent;
+  min-width: 260px;
+}
+
+.dm-message-voice .voice-play-btn,
+.group-message-voice .voice-play-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 36px;
+  height: 36px;
+}
+
+.dm-message-voice .voice-play-btn:hover,
+.group-message-voice .voice-play-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.dm-message-voice .voice-mute-btn,
+.group-message-voice .voice-mute-btn {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dm-message-voice .voice-mute-btn:hover,
+.group-message-voice .voice-mute-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dm-message-voice .voice-waveform,
+.group-message-voice .voice-waveform {
+  flex: 1;
+}
+
+.dm-message-voice .voice-progress-bar,
+.group-message-voice .voice-progress-bar {
+  background: rgba(255, 255, 255, 0.2);
+  height: 4px;
+  border-radius: 2px;
+}
+
+.dm-message-voice .voice-progress-fill,
+.group-message-voice .voice-progress-fill {
+  background: white;
+}
+
+.dm-message-voice .voice-time,
+.group-message-voice .voice-time {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 500;
 }
