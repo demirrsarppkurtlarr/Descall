@@ -1,11 +1,16 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { Play, Pause } from 'lucide-react';
 
-export default function VoiceMessagePlayer({ audioUrl, duration }) {
+// Generate random waveform bars
+const generateWaveform = (count = 24) => {
+  return Array.from({ length: count }, () => Math.random() * 0.6 + 0.2);
+};
+
+export default function VoiceMessagePlayer({ audioUrl, duration, isOwn = false }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef(null);
+  const waveformRef = useRef(generateWaveform());
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -45,13 +50,6 @@ export default function VoiceMessagePlayer({ audioUrl, duration }) {
     setIsPlaying(!isPlaying);
   }, [isPlaying]);
 
-  const toggleMute = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.muted = !isMuted;
-    setIsMuted(!isMuted);
-  }, [isMuted]);
-
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -60,39 +58,39 @@ export default function VoiceMessagePlayer({ audioUrl, duration }) {
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  // Calculate which bars are "played" based on progress
+  const playedBars = Math.floor((progressPercent / 100) * waveformRef.current.length);
+
   return (
-    <div className="voice-message-player">
+    <div className={`voice-message-bubble ${isOwn ? 'own' : 'other'}`}>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
       
       <button 
         className="voice-play-btn"
         onClick={togglePlay}
-        title={isPlaying ? 'Durdur' : 'Oynat'}
+        title={isPlaying ? 'Pause' : 'Play'}
       >
-        {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+        {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
       </button>
 
-      <div className="voice-waveform">
-        <div className="voice-progress-bar">
-          <div 
-            className="voice-progress-fill"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <div className="voice-time">
-          <span>{formatTime(currentTime)}</span>
-          <span>/</span>
-          <span>{formatTime(duration || 0)}</span>
+      <div className="voice-waveform-container">
+        <div className="voice-waveform-bars">
+          {waveformRef.current.map((height, index) => (
+            <div
+              key={index}
+              className={`voice-bar ${index < playedBars ? 'played' : ''}`}
+              style={{ 
+                height: `${height * 100}%`,
+                animationDelay: `${index * 0.02}s`
+              }}
+            />
+          ))}
         </div>
       </div>
 
-      <button 
-        className="voice-mute-btn"
-        onClick={toggleMute}
-        title={isMuted ? 'Sesi Aç' : 'Sessiz'}
-      >
-        {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-      </button>
+      <span className="voice-duration">
+        {isPlaying ? formatTime(currentTime) : formatTime(duration || 0)}
+      </span>
     </div>
   );
 }

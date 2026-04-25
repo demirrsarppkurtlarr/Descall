@@ -911,68 +911,192 @@
   color: var(--discord-text-muted);
 }
 
-/* Voice Message in Chat */
+/* ===== WHATSAPP STYLE VOICE MESSAGE BUBBLES ===== */
+
+/* Container for voice messages */
 .dm-message-voice,
 .group-message-voice {
-  background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+  max-width: 300px;
+  margin: 2px 0;
+}
+
+/* Voice Message Bubble - Base */
+.voice-message-bubble {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
   border-radius: 18px;
-  padding: 12px 16px;
-  margin: 4px 0;
-  max-width: 340px;
-  box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+  min-width: 200px;
+  max-width: 300px;
 }
 
-.dm-message-voice .voice-message-player,
-.group-message-voice .voice-message-player {
-  background: transparent;
-  min-width: 260px;
+/* Own message bubble (sent) - iMessage blue */
+.voice-message-bubble.own {
+  background: linear-gradient(135deg, #007AFF 0%, #0051D5 100%);
+  border-bottom-right-radius: 4px;
 }
 
-.dm-message-voice .voice-play-btn,
-.group-message-voice .voice-play-btn {
-  background: rgba(255, 255, 255, 0.2);
+/* Other message bubble (received) - Light gray */
+.voice-message-bubble.other {
+  background: linear-gradient(135deg, #E9ECEF 0%, #DEE2E6 100%);
+  border-bottom-left-radius: 4px;
+}
+
+/* Play Button */
+.voice-message-bubble .voice-play-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* Own message - White button */
+.voice-message-bubble.own .voice-play-btn {
+  background: rgba(255, 255, 255, 0.25);
   color: white;
-  width: 36px;
-  height: 36px;
 }
 
-.dm-message-voice .voice-play-btn:hover,
-.group-message-voice .voice-play-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
+.voice-message-bubble.own .voice-play-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
 }
 
-.dm-message-voice .voice-mute-btn,
-.group-message-voice .voice-mute-btn {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.dm-message-voice .voice-mute-btn:hover,
-.group-message-voice .voice-mute-btn:hover {
+/* Other message - Blue button */
+.voice-message-bubble.other .voice-play-btn {
+  background: #007AFF;
   color: white;
-  background: rgba(255, 255, 255, 0.2);
 }
 
-.dm-message-voice .voice-waveform,
-.group-message-voice .voice-waveform {
+.voice-message-bubble.other .voice-play-btn:hover {
+  background: #0051D5;
+  transform: scale(1.05);
+}
+
+/* Waveform Container */
+.voice-waveform-container {
   flex: 1;
+  height: 40px;
+  display: flex;
+  align-items: center;
 }
 
-.dm-message-voice .voice-progress-bar,
-.group-message-voice .voice-progress-bar {
-  background: rgba(255, 255, 255, 0.2);
-  height: 4px;
+/* Waveform Bars Container */
+.voice-waveform-bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Individual Waveform Bar */
+.voice-bar {
+  width: 3px;
   border-radius: 2px;
+  background: currentColor;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+  min-height: 4px;
 }
 
-.dm-message-voice .voice-progress-fill,
-.group-message-voice .voice-progress-fill {
+/* Own message - White bars */
+.voice-message-bubble.own .voice-bar {
   background: white;
 }
 
-.dm-message-voice .voice-time,
-.group-message-voice .voice-time {
-  color: rgba(255, 255, 255, 0.8);
+.voice-message-bubble.own .voice-bar.played {
+  opacity: 1;
+}
+
+/* Other message - Blue bars */
+.voice-message-bubble.other .voice-bar {
+  background: #007AFF;
+}
+
+.voice-message-bubble.other .voice-bar.played {
+  opacity: 1;
+  background: #0051D5;
+}
+
+/* Duration Text */
+.voice-duration {
   font-size: 12px;
   font-weight: 500;
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Own message - White text */
+.voice-message-bubble.own .voice-duration {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Other message - Gray text */
+.voice-message-bubble.other .voice-duration {
+  color: #6c757d;
+}
+
+/* Old voice message player styles - keep for backward compatibility */
+.voice-message-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--discord-embed);
+  border-radius: 20px;
+  padding: 12px 16px;
+  min-width: 240px;
+}
+
+.voice-play-btn,
+.voice-mute-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  color: var(--discord-text);
+}
+
+.voice-play-btn:hover,
+.voice-mute-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.voice-waveform {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.voice-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--discord-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.voice-progress-fill {
+  height: 100%;
+  background: var(--discord-accent);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.voice-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--discord-text-muted);
 }

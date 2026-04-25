@@ -81,7 +81,7 @@ function groupDmRows(messages) {
   });
 }
 
-function MediaMessage({ media, onOpenLightbox }) {
+function MediaMessage({ media, onOpenLightbox, isOwn = false }) {
   const url = getMediaUrl(media.url);
   if (media.mediaType === "image") {
     return (
@@ -111,7 +111,7 @@ function MediaMessage({ media, onOpenLightbox }) {
   if (media.mediaType === "audio") {
     return (
       <div className="dm-message-voice">
-        <VoiceMessagePlayer audioUrl={url} duration={media.duration || 0} />
+        <VoiceMessagePlayer audioUrl={url} duration={media.duration || 0} isOwn={isOwn} />
       </div>
     );
   }
@@ -1991,14 +1991,15 @@ export default function ChatLayout({
                           {formatTime(msg.timestamp)}
                         </span>
                       )}
-                      {msg.media && <MediaMessage media={msg.media} onOpenLightbox={setLightboxUrl} />}
+                      {msg.media && <MediaMessage media={msg.media} onOpenLightbox={setLightboxUrl} isOwn={fromSelf} />}
                       
                       {/* Voice message from mediaUrl */}
                       {(msg.mediaUrl || msg.media_url) && (msg.mediaType === 'audio' || msg.media_type === 'audio') && (
                         <div className="dm-message-voice">
                           <VoiceMessagePlayer 
                             audioUrl={msg.mediaUrl || msg.media_url} 
-                            duration={msg.duration || 0} 
+                            duration={msg.duration || 0}
+                            isOwn={fromSelf}
                           />
                         </div>
                       )}
@@ -2089,7 +2090,8 @@ export default function ChatLayout({
                             <div className="dm-message-voice">
                               <VoiceMessagePlayer 
                                 audioUrl={msg.mediaUrl || msg.media_url || msg.media?.url} 
-                                duration={msg.duration || msg.media?.duration || 0} 
+                                duration={msg.duration || msg.media?.duration || 0}
+                                isOwn={fromSelf}
                               />
                             </div>
                           ) : (
