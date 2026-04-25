@@ -26,6 +26,9 @@ import './DownloadPage.css';
 const GITHUB_REPO = 'demirrsarppkurtlarr/Descall';
 const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
+// Fallback download link for private repos (update this manually after each release)
+const FALLBACK_DOWNLOAD_URL = null; // e.g., "https://github.com/demirrsarppkurtlarr/Descall/releases/download/v1.0.5/Descall-Setup-1.0.5.exe"
+
 const features = [
   { icon: MessageCircle, title: "Real-time Chat", desc: "Instant messaging with typing indicators" },
   { icon: Mic, title: "Voice Messages", desc: "Crystal clear voice recordings" },
@@ -90,8 +93,14 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
     try {
       const response = await fetch(GITHUB_API);
       if (response.status === 404) {
-        console.log('No release found yet - download will be available soon');
-        setReleaseError('Download coming soon! Setup file not available yet.');
+        console.log('No release found or repo is private');
+        // Try fallback URL for private repos
+        if (FALLBACK_DOWNLOAD_URL) {
+          setDownloadLinks({ windows: FALLBACK_DOWNLOAD_URL, mac: null, linux: null });
+          setLatestRelease({ tag_name: 'v1.0.5' }); // Update version manually
+        } else {
+          setReleaseError('Download coming soon! Setup file not available yet.');
+        }
         setLoading(false);
         return;
       }
