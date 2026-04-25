@@ -48,6 +48,17 @@ jobs:
           echo "=== Checking assets ==="
           if exist dist\assets\*.js (echo "JS files found") else (echo "ERROR: No JS files in assets!")
 
+      - name: Sync version from tag
+        working-directory: frontend/electron
+        shell: cmd
+        run: |
+          for /f "tokens=2 delims==" %%a in ('findstr "version" package.json') do (set OLD_VER=%%a)
+          set TAG_NAME=%GITHUB_REF_NAME:v=%
+          echo Old version: %OLD_VER%
+          echo New version: %TAG_NAME%
+          powershell -Command "(Get-Content package.json) -replace '\"version\": \"[^\"]+\"', '\"version\": \"%TAG_NAME%\"' | Set-Content package.json"
+          type package.json | findstr version
+
       - name: Install Electron dependencies
         working-directory: frontend/electron
         run: npm install
@@ -60,11 +71,21 @@ jobs:
           ELECTRON_MIRROR: "https://npmmirror.com/mirrors/electron/"
           ELECTRON_BUILDER_CACHE: "true"
 
+      - name: List build output
+        working-directory: frontend/electron
+        shell: cmd
+        run: |
+          echo "=== Build output ==="
+          dir dist /s
+          echo "=== Looking for .exe files ==="
+          dir dist\*.exe /s /b
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: electron-build-${{ matrix.platform }}
           path: frontend/electron/dist/**
+          if-no-files-found: warn
 
   release:
     needs: build
