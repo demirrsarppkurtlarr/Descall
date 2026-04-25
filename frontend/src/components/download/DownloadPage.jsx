@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Github,
   Star,
-  LogIn
+  LogIn,
+  X
 } from 'lucide-react';
 import './DownloadPage.css';
 
@@ -66,13 +67,17 @@ const stats = [
   { value: "50+", label: "Countries" },
 ];
 
-export default function DownloadPage() {
+export default function DownloadPage({ onLogin, onRegister, authLoading, authError }) {
   const [selectedPlatform, setSelectedPlatform] = useState('windows');
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isInstalled, setIsInstalled] = useState(false);
   const [latestRelease, setLatestRelease] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     fetchLatestRelease();
@@ -181,7 +186,7 @@ export default function DownloadPage() {
           {/* Login Button */}
           <motion.button
             className="login-btn"
-            onClick={() => window.location.href = '/login'}
+            onClick={() => setShowLogin(true)}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45 }}
@@ -391,6 +396,78 @@ export default function DownloadPage() {
       <footer className="download-footer">
         <p>© 2024 Descall. Open source on <a href={`https://github.com/${GITHUB_REPO}`}>GitHub</a></p>
       </footer>
+
+      {/* Login Modal */}
+      {showLogin && (
+        <div className="login-modal-overlay" onClick={() => setShowLogin(false)}>
+          <motion.div 
+            className="login-modal"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="modal-close" onClick={() => setShowLogin(false)}>
+              <X size={20} />
+            </button>
+            
+            <h2>{isRegistering ? 'Create Account' : 'Welcome Back'}</h2>
+            <p>{isRegistering ? 'Join Descall today' : 'Sign in to your account'}</p>
+            
+            {authError && <div className="auth-error">{authError}</div>}
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (isRegistering) {
+                onRegister?.(username, password);
+              } else {
+                onLogin?.(username, password);
+              }
+            }}>
+              <div className="form-group">
+                <label>Username</label>
+                <input 
+                  type="text" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Password</label>
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+              
+              <button 
+                type="submit" 
+                className="submit-btn"
+                disabled={authLoading}
+              >
+                {authLoading ? 'Loading...' : (isRegistering ? 'Create Account' : 'Sign In')}
+              </button>
+            </form>
+            
+            <div className="auth-switch">
+              {isRegistering ? 'Already have an account?' : "Don't have an account?"}
+              <button 
+                type="button"
+                className="switch-btn"
+                onClick={() => setIsRegistering(!isRegistering)}
+              >
+                {isRegistering ? 'Sign In' : 'Create Account'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

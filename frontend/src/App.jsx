@@ -568,7 +568,14 @@ export default function App() {
 
   // Show download page at root for non-logged-in users
   if (!me && window.location.pathname === "/") {
-    return <DownloadPage />;
+    return (
+      <DownloadPage 
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        authLoading={authLoading}
+        authError={authError}
+      />
+    );
   }
 
   // Login/Register page
