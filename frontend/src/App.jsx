@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AuthView from "./components/AuthView";
 import ChatLayout from "./components/ChatLayout";
+import DownloadPage from "./components/download/DownloadPage";
 import { getMe, login, register } from "./api/auth";
 import { getMyGroups } from "./api/groups";
 import { createSocket } from "./socket";
@@ -561,6 +563,11 @@ export default function App() {
     }
     return "Online";
   }, [isConnected, reconnectState]);
+
+  // Download page - public route
+  if (window.location.pathname === "/download") {
+    return <DownloadPage />;
+  }
 
   if (!sessionChecked) return <div className="session-boot" aria-busy="true" />;
 
