@@ -419,11 +419,11 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
             <form onSubmit={(e) => {
               e.preventDefault();
               if (isRegistering) {
-                onRegister?.(username, password);
+                onRegister?.({ username, password });
               } else {
-                onLogin?.(username, password);
+                onLogin?.({ username, password });
               }
-            }}>
+            }}
               <div className="form-group">
                 <label>Username</label>
                 <input 
