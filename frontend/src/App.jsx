@@ -494,7 +494,15 @@ export default function App() {
   };
 
   const handleSendDmMedia = (toUserId, mediaInfo) => {
-    socketRef.current?.emit("dm:send", { toUserId, text: "", media: mediaInfo });
+    socketRef.current?.emit("dm:send", {
+      toUserId,
+      text: "",
+      mediaUrl: mediaInfo.url,
+      mediaType: mediaInfo.mediaType,
+      mimeType: mediaInfo.mimeType,
+      size: mediaInfo.size,
+      originalName: mediaInfo.originalName,
+    });
   };
 
   const handleSendFriendRequest = (toUsername) => {

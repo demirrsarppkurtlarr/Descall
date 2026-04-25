@@ -518,14 +518,11 @@ export default function ChatLayout({
       const file = new File([audioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
       const result = await uploadFile(file);
       
-      socket?.emit("group:media", {
+      socket?.emit("group:message", {
         groupId: groups.active.id,
-        media: {
-          url: result.url,
-          mediaType: 'audio',
-          mimeType: 'audio/webm',
-          duration: recordingDuration,
-        }
+        content: "",
+        mediaUrl: result.url,
+        mediaType: 'audio',
       });
       
       resetRecording();
