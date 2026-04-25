@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Download, 
-  Windows, 
-  Apple, 
-  Linux, 
+  Monitor,
+  Smartphone,
+  Terminal,
   CheckCircle2, 
   Loader2,
   Sparkles,
@@ -36,7 +36,7 @@ const platforms = [
   { 
     id: 'windows', 
     name: 'Windows', 
-    icon: Windows, 
+    icon: Monitor, 
     file: 'Descall-Setup.exe',
     size: '~80 MB',
     color: '#0078D4'
@@ -44,7 +44,7 @@ const platforms = [
   { 
     id: 'mac', 
     name: 'macOS', 
-    icon: Apple, 
+    icon: Smartphone, 
     file: 'Descall.dmg',
     size: '~85 MB',
     color: '#000000'
@@ -52,7 +52,7 @@ const platforms = [
   { 
     id: 'linux', 
     name: 'Linux', 
-    icon: Linux, 
+    icon: Terminal, 
     file: 'Descall.AppImage',
     size: '~90 MB',
     color: '#25D366'
