@@ -80,17 +80,20 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body ?? {};
+    console.log("[AUTH] Login request received:", { username, hasPassword: !!password });
 
     if (!username || !password) {
+      console.log("[AUTH] Missing credentials");
       return res.status(400).json({ error: "Username and password are required." });
     }
 
     if (typeof username !== "string" || typeof password !== "string") {
+      console.log("[AUTH] Invalid types:", typeof username, typeof password);
       return res.status(400).json({ error: "Invalid request body." });
     }
 
     const cleanUsername = username.trim();
-    console.log("[AUTH] Login attempt for:", cleanUsername);
+    console.log("[AUTH] Login attempt for:", cleanUsername, "password length:", password.length);
 
     const { data: user, error: lookupError } = await supabase
       .from("users")
@@ -103,12 +106,19 @@ router.post("/login", async (req, res) => {
       return res.status(500).json({ error: "Database error." });
     }
 
+    console.log("[AUTH] User found:", !!user);
+    if (user) {
+      console.log("[AUTH] User details:", { id: user.id, username: user.username, hasHash: !!user.password_hash });
+    }
+
     const dummyHash = "$2a$12$invalidhashfortimingprotection000000000000000000000000";
     const hashToCompare = user ? user.password_hash : dummyHash;
 
     const passwordMatch = await bcrypt.compare(password, hashToCompare);
+    console.log("[AUTH] Password match result:", passwordMatch);
 
     if (!user || !passwordMatch) {
+      console.log("[AUTH] Login failed - user exists:", !!user, "password match:", passwordMatch);
       return res.status(401).json({ error: "Invalid username or password." });
     }
 
