@@ -71,12 +71,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            **/*.exe
-            **/*.dmg
-            **/*.AppImage
-            **/*.deb
-            **/*.rpm
-            **/*.zip
+            **/Descall*.exe
+            **/Descall Setup*.exe
           draft: false
           prerelease: false
           generate_release_notes: true
