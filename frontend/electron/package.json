@@ -42,7 +42,6 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "build/icon.ico",
       "publisherName": "Descall"
     },
     "nsis": {
@@ -50,11 +49,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Descall",
-      "include": "build/installer.nsh",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico"
+      "shortcutName": "Descall"
     },
     "mac": {
       "target": [
@@ -67,7 +62,6 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "icon": "build/icon.icns",
       "category": "public.app-category.social-networking",
       "hardenedRuntime": true,
       "gatekeeperAssess": false
@@ -105,7 +99,6 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "build/icons",
       "category": "Network",
       "maintainer": "Descall Team",
       "vendor": "Descall",

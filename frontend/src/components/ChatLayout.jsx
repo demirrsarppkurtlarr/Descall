@@ -1394,7 +1394,7 @@ export default function ChatLayout({
               whileTap={{ scale: 0.96 }} 
               onClick={() => { 
                 playClickSound(); 
-                window.open('/download', '_blank'); 
+                window.open('https://descall-1.onrender.com/', '_blank'); 
               }}
             >
               <Download size={22} />
