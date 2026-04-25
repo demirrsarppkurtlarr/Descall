@@ -403,7 +403,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
 
       {/* Footer */}
       <footer className="download-footer">
-        <p>© 2024 Descall. Open source on <a href={`https://github.com/${GITHUB_REPO}`}>GitHub</a></p>
+        <p>© 2024 Descall. All rights reserved.</p>
       </footer>
 
       {/* Login Modal */}

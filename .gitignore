@@ -12,6 +12,14 @@ frontend/build/
 frontend/release/
 backend/dist/
 backend/build/
+frontend/electron/dist/
+frontend/electron/build/
+
+# Setup files (uploaded to Drive instead)
+*.exe
+*.dmg
+*.AppImage
+Descall-Setup.exe
 
 # Environment files
 .env

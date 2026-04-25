@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   base: "./",
+  publicDir: "public",
   define: {
     'import.meta.env.VITE_API_BASE_URL': JSON.stringify('https://descall-qzkg.onrender.com'),
   },
@@ -17,5 +18,6 @@ export default defineConfig({
         format: "iife",
       },
     },
+    copyPublicDir: true,
   },
 });

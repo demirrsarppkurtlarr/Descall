@@ -16,8 +16,8 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron": "28.3.3",
+    "electron-builder": "24.13.3"
   },
   "build": {
     "appId": "com.descall.app",
@@ -104,12 +104,6 @@
       "vendor": "Descall",
       "synopsis": "Discord-like chat application",
       "description": "Descall is a modern chat application with voice messaging, video calls, and group chats."
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "demirrsarppkurtlarr",
-      "repo": "descall",
-      "releaseType": "release"
     }
   }
 }
