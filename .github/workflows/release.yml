@@ -50,14 +50,13 @@ jobs:
 
       - name: Sync version from tag
         working-directory: frontend/electron
-        shell: cmd
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: powershell
         run: |
-          for /f "tokens=2 delims==" %%a in ('findstr "version" package.json') do (set OLD_VER=%%a)
-          set TAG_NAME=%GITHUB_REF_NAME:v=%
-          echo Old version: %OLD_VER%
-          echo New version: %TAG_NAME%
-          powershell -Command "(Get-Content package.json) -replace '\"version\": \"[^\"]+\"', '\"version\": \"%TAG_NAME%\"' | Set-Content package.json"
-          type package.json | findstr version
+          $tagName = "${env:GITHUB_REF_NAME}" -replace '^v',''
+          Write-Host "New version: $tagName"
+          (Get-Content package.json) -replace '"version": "[^"]+"', "`"version`": `"$tagName`"" | Set-Content package.json
+          Get-Content package.json | Select-String "version"
 
       - name: Install Electron dependencies
         working-directory: frontend/electron
