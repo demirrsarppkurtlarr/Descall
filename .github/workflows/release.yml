@@ -41,6 +41,7 @@ jobs:
 
       - name: Debug - Check dist contents
         working-directory: frontend
+        shell: cmd
         run: |
           echo "=== dist folder contents ==="
           dir dist /s
