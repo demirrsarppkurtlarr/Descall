@@ -94,7 +94,6 @@
           ]
         }
       ],
-      "icon": "public/icon.png",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
@@ -115,7 +114,6 @@
           ]
         }
       ],
-      "icon": "public/icon.png",
       "category": "public.app-category.social-networking",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -136,7 +134,6 @@
           ]
         }
       ],
-      "icon": "public/icon.png",
       "category": "Network",
       "maintainer": "Descall Team",
       "vendor": "Descall",
