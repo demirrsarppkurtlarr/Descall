@@ -2088,11 +2088,12 @@ export default function ChatLayout({
                         <>
                           {(msg.mediaType === 'audio' || msg.media_type === 'audio' || msg.media?.type === 'audio') ? (
                             <div className="dm-message-voice">
-                              <VoiceMessagePlayer 
-                                audioUrl={msg.mediaUrl || msg.media_url || msg.media?.url} 
-                                duration={msg.duration || msg.media?.duration || 0}
-                                isOwn={fromSelf}
-                              />
+                              {(() => {
+                                const url = msg.mediaUrl || msg.media_url || msg.media?.url;
+                                const dur = msg.duration || msg.media?.duration || 0;
+                                console.log('[VoiceMessage] Rendering for URL:', url, 'duration:', dur, 'mediaType:', msg.mediaType || msg.media_type || msg.media?.type);
+                                return <VoiceMessagePlayer audioUrl={url} duration={dur} isOwn={fromSelf} />;
+                              })()}
                             </div>
                           ) : (
                             <div className="gif-message">
