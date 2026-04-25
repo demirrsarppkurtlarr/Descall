@@ -9,7 +9,8 @@ const router = express.Router();
 
 const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_VIDEO = ["video/mp4", "video/webm"];
-const ALLOWED_ALL = [...ALLOWED_IMAGE, ...ALLOWED_VIDEO];
+const ALLOWED_AUDIO = ["audio/webm", "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4"];
+const ALLOWED_ALL = [...ALLOWED_IMAGE, ...ALLOWED_VIDEO, ...ALLOWED_AUDIO];
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 // Use memory storage for Supabase upload
@@ -53,7 +54,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No file uploaded." });
 
     const file = req.file;
-    const mediaType = ALLOWED_IMAGE.includes(file.mimetype) ? "image" : "video";
+    let mediaType = "file";
+    if (ALLOWED_IMAGE.includes(file.mimetype)) mediaType = "image";
+    else if (ALLOWED_VIDEO.includes(file.mimetype)) mediaType = "video";
+    else if (ALLOWED_AUDIO.includes(file.mimetype)) mediaType = "audio";
+    
     const { url, path } = await uploadToSupabase(file, "files");
 
     res.json({
