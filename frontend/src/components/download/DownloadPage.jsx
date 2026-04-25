@@ -17,7 +17,8 @@ import {
   Users,
   ChevronRight,
   Github,
-  Star
+  Star,
+  LogIn
 } from 'lucide-react';
 import './DownloadPage.css';
 
@@ -176,6 +177,20 @@ export default function DownloadPage() {
             The ultimate chat application for your desktop. 
             Fast, secure, and beautifully designed.
           </motion.p>
+
+          {/* Login Button */}
+          <motion.button
+            className="login-btn"
+            onClick={() => window.location.href = '/login'}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <LogIn size={18} />
+            <span>Sign In</span>
+          </motion.button>
 
           {/* Stats */}
           <motion.div 

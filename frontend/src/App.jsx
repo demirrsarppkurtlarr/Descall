@@ -564,13 +564,14 @@ export default function App() {
     return "Online";
   }, [isConnected, reconnectState]);
 
-  // Download page - public route
-  if (window.location.pathname === "/download") {
+  if (!sessionChecked) return <div className="session-boot" aria-busy="true" />;
+
+  // Show download page at root for non-logged-in users
+  if (!me && window.location.pathname === "/") {
     return <DownloadPage />;
   }
 
-  if (!sessionChecked) return <div className="session-boot" aria-busy="true" />;
-
+  // Login/Register page
   if (!me) {
     return (
       <AuthView
