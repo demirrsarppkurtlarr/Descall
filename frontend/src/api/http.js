@@ -11,36 +11,46 @@ export async function httpRequest(path, options = {}) {
   const bodyText = options.body || '{}';
   
   console.log(`[HTTP] ${options.method || 'GET'} ${url}`);
+  console.log(`[HTTP] API_BASE_URL:`, API_BASE_URL);
+  console.log(`[HTTP] Full URL:`, url);
   console.log(`[HTTP] Body:`, bodyText.slice(0, 200));
+  console.log(`[HTTP] Is Electron:`, !!window.electronAPI);
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
-
-  let body = {};
   try {
-    body = await response.json();
-  } catch {
-    body = {};
-  }
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
 
-  console.log(`[HTTP] Response ${response.status}:`, body);
-
-  if (!response.ok) {
-    if (
-      typeof body?.message === "string" &&
-      body.message.toLowerCase().includes("no api key found")
-    ) {
-      throw new Error(
-        "Wrong API base URL. VITE_API_BASE_URL must point to your Node backend (Render), not Supabase.",
-      );
+    let body = {};
+    try {
+      body = await response.json();
+    } catch (parseError) {
+      console.error(`[HTTP] Failed to parse response:`, parseError);
+      body = { error: "Invalid response from server" };
     }
-    throw new Error(body.error || body.message || `HTTP ${response.status}`);
-  }
 
-  return body;
+    console.log(`[HTTP] Response ${response.status}:`, body);
+
+    if (!response.ok) {
+      if (
+        typeof body?.message === "string" &&
+        body.message.toLowerCase().includes("no api key found")
+      ) {
+        throw new Error(
+          "Wrong API base URL. VITE_API_BASE_URL must point to your Node backend (Render), not Supabase.",
+        );
+      }
+      throw new Error(body.error || body.message || `HTTP ${response.status}`);
+    }
+
+    return body;
+  } catch (networkError) {
+    console.error(`[HTTP] Network error:`, networkError);
+    console.error(`[HTTP] Failed URL:`, url);
+    throw new Error(networkError.message || "Network error - check your connection");
+  }
 }
