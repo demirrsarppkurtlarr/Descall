@@ -111,7 +111,8 @@ function createMainWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.cjs'),
-      webSecurity: true
+      webSecurity: false,
+      allowRunningInsecureContent: true
     }
   });
 
@@ -138,7 +139,12 @@ function createMainWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    console.log('Loading index.html from:', indexPath);
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error('Failed to load index.html:', err);
+      dialog.showErrorBox('Loading Error', `Failed to load app: ${err.message}`);
+    });
   }
 
   // Show window when ready
