@@ -30,7 +30,8 @@ import {
   Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
   Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid,
   ChevronLeft, ChevronRight, MoreVertical, Trash2,
-  Menu, Palette, Sparkles, User, Megaphone
+  Menu, Palette, Sparkles, User, Megaphone,
+  Download
 } from "lucide-react";
 
 function asArray(value) {
@@ -1383,6 +1384,20 @@ export default function ChatLayout({
             </motion.button>
             <motion.button type="button" className={`rail-btn ${sidebarView === "online" ? "active" : ""}`} title="Online" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => { playClickSound(); setSidebarView("online"); }}>
               <Circle size={10} fill="currentColor" />
+            </motion.button>
+            <div className="rail-divider" />
+            <motion.button 
+              type="button" 
+              className="rail-btn download-btn" 
+              title="Download App"
+              whileHover={{ scale: 1.04 }} 
+              whileTap={{ scale: 0.96 }} 
+              onClick={() => { 
+                playClickSound(); 
+                window.open('/download', '_blank'); 
+              }}
+            >
+              <Download size={22} />
             </motion.button>
             <div className="rail-spacer" />
             <motion.button 
