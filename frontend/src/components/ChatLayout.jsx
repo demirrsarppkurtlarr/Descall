@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useToast } from "../context/ToastContext";
 import { useMobile } from "../hooks/useMobile";
 import { useProfileCustomization } from "../hooks/useProfileCustomization";
+import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
+import VoiceMessagePlayer from "./chat/VoiceMessagePlayer";
 import TypingIndicator from "./chat/TypingIndicator";
 import MessageReactions from "./chat/MessageReactions";
 import MessageEditUI from "./chat/MessageEditUI";
@@ -437,6 +439,18 @@ export default function ChatLayout({
     },
     call: { minimized: false },
   });
+  // ========== VOICE RECORDER ==========
+  const {
+    isRecording,
+    recordingDuration,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    resetRecording,
+    formattedDuration,
+  } = useVoiceRecorder();
+
   // ========== MOBILE & CUSTOMIZATION ==========
   const { isMobile, isPortrait, touchSupported, vibrate } = useMobile();
   const profileCustomization = useProfileCustomization();
@@ -469,6 +483,59 @@ export default function ChatLayout({
   const cancelEditing = useCallback(() => {
     setEditingMessage(null);
   }, []);
+
+  // Send voice message
+  const sendVoiceMessage = useCallback(async () => {
+    if (!audioBlob || !activeDmUser) return;
+    
+    try {
+      setUploading(true);
+      const file = new File([audioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      const result = await uploadFile(file);
+      
+      onSendDmMedia(activeDmUser.id, {
+        url: result.url,
+        mediaType: 'audio',
+        mimeType: 'audio/webm',
+        duration: recordingDuration,
+      });
+      
+      resetRecording();
+    } catch (error) {
+      console.error('Failed to send voice message:', error);
+      toast({ type: 'error', message: 'Ses mesajı gönderilemedi' });
+    } finally {
+      setUploading(false);
+    }
+  }, [audioBlob, activeDmUser, recordingDuration, onSendDmMedia, resetRecording, toast]);
+
+  // Send group voice message
+  const sendGroupVoiceMessage = useCallback(async () => {
+    if (!audioBlob || !groups.active) return;
+    
+    try {
+      setUploading(true);
+      const file = new File([audioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      const result = await uploadFile(file);
+      
+      socket?.emit("group:media", {
+        groupId: groups.active.id,
+        media: {
+          url: result.url,
+          mediaType: 'audio',
+          mimeType: 'audio/webm',
+          duration: recordingDuration,
+        }
+      });
+      
+      resetRecording();
+    } catch (error) {
+      console.error('Failed to send group voice message:', error);
+      toast({ type: 'error', message: 'Ses mesajı gönderilemedi' });
+    } finally {
+      setUploading(false);
+    }
+  }, [audioBlob, groups.active, recordingDuration, socket, resetRecording, toast]);
 
   const saveEditedMessage = useCallback((newText) => {
     if (!editingMessage || !newText.trim()) return;
@@ -2076,18 +2143,54 @@ export default function ChatLayout({
               onChange={handleFileUpload}
               disabled={uploading}
             />
-            <RippleButton type="button" className="attach-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Attach file">
-              {uploading ? <Clock size={18} /> : <Paperclip size={18} />}
-            </RippleButton>
-            <button 
-              type="button" 
-              className="gif-btn"
-              onClick={() => { playClickSound(); setGiphyPickerForGroup(false); setGiphyPickerOpen(true); }}
-              title="Send GIF"
-            >
-              GIF
-            </button>
-            <RippleButton type="submit"><Send size={18} /></RippleButton>
+            {/* Voice Recording UI */}
+            {isRecording ? (
+              <div className="voice-recording-ui">
+                <span className="recording-indicator">
+                  <span className="recording-dot"></span>
+                  {formattedDuration}
+                </span>
+                <button type="button" className="voice-cancel-btn" onClick={cancelRecording} title="İptal">
+                  <X size={18} />
+                </button>
+                <button type="button" className="voice-send-btn" onClick={stopRecording} title="Gönder">
+                  <Send size={18} />
+                </button>
+              </div>
+            ) : audioBlob ? (
+              <div className="voice-preview-ui">
+                <VoiceMessagePlayer audioUrl={URL.createObjectURL(audioBlob)} duration={recordingDuration} />
+                <button type="button" className="voice-cancel-btn" onClick={resetRecording} title="İptal">
+                  <X size={18} />
+                </button>
+                <button type="button" className="voice-send-btn" onClick={sendVoiceMessage} disabled={uploading} title="Gönder">
+                  {uploading ? <Clock size={18} /> : <Send size={18} />}
+                </button>
+              </div>
+            ) : (
+              <>
+                <RippleButton type="button" className="attach-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Attach file">
+                  {uploading ? <Clock size={18} /> : <Paperclip size={18} />}
+                </RippleButton>
+                <button 
+                  type="button" 
+                  className="voice-btn"
+                  onClick={startRecording}
+                  title="Sesli mesaj"
+                >
+                  <Mic size={18} />
+                </button>
+                <button 
+                  type="button" 
+                  className="gif-btn"
+                  onClick={() => { playClickSound(); setGiphyPickerForGroup(false); setGiphyPickerOpen(true); }}
+                  title="Send GIF"
+                >
+                  GIF
+                </button>
+                <RippleButton type="submit"><Send size={18} /></RippleButton>
+              </>
+            )}
           </form>
         )}
 
@@ -2115,15 +2218,51 @@ export default function ChatLayout({
               value={groups.ui.groupComposer || ""}
               onChange={(e) => groupActions.setUI({ groupComposer: e.target.value })}
             />
-            <button 
-              type="button" 
-              className="gif-btn"
-              onClick={() => { playClickSound(); setGiphyPickerForGroup(true); setGiphyPickerOpen(true); }}
-              title="Send GIF"
-            >
-              GIF
-            </button>
-            <RippleButton type="submit">Send</RippleButton>
+            {/* Voice Recording UI for Group */}
+            {isRecording ? (
+              <div className="voice-recording-ui">
+                <span className="recording-indicator">
+                  <span className="recording-dot"></span>
+                  {formattedDuration}
+                </span>
+                <button type="button" className="voice-cancel-btn" onClick={cancelRecording} title="İptal">
+                  <X size={18} />
+                </button>
+                <button type="button" className="voice-send-btn" onClick={stopRecording} title="Gönder">
+                  <Send size={18} />
+                </button>
+              </div>
+            ) : audioBlob ? (
+              <div className="voice-preview-ui">
+                <VoiceMessagePlayer audioUrl={URL.createObjectURL(audioBlob)} duration={recordingDuration} />
+                <button type="button" className="voice-cancel-btn" onClick={resetRecording} title="İptal">
+                  <X size={18} />
+                </button>
+                <button type="button" className="voice-send-btn" onClick={sendGroupVoiceMessage} disabled={uploading} title="Gönder">
+                  {uploading ? <Clock size={18} /> : <Send size={18} />}
+                </button>
+              </div>
+            ) : (
+              <>
+                <button 
+                  type="button" 
+                  className="voice-btn"
+                  onClick={startRecording}
+                  title="Sesli mesaj"
+                >
+                  <Mic size={18} />
+                </button>
+                <button 
+                  type="button" 
+                  className="gif-btn"
+                  onClick={() => { playClickSound(); setGiphyPickerForGroup(true); setGiphyPickerOpen(true); }}
+                  title="Send GIF"
+                >
+                  GIF
+                </button>
+                <RippleButton type="submit">Send</RippleButton>
+              </>
+            )}
           </form>
         )}
 
