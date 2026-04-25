@@ -139,12 +139,31 @@ function createMainWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    const indexPath = path.join(__dirname, '../dist/index.html');
-    console.log('Loading index.html from:', indexPath);
-    mainWindow.loadFile(indexPath).catch(err => {
-      console.error('Failed to load index.html:', err);
-      dialog.showErrorBox('Loading Error', `Failed to load app: ${err.message}`);
-    });
+    // Try multiple paths for packaged app
+    const possiblePaths = [
+      path.join(process.resourcesPath, 'dist', 'index.html'),
+      path.join(__dirname, 'dist', 'index.html'),
+      path.join(__dirname, '..', 'dist', 'index.html'),
+      path.join(app.getAppPath(), 'dist', 'index.html')
+    ];
+    
+    let loaded = false;
+    for (const indexPath of possiblePaths) {
+      console.log('Trying to load from:', indexPath);
+      if (require('fs').existsSync(indexPath)) {
+        console.log('Found index.html at:', indexPath);
+        mainWindow.loadFile(indexPath).then(() => {
+          loaded = true;
+        }).catch(err => {
+          console.error('Failed to load from', indexPath, ':', err);
+        });
+        break;
+      }
+    }
+    
+    if (!loaded) {
+      dialog.showErrorBox('Loading Error', `Failed to load app: index.html not found in any of:\n${possiblePaths.join('\n')}`);
+    }
   }
 
   // Show window when ready
