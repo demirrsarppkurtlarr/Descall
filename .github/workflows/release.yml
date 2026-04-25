@@ -72,7 +72,6 @@ jobs:
         with:
           files: |
             **/Descall-Setup-*.exe
-            **/Descall-Portable-*.exe
           draft: false
           prerelease: false
           generate_release_notes: true

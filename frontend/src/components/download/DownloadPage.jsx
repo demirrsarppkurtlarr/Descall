@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import './DownloadPage.css';
 
-const GITHUB_REPO = 'demirrsarppkurtlarr/descall';
+const GITHUB_REPO = 'demirrsarppkurtlarr/Descall';
 const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
 const features = [
