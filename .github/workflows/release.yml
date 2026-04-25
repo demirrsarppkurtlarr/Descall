@@ -71,8 +71,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            **/Descall*.exe
-            **/Descall Setup*.exe
+            **/Descall-Setup-*.exe
+            **/Descall-Portable-*.exe
           draft: false
           prerelease: false
           generate_release_notes: true
