@@ -89,6 +89,12 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
   const fetchLatestRelease = async () => {
     try {
       const response = await fetch(GITHUB_API);
+      if (response.status === 404) {
+        console.log('No release found yet - download will be available soon');
+        setReleaseError('Download coming soon! Setup file not available yet.');
+        setLoading(false);
+        return;
+      }
       if (!response.ok) throw new Error('Failed to fetch release');
       const data = await response.json();
       
@@ -100,7 +106,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
       if (data.assets && Array.isArray(data.assets)) {
         data.assets.forEach(asset => {
           const name = asset.name.toLowerCase();
-          if (name.includes('win') && name.includes('.exe')) {
+          if (name.includes('setup') && name.includes('.exe')) {
             links.windows = asset.browser_download_url;
           } else if (name.includes('dmg') || name.includes('mac')) {
             links.mac = asset.browser_download_url;
@@ -113,7 +119,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
       setDownloadLinks(links);
     } catch (error) {
       console.error('Failed to fetch release:', error);
-      setReleaseError('Failed to load download links. Please check back later.');
+      setReleaseError('Download coming soon! Check back later.');
     } finally {
       setLoading(false);
     }
