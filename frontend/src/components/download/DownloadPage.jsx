@@ -423,7 +423,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
               } else {
                 onLogin?.({ username, password });
               }
-            }}
+            }}>
               <div className="form-group">
                 <label>Username</label>
                 <input 
