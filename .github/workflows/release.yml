@@ -42,12 +42,15 @@ jobs:
       - name: Install Electron dependencies
         working-directory: frontend/electron
         run: npm install
+        env:
+          ELECTRON_MIRROR: "https://github.com/electron/electron/releases/download/"
 
       - name: Build Electron app
         working-directory: frontend/electron
         run: npm run build:${{ matrix.platform }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_MIRROR: "https://github.com/electron/electron/releases/download/"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
