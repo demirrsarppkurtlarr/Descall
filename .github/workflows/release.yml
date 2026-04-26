@@ -91,6 +91,26 @@ jobs:
           echo "=== Looking for .exe files ==="
           dir dist\*.exe /s /b
 
+      - name: Debug - Check resources folder
+        working-directory: frontend/electron
+        shell: cmd
+        run: |
+          echo "=== Checking unpacked resources ==="
+          for /f "delims=" %%i in ('dir /s /b dist\win-unpacked\resources 2^>nul') do (
+            echo "Found: %%i"
+          )
+          if exist dist\win-unpacked\resources\app.asar (
+            echo "app.asar exists"
+          ) else (
+            echo "app.asar NOT found"
+          )
+          if exist dist\win-unpacked\resources\dist (
+            echo "dist folder exists in resources"
+            dir dist\win-unpacked\resources\dist /s
+          ) else (
+            echo "dist folder NOT in resources"
+          )
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

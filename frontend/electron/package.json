@@ -44,12 +44,7 @@
       "../dist/*.png",
       "node_modules/**/*"
     ],
-    "asar": true,
-    "asarUnpack": [
-      "node_modules/auto-launch/**/*",
-      "node_modules/electron-updater/**/*",
-      "node_modules/electron-log/**/*"
-    ],
+    "asar": false,
     "win": {
       "target": [
         {
