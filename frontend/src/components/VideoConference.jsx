@@ -237,7 +237,8 @@ export default function VideoConference({
             </button>
             <button 
               className={`vc-pip-control ${isScreenSharing ? 'active' : ''}`} 
-              onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+              onClick={() => isScreenSharing ? stopScreenShare() : startScreenShare()}
+              title={isScreenSharing ? "Stop screen sharing" : "Start screen sharing"}
             >
               <Monitor size={16} />
             </button>
@@ -635,7 +636,8 @@ export default function VideoConference({
           <div className="screen-share-container" ref={screenQualityRef}>
             <RippleButton
               className={`vc-btn ${isScreenSharing ? 'active' : ''}`}
-              onClick={isScreenSharing ? stopScreenShare : handleStartScreenShare}
+              onClick={() => isScreenSharing ? stopScreenShare() : handleStartScreenShare()}
+              title={isScreenSharing ? "Stop screen sharing" : "Start screen sharing"}
             >
               <Monitor size={20} />
             </RippleButton>
