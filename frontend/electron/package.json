@@ -58,7 +58,8 @@
           "arch": ["x64"]
         }
       ],
-      "publisherName": "Descall"
+      "publisherName": "Descall",
+      "icon": "../public/favicon.ico"
     },
     "nsis": {
       "oneClick": false,
