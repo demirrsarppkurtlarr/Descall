@@ -58,14 +58,26 @@ function formatRelativeTime(iso) {
   } catch { return ""; }
 }
 
-// Click sound for UI interactions - dynamic path for web/electron
+// Sound paths for web/electron
 const isElectronEnv = typeof window !== 'undefined' && window.electronAPI?.isElectron;
 const clickSoundPath = isElectronEnv ? 'sounds/click.mp3' : '/sounds/click.mp3';
+const notificationSoundPath = isElectronEnv ? 'sounds/notification.mp3' : '/sounds/notification.mp3';
+
 const clickSound = typeof Audio !== 'undefined' ? new Audio(clickSoundPath) : null;
+const notificationSound = typeof Audio !== 'undefined' ? new Audio(notificationSoundPath) : null;
+
 function playClickSound() {
   if (clickSound) {
     clickSound.currentTime = 0;
     clickSound.play().catch(() => {}); // Ignore autoplay errors
+  }
+}
+
+function playNotificationSound() {
+  if (notificationSound) {
+    notificationSound.currentTime = 0;
+    notificationSound.volume = 0.7;
+    notificationSound.play().catch(() => {}); // Ignore autoplay errors
   }
 }
 
@@ -387,14 +399,17 @@ function TitleBar() {
       borderBottom: '1px solid rgba(126,129,255,0.2)',
       boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
         <img 
           src="/icon.png" 
           alt="Descall" 
-          style={{ width: 22, height: 22, borderRadius: '4px' }} 
-          onError={(e) => { e.target.src = '/favicon.ico'; }}
+          style={{ width: 22, height: 22, borderRadius: '4px', flexShrink: 0 }} 
+          onError={(e) => { 
+            e.target.style.display = 'none';
+          }}
         />
         <span style={{ 
+          flexShrink: 0,
           color: '#fff', 
           fontSize: '14px', 
           fontWeight: 600,
@@ -977,11 +992,16 @@ export default function ChatLayout({
       setAnnouncements((prev) => prev.filter((a) => a.id !== id));
     };
 
-    socket.on("announcement:new", onNewAnnouncement);
+    // Announcement with notification sound
+    const onNewAnnouncementWithSound = (data) => {
+      playNotificationSound();
+      onNewAnnouncement(data);
+    };
+    socket.on("announcement:new", onNewAnnouncementWithSound);
     socket.on("announcement:deleted", onDeletedAnnouncement);
 
     return () => {
-      socket.off("announcement:new", onNewAnnouncement);
+      socket.off("announcement:new", onNewAnnouncementWithSound);
       socket.off("announcement:deleted", onDeletedAnnouncement);
     };
   }, [socket, sidebarView]);
@@ -1041,7 +1061,16 @@ export default function ChatLayout({
       setGroups((g) => ({ ...g, call: { ...g.call, minimized: false } }));
     };
 
-    socket.on("group:message", onGroupMessage);
+    // Group message with notification sound
+    const onGroupMessageWithSound = (data) => {
+      // Play sound if message is from someone else
+      if (data.sender?.id !== me?.id) {
+        playNotificationSound();
+      }
+      // Call original handler
+      onGroupMessage(data);
+    };
+    socket.on("group:message", onGroupMessageWithSound);
     socket.on("group:call:left", onCallEnded);
     socket.on("group:call:ended", onCallEnded);
 
@@ -1091,8 +1120,14 @@ export default function ChatLayout({
       console.log("[ChatLayout] DM message received:", data);
       const { from, text, mediaUrl, mediaType, timestamp, messageId } = data;
       
+      // Play notification sound if message is from someone else (not me)
+      const isFromMe = from === me?.id;
+      if (!isFromMe) {
+        playNotificationSound();
+      }
+      
       // Check if this is for currently active DM conversation
-      if (activeDmUser && (from === activeDmUser.id || from === me?.id)) {
+      if (activeDmUser && (from === activeDmUser.id || isFromMe)) {
         setActiveDmMessages(prev => {
           // Prevent duplicates by checking messageId or timestamp+text combination
           const exists = prev.some(m => 
@@ -1110,7 +1145,7 @@ export default function ChatLayout({
             mediaUrl,
             mediaType,
             timestamp,
-            isMe: from === me?.id
+            isMe: isFromMe
           }];
         });
       }
@@ -1118,7 +1153,7 @@ export default function ChatLayout({
     socket.on("dm:message", onDmMessage);
 
     return () => {
-      socket.off("group:message", onGroupMessage);
+      socket.off("group:message", onGroupMessageWithSound);
       socket.off("group:call:left", onCallEnded);
       socket.off("group:call:ended", onCallEnded);
       socket.off("reaction:update", onReactionUpdate);
