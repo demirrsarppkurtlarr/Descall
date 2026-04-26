@@ -399,24 +399,27 @@ function TitleBar() {
       borderBottom: '1px solid rgba(126,129,255,0.2)',
       boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-        <img 
-          src="/icon.png" 
-          alt="Descall" 
-          style={{ width: 22, height: 22, borderRadius: '4px', flexShrink: 0 }} 
-          onError={(e) => { 
-            e.target.style.display = 'none';
-          }}
-        />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ 
+          width: 20, 
+          height: 20, 
+          borderRadius: '4px', 
+          background: 'linear-gradient(135deg, #7c81ff 0%, #4a4dff 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '12px',
+          fontWeight: 'bold',
+          color: '#fff',
+          flexShrink: 0
+        }}>D</div>
         <span style={{ 
-          flexShrink: 0,
           color: '#fff', 
           fontSize: '14px', 
           fontWeight: 600,
           letterSpacing: '0.3px',
-          background: 'linear-gradient(90deg, #fff 0%, #a5a8ff 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
+          whiteSpace: 'nowrap',
+          flexShrink: 0
         }}>Descall</span>
       </div>
       <div style={{ display: 'flex', gap: '4px', WebkitAppRegion: 'no-drag' }}>
