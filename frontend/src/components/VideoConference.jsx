@@ -34,6 +34,8 @@ export default function VideoConference({
   setFocusedParticipant,
   duration = 0,
   remoteStreams,
+  screenQuality,
+  setScreenQuality,
   // Audio device selection props
   audioInputDevices = [],
   audioOutputDevices = [],
@@ -52,11 +54,13 @@ export default function VideoConference({
   const [fullscreenParticipant, setFullscreenParticipant] = useState(null); // null | 'local' | userId
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showVoiceEffects, setShowVoiceEffects] = useState(false);
+  const [showScreenQuality, setShowScreenQuality] = useState(false);
   const [localAudioInputs, setLocalAudioInputs] = useState([]);
   const [localAudioOutputs, setLocalAudioOutputs] = useState([]);
   const controlsTimeoutRef = useRef(null);
   const containerRef = useRef(null);
   const audioSettingsRef = useRef(null);
+  const screenQualityRef = useRef(null);
 
   // Auto-hide controls
   const resetControlsTimer = useCallback(() => {
@@ -66,6 +70,25 @@ export default function VideoConference({
       setShowControls(false);
     }, 3000);
   }, []);
+
+  // Screen sharing quality handlers
+  const handleStartScreenShare = useCallback(async () => {
+    if (startScreenShare) {
+      await startScreenShare(screenQuality);
+    }
+  }, [startScreenShare, screenQuality]);
+
+  const handleResolutionChange = useCallback((resolution) => {
+    if (setScreenQuality) {
+      setScreenQuality(prev => ({ ...prev, resolution }));
+    }
+  }, [setScreenQuality]);
+
+  const handleFpsChange = useCallback((fps) => {
+    if (setScreenQuality) {
+      setScreenQuality(prev => ({ ...prev, fps }));
+    }
+  }, [setScreenQuality]);
 
   // Enumerate audio devices
   useEffect(() => {
@@ -587,12 +610,92 @@ export default function VideoConference({
             {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
           </RippleButton>
           
-          <RippleButton
-            className={`vc-btn ${isScreenSharing ? 'active' : ''}`}
-            onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-          >
-            <Monitor size={20} />
-          </RippleButton>
+          {/* Screen Share with Quality Selector */}
+          <div className="screen-share-container" ref={screenQualityRef}>
+            <RippleButton
+              className={`vc-btn ${isScreenSharing ? 'active' : ''}`}
+              onClick={isScreenSharing ? stopScreenShare : handleStartScreenShare}
+            >
+              <Monitor size={20} />
+            </RippleButton>
+            
+            {/* Quality Settings Dropdown */}
+            {!isScreenSharing && (
+              <button
+                className="quality-toggle-btn"
+                onClick={() => setShowScreenQuality(!showScreenQuality)}
+                title="Ekran kalitesi ayarları"
+              >
+                <Settings size={14} />
+              </button>
+            )}
+            
+            {/* Quality Selector Panel */}
+            <AnimatePresence>
+              {showScreenQuality && !isScreenSharing && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="screen-quality-panel"
+                >
+                  <div className="quality-header">
+                    <Monitor size={16} />
+                    <span>Ekran Kalitesi</span>
+                  </div>
+                  
+                  {/* Resolution Selector */}
+                  <div className="quality-section">
+                    <label className="quality-label">
+                      <Maximize2 size={14} />
+                      Çözünürlük
+                    </label>
+                    <div className="quality-options">
+                      {['720p', '1080p'].map((res) => (
+                        <button
+                          key={res}
+                          className={`quality-option ${screenQuality?.resolution === res ? 'active' : ''}`}
+                          onClick={() => handleResolutionChange(res)}
+                        >
+                          {res}
+                          {screenQuality?.resolution === res && <Check size={12} />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* FPS Selector */}
+                  <div className="quality-section">
+                    <label className="quality-label">
+                      <Activity size={14} />
+                      FPS (Kare/Saniye)
+                    </label>
+                    <div className="quality-options fps-options">
+                      {[30, 60, 120, 240].map((fps) => (
+                        <button
+                          key={fps}
+                          className={`quality-option ${screenQuality?.fps === fps ? 'active' : ''}`}
+                          onClick={() => handleFpsChange(fps)}
+                        >
+                          {fps}
+                          {screenQuality?.fps === fps && <Check size={12} />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="quality-footer">
+                    <span className="quality-hint">
+                      {screenQuality?.resolution === '1080p' && screenQuality?.fps >= 60 
+                        ? '⚡ Yüksek performans gerektirir' 
+                        : '💡 Düşük performans için 720p/30fps'}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <RippleButton

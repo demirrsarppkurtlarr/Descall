@@ -28,6 +28,12 @@ export function useGroupCall(socket) {
   const [audioOutputDevices, setAudioOutputDevices] = useState([]);
   const [selectedAudioInput, setSelectedAudioInput] = useState("");
   const [selectedAudioOutput, setSelectedAudioOutput] = useState("");
+  
+  // Screen sharing quality settings
+  const [screenQuality, setScreenQuality] = useState({
+    resolution: '1080p', // '720p' | '1080p'
+    fps: 30, // 30 | 60 | 120 | 240
+  });
 
   const socketRef = useRef(socket);
   const localStreamRef = useRef(null);
@@ -421,16 +427,30 @@ export function useGroupCall(socket) {
     }
   }, [isCameraOn]);
 
-  const startScreenShare = useCallback(async () => {
+  const startScreenShare = useCallback(async (quality = screenQuality) => {
     try {
-      console.log("[GroupCall] Starting screen share...", { isScreenSharing, activeGroupId, localStreamRef: !!localStreamRef.current });
+      console.log("[GroupCall] Starting screen share...", { isScreenSharing, activeGroupId, quality });
       if (isScreenSharing) {
-        console.log("[GroupCall] Already screen sharing, skipping");
+        console.log("[GroupCall] Already screen sharing");
         return;
       }
       
+      // Calculate resolution based on setting
+      const resolutionMap = {
+        '720p': { width: 1280, height: 720 },
+        '1080p': { width: 1920, height: 1080 },
+      };
+      
+      const { width, height } = resolutionMap[quality.resolution] || resolutionMap['1080p'];
+      const frameRate = quality.fps || 30;
+      
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: "always", width: 1920, height: 1080 },
+        video: { 
+          cursor: "always", 
+          width: { ideal: width },
+          height: { ideal: height },
+          frameRate: { ideal: frameRate, max: frameRate }
+        },
         audio: false,
       });
       
@@ -994,6 +1014,8 @@ export function useGroupCall(socket) {
     localVideoRef,
     screenVideoRef,
     setLocalVideo,
+    screenQuality,
+    setScreenQuality,
     setScreenVideo,
     startGroupCall,
     acceptGroupCall,

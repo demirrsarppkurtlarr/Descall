@@ -692,6 +692,122 @@ body.electron-app .nav-rail {
   padding-top: 10px;
 }
 
+/* Screen Share Quality Selector - Professional */
+.screen-share-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quality-toggle-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quality-toggle-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #8b5cf6;
+}
+
+.screen-quality-panel {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 0;
+  width: 280px;
+  background: linear-gradient(145deg, #1a1d29 0%, #0f1218 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  padding: 16px;
+  z-index: 100;
+}
+
+.quality-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.quality-section {
+  margin-bottom: 16px;
+}
+
+.quality-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.quality-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quality-option {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quality-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.quality-option.active {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.quality-option svg {
+  color: #10b981;
+}
+
+.quality-footer {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.quality-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
 .rail-btn {
   width: 48px;
   height: 48px;
