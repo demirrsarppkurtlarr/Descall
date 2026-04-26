@@ -399,27 +399,26 @@ function TitleBar() {
       borderBottom: '1px solid rgba(126,129,255,0.2)',
       boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{ 
-          width: 20, 
-          height: 20, 
-          borderRadius: '4px', 
+          width: '24px', 
+          height: '24px', 
+          minWidth: '24px',
+          minHeight: '24px',
+          borderRadius: '6px', 
           background: 'linear-gradient(135deg, #7c81ff 0%, #4a4dff 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '12px',
+          fontSize: '14px',
           fontWeight: 'bold',
-          color: '#fff',
-          flexShrink: 0
+          color: '#fff'
         }}>D</div>
         <span style={{ 
           color: '#fff', 
           fontSize: '14px', 
           fontWeight: 600,
-          letterSpacing: '0.3px',
-          whiteSpace: 'nowrap',
-          flexShrink: 0
+          whiteSpace: 'nowrap'
         }}>Descall</span>
       </div>
       <div style={{ display: 'flex', gap: '4px', WebkitAppRegion: 'no-drag' }}>
