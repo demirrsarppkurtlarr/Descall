@@ -646,6 +646,12 @@ select {
   gap: 6px;
 }
 
+/* When TitleBar is present (Electron app), add padding to nav-rail */
+body.electron-app .nav-rail {
+  padding-top: 50px;
+  min-height: calc(100vh - 40px);
+}
+
 .rail-btn {
   width: 48px;
   height: 48px;
