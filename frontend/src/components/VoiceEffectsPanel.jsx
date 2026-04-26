@@ -60,7 +60,8 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
   const animationRef = useRef(null);
   const processedStreamRef = useRef(null);
 
-  // Define stopVoiceEffects BEFORE useEffect that uses it
+  // TDZ FIX: stopVoiceEffects MUST be defined before any useEffect that uses it
+  // This prevents "Cannot access before initialization" error
   const stopVoiceEffects = useCallback(() => {
     voiceEffects.stop();
     if (processedStreamRef.current) {
