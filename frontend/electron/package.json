@@ -39,8 +39,8 @@
       "preload.cjs",
       "node_modules/**/*"
     ],
-    "asar": false,
-    "extraFiles": [
+    "asar": true,
+    "extraResources": [
       {
         "from": "../dist",
         "to": "dist",

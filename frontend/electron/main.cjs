@@ -138,8 +138,8 @@ function createMainWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    // For asar:false, files are in resources/app/dist/
-    const indexPath = path.join(app.getAppPath(), 'dist', 'index.html');
+    // extraResources puts files in resources/dist/
+    const indexPath = path.join(process.resourcesPath, 'dist', 'index.html');
     console.log('Loading from:', indexPath);
     
     if (require('fs').existsSync(indexPath)) {
@@ -148,17 +148,18 @@ function createMainWindow() {
         dialog.showErrorBox('Loading Error', `Failed to load app: ${err.message}`);
       });
     } else {
-      // Fallback: try alternative paths
+      // Fallback paths
       const altPaths = [
+        path.join(app.getAppPath(), 'dist', 'index.html'),
         path.join(__dirname, 'dist', 'index.html'),
-        path.join(__dirname, '..', 'dist', 'index.html'),
-        path.join(process.resourcesPath, 'dist', 'index.html')
+        path.join(__dirname, '..', 'dist', 'index.html')
       ];
       
       let found = false;
       for (const altPath of altPaths) {
+        console.log('Trying:', altPath);
         if (require('fs').existsSync(altPath)) {
-          console.log('Found at alternative path:', altPath);
+          console.log('Found at:', altPath);
           mainWindow.loadFile(altPath);
           found = true;
           break;
@@ -166,7 +167,7 @@ function createMainWindow() {
       }
       
       if (!found) {
-        dialog.showErrorBox('Loading Error', `index.html not found at: ${indexPath}\nChecked alternatives:\n${altPaths.join('\n')}`);
+        dialog.showErrorBox('Loading Error', `index.html not found at: ${indexPath}\nTried:\n${altPaths.join('\n')}`);
       }
     }
   }
