@@ -21,6 +21,7 @@ import {
   LogIn,
   X
 } from 'lucide-react';
+import TitleBar from '../TitleBar';
 import './DownloadPage.css';
 
 const GITHUB_REPO = 'demirrsarppkurtlarr/Descall';
@@ -181,8 +182,10 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
   const currentPlatform = platforms.find(p => p.id === selectedPlatform);
 
   return (
-    <div className="download-page">
-      {/* Animated Background */}
+    <>
+      <TitleBar />
+      <div className="download-page">
+        {/* Animated Background */}
       <div className="download-bg">
         <div className="gradient-orb orb-1" />
         <div className="gradient-orb orb-2" />
@@ -538,6 +541,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
         </motion.div>
       )}
       </AnimatePresence>
-    </div>
+      </div>
+    </>
   );
 }

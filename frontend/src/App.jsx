@@ -19,6 +19,7 @@ import {
 } from "./lib/storage";
 import audioManager, { initAudioManager } from "./lib/audioManager";
 import AdminPanel from "./components/admin/AdminPanel";
+import TitleBar from "./components/TitleBar";
 import "./styles.admin-new.css";
 
 function mergeById(existing, incoming) {
@@ -580,6 +581,7 @@ export default function App() {
 
   return (
     <>
+      <TitleBar />
       {(me?.is_admin || me?.username === "admin") && !adminOpen && (
         <button type="button" className="admin-fab" onClick={() => setAdminOpen(true)} title="Admin panel">Admin</button>
       )}

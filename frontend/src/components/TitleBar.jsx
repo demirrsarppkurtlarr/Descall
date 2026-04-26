@@ -1,49 +1,31 @@
 import { useState, useEffect } from 'react';
-import { Minus, Square, X, Maximize2, Minimize2 } from 'lucide-react';
+import { Minus, Square, X } from 'lucide-react';
 
 export default function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const isElectron = window.electronWindow !== undefined;
+  const isElectron = window.electronAPI?.isElectron;
 
   useEffect(() => {
     if (!isElectron) return;
 
-    // Check initial state
-    const checkState = async () => {
-      const maximized = await window.electronWindow.isMaximized();
-      const fullscreen = await window.electronWindow.isFullscreen();
-      setIsMaximized(maximized);
-      setIsFullscreen(fullscreen);
-    };
-    checkState();
-
-    // Listen for resize events (optional - would need IPC from main)
-    const handleResize = () => {
-      checkState();
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Listen for maximize state changes from main process
+    if (window.electronAPI?.onMaximizedChange) {
+      window.electronAPI.onMaximizedChange((maximized) => {
+        setIsMaximized(maximized);
+      });
+    }
   }, [isElectron]);
 
-  if (!isElectron) return null; // Only show in Electron
+  // Don't render if not in Electron
+  if (!isElectron) return null;
 
-  const handleMinimize = () => window.electronWindow.minimize();
+  const handleMinimize = () => window.electronAPI?.minimizeWindow?.();
   
-  const handleMaximize = async () => {
-    await window.electronWindow.maximize();
-    const maximized = await window.electronWindow.isMaximized();
-    setIsMaximized(maximized);
+  const handleMaximize = () => {
+    window.electronAPI?.maximizeWindow?.();
   };
   
-  const handleClose = () => window.electronWindow.close();
-  
-  const handleFullscreen = async () => {
-    await window.electronWindow.fullscreen();
-    const fullscreen = await window.electronWindow.isFullscreen();
-    setIsFullscreen(fullscreen);
-  };
+  const handleClose = () => window.electronAPI?.closeWindow?.();
 
   return (
     <div 
@@ -119,18 +101,6 @@ export default function TitleBar() {
         alignItems: 'center',
         WebkitAppRegion: 'no-drag'
       }}>
-        {/* Fullscreen button */}
-        <button 
-          onClick={handleFullscreen}
-          className="win-btn"
-          style={{
-            ...winBtnStyle,
-            color: isFullscreen ? '#5865f2' : '#b9bbbe',
-          }}
-          title="Tam Ekran (F11)"
-        >
-          {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-        </button>
 
         {/* Minimize - Windows Style */}
         <button 
@@ -149,7 +119,7 @@ export default function TitleBar() {
           style={winBtnStyle}
           title={isMaximized ? "Geri Yükle" : "Büyüt"}
         >
-          {isMaximized ? <Minimize2 size={14} strokeWidth={2} /> : <Square size={14} strokeWidth={2} />}
+          {isMaximized ? <Square size={12} strokeWidth={2} /> : <Square size={14} strokeWidth={2} />}
         </button>
         
         {/* Close - Windows Style (Red on hover) */}

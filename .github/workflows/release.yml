@@ -64,9 +64,10 @@ jobs:
 
       - name: Clean and install Electron dependencies
         working-directory: frontend/electron
+        shell: powershell
         run: |
           npm cache clean --force
-          rmdir /s /q node_modules 2>nul || echo "No node_modules to delete"
+          if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue }
           npm install
 
       - name: Verify dist folder exists
