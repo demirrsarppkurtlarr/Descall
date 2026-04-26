@@ -60,6 +60,19 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
   const animationRef = useRef(null);
   const processedStreamRef = useRef(null);
 
+  // Define stopVoiceEffects BEFORE useEffect that uses it
+  const stopVoiceEffects = useCallback(() => {
+    voiceEffects.stop();
+    if (processedStreamRef.current) {
+      processedStreamRef.current.getTracks().forEach(track => track.stop());
+      processedStreamRef.current = null;
+    }
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    setIsProcessing(false);
+  }, []);
+
   // Initialize voice effects with cancellation support
   useEffect(() => {
     let isCancelled = false;
@@ -104,7 +117,7 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
       isCancelled = true;
       stopVoiceEffects();
     };
-  }, [isOpen]);
+  }, [isOpen, stopVoiceEffects]);
 
   // Process stream when localStream changes
   useEffect(() => {
@@ -198,18 +211,6 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
       console.error('Stream processing error:', err);
       setError('Ses işleme hatası');
     }
-  };
-
-  const stopVoiceEffects = () => {
-    voiceEffects.stop();
-    if (processedStreamRef.current) {
-      processedStreamRef.current.getTracks().forEach(track => track.stop());
-      processedStreamRef.current = null;
-    }
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-    setIsProcessing(false);
   };
 
   // Visualization
