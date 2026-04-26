@@ -8,12 +8,20 @@ export default function TitleBar() {
   useEffect(() => {
     if (!isElectron) return;
 
+    // Add electron-app class to body for padding
+    document.body.classList.add('electron-app');
+
     // Listen for maximize state changes from main process
     if (window.electronAPI?.onMaximizedChange) {
       window.electronAPI.onMaximizedChange((maximized) => {
         setIsMaximized(maximized);
       });
     }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('electron-app');
+    };
   }, [isElectron]);
 
   // Don't render if not in Electron
@@ -172,8 +180,3 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
-
-// Add electron-app class to body
-if (isElectron) {
-  document.body.classList.add('electron-app');
-}
