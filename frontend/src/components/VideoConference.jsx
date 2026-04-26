@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users, Minimize2, Volume2, Headphones, ChevronDown, Settings, Sparkles } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users, Minimize2, Volume2, Headphones, ChevronDown, Settings, Sparkles, Activity, Check } from "lucide-react";
 import RippleButton from "./ui/RippleButton";
 import VoiceEffectsPanel from "./VoiceEffectsPanel";
 
