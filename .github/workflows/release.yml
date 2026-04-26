@@ -70,6 +70,12 @@ jobs:
           if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue }
           npm install
 
+      - name: Run prebuild cleanup
+        working-directory: frontend/electron
+        shell: powershell
+        run: |
+          if (Test-Path prebuild.js) { node prebuild.js }
+
       - name: Verify dist folder exists
         working-directory: frontend
         shell: cmd

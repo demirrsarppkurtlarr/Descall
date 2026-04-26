@@ -75,7 +75,6 @@
     "portable": {
       "artifactName": "Descall-Portable-${version}.exe"
     },
-    "beforeBuild": "prebuild.js",
     "mac": {
       "target": [
         {
