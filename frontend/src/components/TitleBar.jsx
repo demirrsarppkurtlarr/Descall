@@ -80,19 +80,6 @@ export default function TitleBar() {
           Descall
         </span>
         
-        {/* Menu items */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '4px', 
-          marginLeft: '20px',
-          color: '#b9bbbe',
-          fontSize: '13px'
-        }}>
-          <span className="menu-item" style={menuItemStyle}>Dosya</span>
-          <span className="menu-item" style={menuItemStyle}>Düzen</span>
-          <span className="menu-item" style={menuItemStyle}>Görünüm</span>
-          <span className="menu-item" style={menuItemStyle}>Yardım</span>
-        </div>
       </div>
 
       {/* Right - Window Controls (Windows Style) */}
@@ -153,13 +140,6 @@ const winBtnStyle = {
   transition: 'all 0.15s ease',
 };
 
-const menuItemStyle = {
-  cursor: 'pointer',
-  padding: '6px 10px',
-  borderRadius: '4px',
-  transition: 'all 0.15s',
-};
-
 // Windows-style hover effects CSS
 const style = document.createElement('style');
 style.textContent = `
@@ -183,9 +163,17 @@ style.textContent = `
   .titlebar .win-btn.close:active {
     background: #f1707a !important;
   }
-  .menu-item:hover {
-    background: #ffffff10;
-    color: #fff;
+  /* Add padding to root when TitleBar is present */
+  body.electron-app {
+    padding-top: 40px !important;
+  }
+  body.electron-app #root {
+    height: calc(100vh - 40px) !important;
   }
 `;
 document.head.appendChild(style);
+
+// Add electron-app class to body
+if (isElectron) {
+  document.body.classList.add('electron-app');
+}
