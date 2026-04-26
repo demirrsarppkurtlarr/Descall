@@ -600,53 +600,55 @@ export default function App() {
   return (
     <>
       <TitleBar />
-      {(me?.is_admin || me?.username === "admin") && !adminOpen && (
-        <button type="button" className="admin-fab" onClick={() => setAdminOpen(true)} title="Admin panel">Admin</button>
-      )}
-      {(me?.is_admin || me?.username === "admin") && adminOpen && (
-        <AdminPanel socket={socketApi} onClose={() => setAdminOpen(false)} onAdminChanged={() => setAdminChanged(true)} />
-      )}
-      <ChatLayout
-        me={me}
-        refreshMe={refreshMe}
-        connectionLabel={connectionLabel}
-        reconnectState={reconnectState}
-        authError={authError}
-        myStatus={myStatus}
-        onlineUsers={onlineUsers}
-        friends={friends}
-        friendRequests={friendRequests}
-        notifications={notifications}
-        myGroups={myGroups}
-        setMyGroups={setMyGroups}
-        activeDmUser={activeDmUser}
-        dmMessages={dmMessages}
-        dmUnread={dmUnread}
-        dmByUserId={dmByUserId}
-        typingDmUser={typingDmUser}
-        onOpenDm={handleOpenDm}
-        onSendDm={handleSendDm}
-        onSendDmMedia={handleSendDmMedia}
-        onSendFriendRequest={handleSendFriendRequest}
-        onAcceptFriend={handleAcceptFriend}
-        onDeclineFriend={handleDeclineFriend}
-        onRemoveFriend={handleRemoveFriend}
-        onLogout={handleLogout}
-        onStatusChange={handleStatusChange}
-        friendNotice={friendNotice}
-        call={call}
-        onTypingDmStart={emitTypingDmStart}
-        onTypingDmStop={emitTypingDmStop}
-        loadOlderDm={loadOlderDm}
-        dmHasMore={dmHasMore}
-        loadingOlderDm={loadingOlderDm}
-        onNotificationRead={handleNotificationRead}
-        onNotificationReadAll={handleNotificationReadAll}
-        peerScreenSharing={peerScreenSharing}
-        groupCall={groupCall}
-        socket={socketApi}
-        onClearDm={() => setActiveDmUser(null)}
-      />
+      <div className="app-container">
+        {(me?.is_admin || me?.username === "admin") && !adminOpen && (
+          <button type="button" className="admin-fab" onClick={() => setAdminOpen(true)} title="Admin panel">Admin</button>
+        )}
+        {(me?.is_admin || me?.username === "admin") && adminOpen && (
+          <AdminPanel socket={socketApi} onClose={() => setAdminOpen(false)} onAdminChanged={() => setAdminChanged(true)} />
+        )}
+        <ChatLayout
+          me={me}
+          refreshMe={refreshMe}
+          connectionLabel={connectionLabel}
+          reconnectState={reconnectState}
+          authError={authError}
+          myStatus={myStatus}
+          onlineUsers={onlineUsers}
+          friends={friends}
+          friendRequests={friendRequests}
+          notifications={notifications}
+          myGroups={myGroups}
+          setMyGroups={setMyGroups}
+          activeDmUser={activeDmUser}
+          dmMessages={dmMessages}
+          dmUnread={dmUnread}
+          dmByUserId={dmByUserId}
+          typingDmUser={typingDmUser}
+          onOpenDm={handleOpenDm}
+          onSendDm={handleSendDm}
+          onSendDmMedia={handleSendDmMedia}
+          onSendFriendRequest={handleSendFriendRequest}
+          onAcceptFriend={handleAcceptFriend}
+          onDeclineFriend={handleDeclineFriend}
+          onRemoveFriend={handleRemoveFriend}
+          onLogout={handleLogout}
+          onStatusChange={handleStatusChange}
+          friendNotice={friendNotice}
+          call={call}
+          onTypingDmStart={emitTypingDmStart}
+          onTypingDmStop={emitTypingDmStop}
+          loadOlderDm={loadOlderDm}
+          dmHasMore={dmHasMore}
+          loadingOlderDm={loadingOlderDm}
+          onNotificationRead={handleNotificationRead}
+          onNotificationReadAll={handleNotificationReadAll}
+          peerScreenSharing={peerScreenSharing}
+          groupCall={groupCall}
+          socket={socketApi}
+          onClearDm={() => setActiveDmUser(null)}
+        />
+      </div>
     </>
   );
 }
