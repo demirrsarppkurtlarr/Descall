@@ -281,17 +281,18 @@ export default function VideoConference({
     : [];
 
   return (
-    <motion.div
-      ref={containerRef}
-      className="video-conference-overlay"
-      initial={{ opacity: 0, scale: 0.94 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      style={{ transformOrigin: "50% 50%" }}
-      onMouseMove={resetControlsTimer}
-      onClick={resetControlsTimer}
-    >
+    <>
+      <motion.div
+        ref={containerRef}
+        className="video-conference-overlay"
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        style={{ transformOrigin: "50% 50%" }}
+        onMouseMove={resetControlsTimer}
+        onClick={resetControlsTimer}
+      >
       {/* Header */}
       <motion.div 
         className={`vc-header ${showControls ? 'visible' : ''}`}
@@ -728,16 +729,17 @@ export default function VideoConference({
       </motion.div>
     </motion.div>
 
-    {/* Voice Effects Panel */}
-    <VoiceEffectsPanel
-      isOpen={showVoiceEffects}
-      onClose={() => setShowVoiceEffects(false)}
-      localStream={localStream}
-      onProcessedStream={(processedStream) => {
-        // Processed stream is handled internally by the panel
-        console.log('Voice effects stream processed');
-      }}
-    />
-  </motion.div>
+    {/* Voice Effects Panel - outside main container but inside return */}
+    {showVoiceEffects && (
+      <VoiceEffectsPanel
+        isOpen={showVoiceEffects}
+        onClose={() => setShowVoiceEffects(false)}
+        localStream={localStream}
+        onProcessedStream={(processedStream) => {
+          console.log('Voice effects stream processed');
+        }}
+      />
+    )}
+  </>
   );
 }
