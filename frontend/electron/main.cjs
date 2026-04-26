@@ -146,6 +146,39 @@ function createMainWindow() {
     mainWindow?.webContents?.send('window:maximized', false);
   });
 
+  // Notification handlers
+  ipcMain.handle('notification:request-permission', async () => {
+    const { Notification } = require('electron');
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  });
+
+  ipcMain.on('notification:show', (_, { title, options = {} }) => {
+    const { Notification } = require('electron');
+    if (Notification.isSupported()) {
+      const notification = new Notification({
+        title,
+        body: options.body || '',
+        icon: path.join(__dirname, '../public/icon.png'),
+        silent: false,
+        urgency: 'normal',
+        ...options
+      });
+      
+      notification.on('click', () => {
+        // Focus window when notification clicked
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.focus();
+        }
+        // Send click event to renderer
+        mainWindow?.webContents?.send('notification:click', { title, options });
+      });
+      
+      notification.show();
+    }
+  });
+
   // Set CSP headers to allow Supabase and API connections
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({

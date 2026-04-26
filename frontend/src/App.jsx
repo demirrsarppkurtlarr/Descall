@@ -18,6 +18,7 @@ import {
   setUser,
 } from "./lib/storage";
 import audioManager, { initAudioManager } from "./lib/audioManager";
+import notificationService from "./lib/notificationService";
 import AdminPanel from "./components/admin/AdminPanel";
 import TitleBar from "./components/TitleBar";
 import "./styles.admin-new.css";
@@ -114,9 +115,11 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
-  // Initialize audio manager on app startup
+  // Initialize audio manager and notification service on app startup
   useEffect(() => {
     initAudioManager().catch(() => {});
+    // Initialize notification service (will request permission on first user interaction)
+    notificationService.init().catch(() => {});
     return () => { audioManager.destroy(); };
   }, []);
 
@@ -304,6 +307,10 @@ export default function App() {
       if (newOnlineFriends.length > 0) {
         // Play notification sound for friends coming online (use notification type)
         audioManager.play("notification");
+        // Send notification for first friend coming online
+        if (newOnlineFriends[0]) {
+          notificationService.friendOnline({ username: newOnlineFriends[0].username });
+        }
       }
       
       prevOnlineUsersRef.current = newUsers;
@@ -315,6 +322,8 @@ export default function App() {
     socket.on("friend:request:incoming", ({ from }) => {
       if (!from) return;
       setFriendRequests((prev) => prev.some((req) => req.id === from.id) ? prev : [...prev, from]);
+      // Notification for incoming friend request
+      notificationService.friendRequest({ from: from.username, fromId: from.id });
     });
     socket.on("friend:accepted", () => { socket.emit("friend:list"); });
     socket.on("friend:error", ({ message } = {}) => {
@@ -352,6 +361,13 @@ export default function App() {
         // Play notification sound for new message (not from active conversation to avoid spam)
         if (activeDmRef.current?.id !== convWith) {
           audioManager.play("message");
+          // Send native notification
+          notificationService.newMessage({
+            from: message.from?.username || 'Birisi',
+            text: message.text || '',
+            preview: message.text?.substring(0, 100),
+            conversationId: convWith
+          });
         }
       }
     });

@@ -35,7 +35,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Remove listeners
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
-  }
+  },
+  
+  // Notifications
+  requestNotificationPermission: () => ipcRenderer.invoke('notification:request-permission'),
+  showNotification: (title, options) => ipcRenderer.send('notification:show', { title, options }),
+  onNotificationClick: (callback) => ipcRenderer.on('notification:click', (_, data) => callback(data)),
 });
 
 // Log preload loaded
