@@ -598,9 +598,7 @@ export default function App() {
   }
 
   return (
-    <>
-      <TitleBar />
-      <div className="app-container">
+    <div className="app-container">
         {(me?.is_admin || me?.username === "admin") && !adminOpen && (
           <button type="button" className="admin-fab" onClick={() => setAdminOpen(true)} title="Admin panel">Admin</button>
         )}
@@ -647,8 +645,6 @@ export default function App() {
           groupCall={groupCall}
           socket={socketApi}
           onClearDm={() => setActiveDmUser(null)}
-        />
       </div>
-    </>
   );
 }

@@ -654,15 +654,14 @@ body.electron-app .nav-rail {
   min-height: calc(100vh - 40px);
 }
 
-/* When TitleBar is present (Electron app) */
+/* Native Windows title bar - no custom padding needed */
 body.electron-app {
-  padding-top: 40px !important;
   overflow: hidden !important;
   height: 100vh !important;
 }
 
 body.electron-app #root {
-  height: calc(100vh - 40px) !important;
+  height: 100vh !important;
   overflow: hidden !important;
   display: flex;
   flex-direction: column;
@@ -684,6 +683,13 @@ body.electron-app .app-root-enhanced {
   min-height: 100% !important;
   max-height: 100% !important;
   overflow: hidden !important;
+}
+
+/* Nav-rail full height with native title bar */
+body.electron-app .nav-rail {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  padding-top: 10px;
 }
 
 .rail-btn {

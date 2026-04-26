@@ -1,0 +1,316 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import voiceEffects from '../lib/voiceEffects';
+import { 
+  Mic, 
+  Wand2, 
+  Volume2, 
+  Activity, 
+  Check, 
+  Settings2,
+  Sparkles,
+  Radio,
+  Mountain,
+  Wind,
+  Ghost,
+  Baby,
+  Phone,
+  Megaphone,
+  Droplets,
+  Building,
+  Home,
+  Music,
+  Zap
+} from 'lucide-react';
+import './VoiceEffectsPanel.css';
+
+const PRESET_ICONS = {
+  none: Mic,
+  robot: Wand2,
+  radio: Radio,
+  cave: Mountain,
+  helium: Wind,
+  monster: Ghost,
+  telephone: Phone,
+  megaphone: Megaphone,
+  underwater: Droplets,
+  stadium: Building,
+  small_room: Home,
+  concert_hall: Music,
+  whisper: Volume2,
+  demon: Ghost,
+  alien: Sparkles,
+  baby: Baby,
+  giant: Mountain,
+  echo: Activity,
+  reverb_only: Music,
+  autotune: Zap,
+  harmonizer: Music
+};
+
+export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProcessedStream }) {
+  const [presets, setPresets] = useState([]);
+  const [currentPreset, setCurrentPreset] = useState('none');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [rnnoiseEnabled, setRnnoiseEnabled] = useState(false);
+  const [visualizationData, setVisualizationData] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const canvasRef = useRef(null);
+  const animationRef = useRef(null);
+  const processedStreamRef = useRef(null);
+
+  // Initialize voice effects
+  useEffect(() => {
+    if (isOpen) {
+      initializeVoiceEffects();
+    }
+    return () => {
+      stopVoiceEffects();
+    };
+  }, [isOpen]);
+
+  // Process stream when localStream changes
+  useEffect(() => {
+    if (isOpen && localStream && isProcessing) {
+      processStream();
+    }
+  }, [isOpen, localStream, isProcessing]);
+
+  const initializeVoiceEffects = async () => {
+    setIsInitializing(true);
+    setError(null);
+    
+    try {
+      const success = await voiceEffects.initialize();
+      if (success) {
+        setPresets(voiceEffects.getPresets());
+        setCurrentPreset(voiceEffects.getCurrentPreset());
+        setIsProcessing(true);
+        setRnnoiseEnabled(voiceEffects.isRNNoiseEnabled());
+      } else {
+        setError('Ses efektleri başlatılamadı');
+      }
+    } catch (err) {
+      setError('Başlatma hatası: ' + err.message);
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  const processStream = async () => {
+    if (!localStream) return;
+    
+    try {
+      // Stop previous processing
+      if (processedStreamRef.current) {
+        processedStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      
+      voiceEffects.stop();
+      
+      // Start new processing
+      const processedStream = await voiceEffects.start(localStream);
+      processedStreamRef.current = processedStream;
+      
+      if (onProcessedStream) {
+        onProcessedStream(processedStream);
+      }
+    } catch (err) {
+      console.error('Stream processing error:', err);
+      setError('Ses işleme hatası');
+    }
+  };
+
+  const stopVoiceEffects = () => {
+    voiceEffects.stop();
+    if (processedStreamRef.current) {
+      processedStreamRef.current.getTracks().forEach(track => track.stop());
+      processedStreamRef.current = null;
+    }
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    setIsProcessing(false);
+  };
+
+  // Visualization
+  useEffect(() => {
+    if (!isOpen || !isProcessing) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const animate = () => {
+      const data = voiceEffects.getVisualizationData();
+      if (data) {
+        drawVisualization(ctx, canvas, data);
+      }
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isOpen, isProcessing]);
+
+  const drawVisualization = (ctx, canvas, data) => {
+    const width = canvas.width;
+    const height = canvas.height;
+    const barWidth = width / data.length;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw frequency bars
+    for (let i = 0; i < data.length; i++) {
+      const barHeight = (data[i] / 255) * height * 0.8;
+      const x = i * barWidth;
+      const y = height - barHeight;
+
+      // Gradient
+      const gradient = ctx.createLinearGradient(0, y, 0, height);
+      gradient.addColorStop(0, '#8b5cf6');
+      gradient.addColorStop(0.5, '#6366f1');
+      gradient.addColorStop(1, '#3b82f6');
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, y, barWidth - 1, barHeight);
+    }
+
+    // Draw center line
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, height / 2);
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+  };
+
+  const handlePresetChange = async (presetId) => {
+    try {
+      await voiceEffects.setPreset(presetId);
+      setCurrentPreset(presetId);
+    } catch (err) {
+      console.error('Preset change error:', err);
+    }
+  };
+
+  const handleRNNoiseToggle = () => {
+    const newEnabled = !rnnoiseEnabled;
+    voiceEffects.toggleRNNoise(newEnabled);
+    setRnnoiseEnabled(newEnabled);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="voice-effects-panel-overlay" onClick={onClose}>
+      <div className="voice-effects-panel" onClick={e => e.stopPropagation()}>
+        <div className="panel-header">
+          <div className="header-title">
+            <Sparkles className="icon" />
+            <h2>Ses Efektleri</h2>
+          </div>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+
+        {error && (
+          <div className="error-banner">
+            {error}
+          </div>
+        )}
+
+        {isInitializing && (
+          <div className="loading-state">
+            <div className="spinner" />
+            <span>Ses motoru başlatılıyor...</span>
+          </div>
+        )}
+
+        <div className="panel-content">
+          {/* Visualization */}
+          <div className="visualization-section">
+            <canvas 
+              ref={canvasRef} 
+              width={600} 
+              height={150}
+              className="visualizer-canvas"
+            />
+            <div className="visualization-label">
+              <Activity size={14} />
+              <span>Real-time Spektrum</span>
+            </div>
+          </div>
+
+          {/* RNNoise Toggle */}
+          <div className="rnnoise-section">
+            <div className="rnnoise-info">
+              <Settings2 size={18} />
+              <div>
+                <span className="rnnoise-title">RNNoise AI</span>
+                <span className="rnnoise-desc">Yapay zeka gürültü engelleme</span>
+              </div>
+            </div>
+            <button 
+              className={`toggle-btn ${rnnoiseEnabled ? 'active' : ''}`}
+              onClick={handleRNNoiseToggle}
+            >
+              {rnnoiseEnabled ? <Check size={16} /> : <span className="dot" />}
+              {rnnoiseEnabled ? 'Aktif' : 'Pasif'}
+            </button>
+          </div>
+
+          {/* Presets Grid */}
+          <div className="presets-section">
+            <h3>Efekt Presetleri</h3>
+            <div className="presets-grid">
+              {presets.map(preset => {
+                const Icon = PRESET_ICONS[preset.id] || Mic;
+                const isActive = currentPreset === preset.id;
+                
+                return (
+                  <button
+                    key={preset.id}
+                    className={`preset-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => handlePresetChange(preset.id)}
+                  >
+                    <div className="preset-icon">
+                      <Icon size={24} />
+                    </div>
+                    <div className="preset-info">
+                      <span className="preset-name">{preset.name}</span>
+                      <span className="preset-desc">{preset.description}</span>
+                    </div>
+                    {isActive && <div className="active-indicator" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Current Effect Info */}
+          {currentPreset !== 'none' && (
+            <div className="current-effect-info">
+              <div className="effect-badge">
+                <Sparkles size={14} />
+                <span>{presets.find(p => p.id === currentPreset)?.name}</span>
+              </div>
+              <span className="effect-status">Efekt aktif</span>
+            </div>
+          )}
+        </div>
+
+        <div className="panel-footer">
+          <p className="footer-note">
+            Web Audio API + WebAssembly ile çalışır
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

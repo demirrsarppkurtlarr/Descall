@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, protocol, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const path = require('path');
@@ -103,9 +103,7 @@ function createMainWindow() {
     minWidth: 1200,
     minHeight: 700,
     show: false,
-    frame: false,
-    titleBarStyle: 'hidden',
-    autoHideMenuBar: true,
+    // Use native Windows title bar without menu (no File, Edit, View, Help)
     icon: path.join(__dirname, '../public/icon.png'),
     webPreferences: {
       nodeIntegration: false,
@@ -117,8 +115,9 @@ function createMainWindow() {
     }
   });
 
-  // Hide menu bar completely
-  mainWindow.setMenuBarVisibility(false);
+  // Remove menu bar completely (native Windows title bar without File, Edit, View, Help)
+  mainWindow.setMenu(null);
+  Menu.setApplicationMenu(null);
 
   // IPC handlers for window controls
   ipcMain.on('window:minimize', () => {
