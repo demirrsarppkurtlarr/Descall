@@ -103,7 +103,8 @@ function createMainWindow() {
     minWidth: 1200,
     minHeight: 700,
     show: false,
-    titleBarStyle: 'default',
+    titleBarStyle: 'hidden',
+    autoHideMenuBar: true,
     icon: path.join(__dirname, '../public/favicon.ico'),
     webPreferences: {
       nodeIntegration: false,
@@ -114,6 +115,9 @@ function createMainWindow() {
       allowRunningInsecureContent: true
     }
   });
+
+  // Hide menu bar completely
+  mainWindow.setMenuBarVisibility(false);
 
   // Set CSP headers to allow Supabase and API connections
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {

@@ -42,7 +42,7 @@ const platforms = [
     name: 'Windows', 
     icon: Monitor, 
     file: 'Descall-Setup.exe',
-    size: '~80 MB',
+    size: '~150 MB',
     color: '#0078D4'
   },
   { 
@@ -50,7 +50,7 @@ const platforms = [
     name: 'macOS', 
     icon: Smartphone, 
     file: 'Descall.dmg',
-    size: '~85 MB',
+    size: '~165 MB',
     color: '#000000'
   },
   { 
@@ -58,7 +58,7 @@ const platforms = [
     name: 'Linux', 
     icon: Terminal, 
     file: 'Descall.AppImage',
-    size: '~90 MB',
+    size: '~170 MB',
     color: '#25D366'
   },
 ];
@@ -330,7 +330,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
                 </div>
                 <div className="req-item">
                   <CheckCircle2 size={16} />
-                  <span>200 MB free space</span>
+                  <span>500 MB free space</span>
                 </div>
               </div>
 
@@ -447,7 +447,7 @@ export default function DownloadPage({ onLogin, onRegister, authLoading, authErr
 
       {/* Footer */}
       <footer className="download-footer">
-        <p>© 2024 Descall. All rights reserved.</p>
+        <p>© 2026 Descall. All rights reserved.</p>
       </footer>
 
       {/* Login Modal */}
