@@ -427,9 +427,12 @@ export function useGroupCall(socket) {
     }
   }, [isCameraOn]);
 
-  const startScreenShare = useCallback(async (quality = screenQuality) => {
+  const startScreenShare = useCallback(async (quality) => {
     try {
-      console.log("[GroupCall] Starting screen share...", { isScreenSharing, activeGroupId, quality });
+      // Use provided quality or fall back to current state
+      const effectiveQuality = quality || screenQuality;
+      console.log("[GroupCall] Starting screen share with quality:", effectiveQuality);
+      
       if (isScreenSharing) {
         console.log("[GroupCall] Already screen sharing");
         return;
@@ -441,14 +444,17 @@ export function useGroupCall(socket) {
         '1080p': { width: 1920, height: 1080 },
       };
       
-      const { width, height } = resolutionMap[quality.resolution] || resolutionMap['1080p'];
-      const frameRate = quality.fps || 30;
+      const { width, height } = resolutionMap[effectiveQuality.resolution] || resolutionMap['1080p'];
+      const frameRate = effectiveQuality.fps || 30;
+      
+      console.log(`[GroupCall] Requesting screen share: ${width}x${height} @ ${frameRate}fps`);
       
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { 
-          cursor: "always", 
-          width: { ideal: width },
-          height: { ideal: height },
+          cursor: "always",
+          displaySurface: "monitor",
+          width: { ideal: width, max: width },
+          height: { ideal: height, max: height },
           frameRate: { ideal: frameRate, max: frameRate }
         },
         audio: false,

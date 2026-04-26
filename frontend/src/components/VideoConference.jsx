@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users, Minimize2, Volume2, Headphones, ChevronDown, Settings, Sparkles, Activity, Check } from "lucide-react";
 import RippleButton from "./ui/RippleButton";
@@ -70,6 +70,19 @@ export default function VideoConference({
       setShowControls(false);
     }, 3000);
   }, []);
+
+  // Stable screen stream handling - prevents flickering
+  const screenVideoRef = useRef(null);
+  useEffect(() => {
+    const video = screenVideoRef.current;
+    if (video && screenStream) {
+      // Only set srcObject if it's different to prevent flickering
+      if (video.srcObject !== screenStream) {
+        video.srcObject = screenStream;
+        video.play().catch(() => {});
+      }
+    }
+  }, [screenStream]);
 
   // Screen sharing quality handlers
   const handleStartScreenShare = useCallback(async () => {
@@ -393,9 +406,7 @@ export default function VideoConference({
                       }}
                     >
                       <video
-                        ref={(el) => {
-                          if (el) el.srcObject = screenStream;
-                        }}
+                        ref={screenVideoRef}
                         autoPlay
                         playsInline
                         className="vc-screen-video"
