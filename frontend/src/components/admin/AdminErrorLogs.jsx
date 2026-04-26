@@ -799,8 +799,16 @@ export default function AdminErrorLogs({ socket }) {
                          selectedLog.severity === 'medium' ? '#ffa500' : '#4ecdc4',
                   fontWeight: "bold",
                   margin: 0 
-                  navigator.clipboard.writeText(JSON.stringify(selectedLog, null, 2));
                 }}>
+                  {selectedLog.severity?.toUpperCase() || 'MEDIUM'}
+                </p>
+              </div>
+              
+              <div className="modal-actions">
+                <RippleButton 
+                  onClick={() => navigator.clipboard.writeText(JSON.stringify(selectedLog, null, 2))}
+                  className="secondary"
+                >
                   <Copy size={16} />
                   Copy JSON
                 </RippleButton>
