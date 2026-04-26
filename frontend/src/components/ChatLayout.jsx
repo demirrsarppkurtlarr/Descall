@@ -346,60 +346,124 @@ function AnimatedMessage({ children, delay = 0 }) {
   );
 }
 
-// Custom Title Bar for frameless window
+// Custom Title Bar for frameless Electron window - ONLY visible in Electron
 function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
 
+  useEffect(() => {
+    // Listen for maximize state changes from main process
+    if (window.electronAPI?.onMaximizedChange) {
+      window.electronAPI.onMaximizedChange((maximized) => {
+        setIsMaximized(maximized);
+      });
+    }
+  }, []);
+
   const handleMinimize = () => {
-    window.electron?.invoke('window:minimize');
+    window.electronAPI?.minimizeWindow?.();
   };
 
   const handleMaximize = () => {
-    window.electron?.invoke('window:maximize');
-    setIsMaximized(!isMaximized);
+    window.electronAPI?.maximizeWindow?.();
   };
 
   const handleClose = () => {
-    window.electron?.invoke('window:close');
+    window.electronAPI?.closeWindow?.();
   };
+
+  // Don't render if not in Electron
+  if (!window.electronAPI?.isElectron) return null;
 
   return (
     <div className="title-bar" style={{
-      height: '32px',
-      background: 'linear-gradient(90deg, #1a1a2e 0%, #16213e 100%)',
+      height: '40px',
+      background: 'linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 12px',
+      padding: '0 16px',
       WebkitAppRegion: 'drag',
       userSelect: 'none',
-      borderBottom: '1px solid rgba(255,255,255,0.1)'
+      borderBottom: '1px solid rgba(126,129,255,0.2)',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <img src="/favicon.ico" alt="Descall" style={{ width: 18, height: 18 }} />
-        <span style={{ color: '#fff', fontSize: '13px', fontWeight: 500 }}>Descall</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <img 
+          src="/icon.png" 
+          alt="Descall" 
+          style={{ width: 22, height: 22, borderRadius: '4px' }} 
+          onError={(e) => { e.target.src = '/favicon.ico'; }}
+        />
+        <span style={{ 
+          color: '#fff', 
+          fontSize: '14px', 
+          fontWeight: 600,
+          letterSpacing: '0.3px',
+          background: 'linear-gradient(90deg, #fff 0%, #a5a8ff 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent'
+        }}>Descall</span>
       </div>
-      <div style={{ display: 'flex', gap: '8px', WebkitAppRegion: 'no-drag' }}>
-        <button onClick={handleMinimize} style={{
-          width: '30px', height: '24px', border: 'none', background: 'transparent',
-          color: '#fff', cursor: 'pointer', borderRadius: '4px', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s'
-        }} onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.target.style.background = 'transparent'}>
-          <Minus size={14} />
+      <div style={{ display: 'flex', gap: '4px', WebkitAppRegion: 'no-drag' }}>
+        <button 
+          onClick={handleMinimize} 
+          style={{
+            width: '34px', 
+            height: '28px', 
+            border: 'none', 
+            background: 'transparent',
+            color: '#ccc', 
+            cursor: 'pointer', 
+            borderRadius: '6px', 
+            display: 'flex',
+            alignItems: 'center', 
+            justifyContent: 'center',
+            transition: 'all 0.2s ease'
+          }} 
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
+        >
+          <Minus size={14} strokeWidth={2.5} />
         </button>
-        <button onClick={handleMaximize} style={{
-          width: '30px', height: '24px', border: 'none', background: 'transparent',
-          color: '#fff', cursor: 'pointer', borderRadius: '4px', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s'
-        }} onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.target.style.background = 'transparent'}>
-          {isMaximized ? <Maximize2 size={12} /> : <Square size={10} />}
+        <button 
+          onClick={handleMaximize} 
+          style={{
+            width: '34px', 
+            height: '28px', 
+            border: 'none', 
+            background: 'transparent',
+            color: '#ccc', 
+            cursor: 'pointer', 
+            borderRadius: '6px', 
+            display: 'flex',
+            alignItems: 'center', 
+            justifyContent: 'center',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
+        >
+          {isMaximized ? <Maximize2 size={12} strokeWidth={2.5} /> : <Square size={11} strokeWidth={2.5} />}
         </button>
-        <button onClick={handleClose} style={{
-          width: '30px', height: '24px', border: 'none', background: 'transparent',
-          color: '#fff', cursor: 'pointer', borderRadius: '4px', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s'
-        }} onMouseEnter={e => e.target.style.background = '#e81123'} onMouseLeave={e => e.target.style.background = 'transparent'}>
-          <X size={14} />
+        <button 
+          onClick={handleClose} 
+          style={{
+            width: '34px', 
+            height: '28px', 
+            border: 'none', 
+            background: 'transparent',
+            color: '#ccc', 
+            cursor: 'pointer', 
+            borderRadius: '6px', 
+            display: 'flex',
+            alignItems: 'center', 
+            justifyContent: 'center',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#e81123'; e.currentTarget.style.color = '#fff'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#ccc'; }}
+        >
+          <X size={14} strokeWidth={2.5} />
         </button>
       </div>
     </div>
@@ -1421,8 +1485,8 @@ export default function ChatLayout({
     <div 
       className={`app-root app-root-enhanced ${isMobile ? "mobile-view" : ""} ${!sidebarOpen ? "sidebar-collapsed" : ""}`}
     >
-      {/* Custom Title Bar for Electron */}
-      {window.electron && <TitleBar />}
+      {/* Custom Title Bar for Electron - Only shows in Electron app */}
+      <TitleBar />
       
       {/* Desktop Sidebar - Hidden on Mobile */}
       {!isMobile && (

@@ -106,7 +106,7 @@ function createMainWindow() {
     frame: false,
     titleBarStyle: 'hidden',
     autoHideMenuBar: true,
-    icon: path.join(__dirname, '../public/favicon.ico'),
+    icon: path.join(__dirname, '../public/icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -121,11 +121,11 @@ function createMainWindow() {
   mainWindow.setMenuBarVisibility(false);
 
   // IPC handlers for window controls
-  ipcMain.handle('window:minimize', () => {
+  ipcMain.on('window:minimize', () => {
     mainWindow?.minimize();
   });
 
-  ipcMain.handle('window:maximize', () => {
+  ipcMain.on('window:maximize', () => {
     if (mainWindow?.isMaximized()) {
       mainWindow?.unmaximize();
     } else {
@@ -133,8 +133,17 @@ function createMainWindow() {
     }
   });
 
-  ipcMain.handle('window:close', () => {
+  ipcMain.on('window:close', () => {
     mainWindow?.close();
+  });
+
+  // Handle maximize state change
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents?.send('window:maximized', true);
+  });
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents?.send('window:maximized', false);
   });
 
   // Set CSP headers to allow Supabase and API connections
