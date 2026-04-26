@@ -1,5 +1,4 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeImage, protocol } = require('electron');
-const AutoLaunch = require('auto-launch');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const path = require('path');
@@ -139,30 +138,36 @@ function createMainWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    // Try multiple paths for packaged app
-    const possiblePaths = [
-      path.join(process.resourcesPath, 'dist', 'index.html'),
-      path.join(__dirname, 'dist', 'index.html'),
-      path.join(__dirname, '..', 'dist', 'index.html'),
-      path.join(app.getAppPath(), 'dist', 'index.html')
-    ];
+    // For asar:false, files are in resources/app/dist/
+    const indexPath = path.join(app.getAppPath(), 'dist', 'index.html');
+    console.log('Loading from:', indexPath);
     
-    let loaded = false;
-    for (const indexPath of possiblePaths) {
-      console.log('Trying to load from:', indexPath);
-      if (require('fs').existsSync(indexPath)) {
-        console.log('Found index.html at:', indexPath);
-        mainWindow.loadFile(indexPath).then(() => {
-          loaded = true;
-        }).catch(err => {
-          console.error('Failed to load from', indexPath, ':', err);
-        });
-        break;
+    if (require('fs').existsSync(indexPath)) {
+      mainWindow.loadFile(indexPath).catch(err => {
+        console.error('Failed to load:', err);
+        dialog.showErrorBox('Loading Error', `Failed to load app: ${err.message}`);
+      });
+    } else {
+      // Fallback: try alternative paths
+      const altPaths = [
+        path.join(__dirname, 'dist', 'index.html'),
+        path.join(__dirname, '..', 'dist', 'index.html'),
+        path.join(process.resourcesPath, 'dist', 'index.html')
+      ];
+      
+      let found = false;
+      for (const altPath of altPaths) {
+        if (require('fs').existsSync(altPath)) {
+          console.log('Found at alternative path:', altPath);
+          mainWindow.loadFile(altPath);
+          found = true;
+          break;
+        }
       }
-    }
-    
-    if (!loaded) {
-      dialog.showErrorBox('Loading Error', `Failed to load app: index.html not found in any of:\n${possiblePaths.join('\n')}`);
+      
+      if (!found) {
+        dialog.showErrorBox('Loading Error', `index.html not found at: ${indexPath}\nChecked alternatives:\n${altPaths.join('\n')}`);
+      }
     }
   }
 
@@ -298,33 +303,6 @@ ipcMain.handle('close-window', () => {
   if (mainWindow) mainWindow.close();
 });
 
-// Auto-start IPC handlers
-ipcMain.handle('auto-start:get', async () => {
-  try {
-    const isEnabled = await descallAutoLauncher.isEnabled();
-    return { success: true, enabled: isEnabled };
-  } catch (err) {
-    log.error('Auto-start get error:', err);
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('auto-start:set', async (event, enabled) => {
-  try {
-    if (enabled) {
-      await descallAutoLauncher.enable();
-      log.info('Auto-start enabled');
-    } else {
-      await descallAutoLauncher.disable();
-      log.info('Auto-start disabled');
-    }
-    return { success: true };
-  } catch (err) {
-    log.error('Auto-start set error:', err);
-    return { success: false, error: err.message };
-  }
-});
-
 // Security: Handle downloads
 ipcMain.on('download-file', async (event, { url, filename }) => {
   try {
@@ -343,12 +321,6 @@ ipcMain.on('download-file', async (event, { url, filename }) => {
     log.error('Download error:', error);
     return { success: false, error: error.message };
   }
-});
-
-// Auto-launch configuration
-const descallAutoLauncher = new AutoLaunch({
-  name: 'Descall',
-  path: app.getPath('exe'),
 });
 
 // Register custom protocol for sounds
