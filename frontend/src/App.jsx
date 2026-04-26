@@ -355,8 +355,10 @@ export default function App() {
       const convWith = message?.convWith;
       if (!convWith) return;
       setDmByUserId((prev) => ({ ...prev, [convWith]: [...(prev[convWith] ?? []), message] }));
-      const fromOther = message.from?.id && message.from.id !== myIdRef.current;
-      if (fromOther && message.from?.id) {
+      // Only notify for messages from others (not self)
+      const currentUserId = me?.id;
+      const isFromOther = message.from?.id && message.from.id !== currentUserId;
+      if (isFromOther) {
         socket.emit("dm:delivered", { msgId: message.id, fromUserId: message.from.id });
         // Play notification sound for new message (not from active conversation to avoid spam)
         if (activeDmRef.current?.id !== convWith) {
