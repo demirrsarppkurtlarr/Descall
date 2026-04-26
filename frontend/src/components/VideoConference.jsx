@@ -602,6 +602,15 @@ export default function VideoConference({
             {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
           </RippleButton>
           
+          {/* Voice Effects Button */}
+          <RippleButton
+            className={`vc-btn ${showVoiceEffects ? 'active' : ''}`}
+            onClick={() => setShowVoiceEffects(!showVoiceEffects)}
+            title="Ses Efektleri"
+          >
+            <Sparkles size={20} />
+          </RippleButton>
+          
           <RippleButton
             className={`vc-btn ${!isCameraOn ? 'danger' : ''}`}
             onClick={toggleCamera}
@@ -706,6 +715,18 @@ export default function VideoConference({
           <span>End Call</span>
         </RippleButton>
       </motion.div>
-    </motion.div>
+    </AnimatePresence>
+
+    {/* Voice Effects Panel */}
+    <VoiceEffectsPanel
+      isOpen={showVoiceEffects}
+      onClose={() => setShowVoiceEffects(false)}
+      localStream={localStream}
+      onProcessedStream={(processedStream) => {
+        // Processed stream is handled internally by the panel
+        console.log('Voice effects stream processed');
+      }}
+    />
+  </motion.div>
   );
 }
