@@ -646,10 +646,26 @@ select {
   gap: 6px;
 }
 
-/* When TitleBar is present (Electron app), add padding to nav-rail */
-body.electron-app .nav-rail {
-  padding-top: 50px;
-  min-height: calc(100vh - 40px);
+/* When TitleBar is present (Electron app), add padding to root when TitleBar is present */
+body.electron-app {
+  padding-top: 40px !important;
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+body.electron-app #root {
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
+}
+
+/* Inner content should scroll, not the whole app */
+body.electron-app .app-container,
+body.electron-app main {
+  overflow: hidden;
+}
+
+body.electron-app .chat-layout {
+  height: calc(100vh - 40px) !important;
+  overflow: hidden;
 }
 
 .rail-btn {
