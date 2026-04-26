@@ -28,8 +28,7 @@ import {
   PanelLeftClose, Settings, Send, Paperclip,
   Phone, Video, X, Plus, Clock, Check, CheckCheck, Play,
   Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
-  Minus, Square, Maximize2,
-  Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid,
+  Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid, Minus, Square,
   ChevronLeft, ChevronRight, MoreVertical, Trash2,
   Menu, Palette, Sparkles, User, Megaphone,
   Download
