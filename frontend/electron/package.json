@@ -12,6 +12,7 @@
   },
   "scripts": {
     "start": "electron .",
+    "prebuild": "node -e \"const fs=require('fs'),path=require('path'); const caches=[path.join(process.env.APPDATA||process.env.HOME,'electron-builder'),path.join(process.env.TEMP||'/tmp','electron-builder')]; caches.forEach(c=>{try{fs.rmSync(c,{recursive:true,force:true});console.log('Cleaned:',c);}catch(e){}}); console.log('Cache cleaned');\"",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
@@ -32,7 +33,7 @@
     "productName": "Descall",
     "directories": {
       "output": "dist",
-      "buildResources": "build"
+      "buildResources": "../public"
     },
     "files": [
       "main.cjs",
@@ -72,6 +73,7 @@
     "portable": {
       "artifactName": "Descall-Portable-${version}.exe"
     },
+    "beforeBuild": "npm run prebuild",
     "mac": {
       "target": [
         {

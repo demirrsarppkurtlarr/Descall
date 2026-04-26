@@ -31,9 +31,11 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package.json
 
-      - name: Install dependencies
+      - name: Clean cache and install dependencies
         working-directory: frontend
-        run: npm install
+        run: |
+          npm cache clean --force
+          npm install
 
       - name: Build frontend
         working-directory: frontend
@@ -60,9 +62,12 @@ jobs:
           (Get-Content package.json) -replace '"version": "[^"]+"', "`"version`": `"$tagName`"" | Set-Content package.json
           Get-Content package.json | Select-String "version"
 
-      - name: Install Electron dependencies
+      - name: Clean and install Electron dependencies
         working-directory: frontend/electron
-        run: npm install
+        run: |
+          npm cache clean --force
+          rmdir /s /q node_modules 2>nul || echo "No node_modules to delete"
+          npm install
 
       - name: Verify dist folder exists
         working-directory: frontend
