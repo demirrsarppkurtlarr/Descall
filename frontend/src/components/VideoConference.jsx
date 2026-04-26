@@ -644,7 +644,7 @@ export default function VideoConference({
               <button
                 className="quality-toggle-btn"
                 onClick={() => setShowScreenQuality(!showScreenQuality)}
-                title="Ekran kalitesi ayarları"
+                title="Screen quality settings"
               >
                 <Settings size={14} />
               </button>
@@ -662,14 +662,14 @@ export default function VideoConference({
                 >
                   <div className="quality-header">
                     <Monitor size={16} />
-                    <span>Ekran Kalitesi</span>
+                    <span>Screen Quality</span>
                   </div>
                   
                   {/* Resolution Selector */}
                   <div className="quality-section">
                     <label className="quality-label">
                       <Maximize2 size={14} />
-                      Çözünürlük
+                      Resolution
                     </label>
                     <div className="quality-options">
                       {['720p', '1080p'].map((res) => (
@@ -689,7 +689,7 @@ export default function VideoConference({
                   <div className="quality-section">
                     <label className="quality-label">
                       <Activity size={14} />
-                      FPS (Kare/Saniye)
+                      FPS (FRAMES/SECOND)
                     </label>
                     <div className="quality-options fps-options">
                       {[30, 60, 120, 240].map((fps) => (
@@ -708,8 +708,8 @@ export default function VideoConference({
                   <div className="quality-footer">
                     <span className="quality-hint">
                       {screenQuality?.resolution === '1080p' && screenQuality?.fps >= 60 
-                        ? '⚡ Yüksek performans gerektirir' 
-                        : '💡 Düşük performans için 720p/30fps'}
+                        ? '⚡ Requires high performance' 
+                        : '💡 720p/30fps for low performance'}
                     </span>
                   </div>
                 </motion.div>

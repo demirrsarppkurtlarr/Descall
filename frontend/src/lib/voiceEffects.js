@@ -44,12 +44,12 @@ class VoiceEffectsProcessor {
         settings: { pitch: 1, formant: 0.5, distortion: 0.3, bitcrush: true }
       },
       radio: { 
-        name: 'Radyo', 
+        name: 'Radio', 
         description: 'AM/FM radio simulation',
         settings: { highpass: 800, lowpass: 3500, compression: 0.8, noise: 0.1 }
       },
       cave: { 
-        name: 'Mağara', 
+        name: 'Cave', 
         description: 'Deep reverb and echo',
         settings: { reverb: 0.8, delay: 0.4, lowpass: 800, bassBoost: 1.5 }
       },
@@ -59,42 +59,42 @@ class VoiceEffectsProcessor {
         settings: { pitch: 1.8, formant: 1.5, speed: 1.2 }
       },
       monster: { 
-        name: 'Canavar', 
+        name: 'Monster', 
         description: 'Deep growling voice',
         settings: { pitch: 0.6, formant: 0.4, distortion: 0.5, lowpass: 400 }
       },
       telephone: { 
-        name: 'Telefon', 
+        name: 'Telephone', 
         description: 'Old phone line simulation',
         settings: { highpass: 400, lowpass: 3400, bitcrush: true, compression: 0.9 }
       },
       megaphone: { 
-        name: 'Megafon', 
+        name: 'Megaphone', 
         description: 'Loudspeaker announcement effect',
         settings: { highpass: 600, distortion: 0.4, compression: 0.7, eq: 'mid' }
       },
       underwater: { 
-        name: 'Sualtı', 
+        name: 'Underwater', 
         description: 'Muffled underwater sound',
         settings: { lowpass: 600, reverb: 0.6, phase: true, modulation: 2 }
       },
       stadium: { 
-        name: 'Stadyum', 
+        name: 'Stadium', 
         description: 'Large arena echo',
         settings: { reverb: 0.9, delay: 0.6, diffusion: 0.8 }
       },
       small_room: { 
-        name: 'Küçük Oda', 
+        name: 'Small Room', 
         description: 'Intimate room acoustics',
         settings: { reverb: 0.3, earlyReflections: 0.5 }
       },
       concert_hall: { 
-        name: 'Konser Salonu', 
+        name: 'Concert Hall', 
         description: 'Concert hall reverb',
         settings: { reverb: 0.85, preDelay: 40, decay: 2.5 }
       },
       whisper: { 
-        name: 'Fısıltı', 
+        name: 'Whisper', 
         description: 'Quiet whisper effect',
         settings: { compression: 0.95, gain: 2, highpass: 200, noiseGate: 0.1 }
       },
@@ -104,22 +104,22 @@ class VoiceEffectsProcessor {
         settings: { pitch: 0.7, pitchShift2: 0.5, distortion: 0.6, chorus: true }
       },
       alien: { 
-        name: 'Uzaylı', 
+        name: 'Alien', 
         description: 'Sci-fi alien voice',
         settings: { ringModulation: 30, pitch: 1.3, flanger: true }
       },
       baby: { 
-        name: 'Bebek', 
+        name: 'Baby', 
         description: 'Cute baby voice',
         settings: { pitch: 1.5, formant: 1.8, speed: 1.1, warmth: 0.3 }
       },
       giant: { 
-        name: 'Dev', 
+        name: 'Giant', 
         description: 'Huge giant voice',
         settings: { pitch: 0.5, formant: 0.3, bassBoost: 2, reverb: 0.4 }
       },
       echo: { 
-        name: 'Yankı', 
+        name: 'Echo', 
         description: 'Simple delay echo',
         settings: { delay: 0.4, feedback: 0.5, mix: 0.4 }
       },

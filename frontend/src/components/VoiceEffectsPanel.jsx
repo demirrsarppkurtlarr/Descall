@@ -89,10 +89,10 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
         setIsProcessing(true);
         setRnnoiseEnabled(voiceEffects.isRNNoiseEnabled());
       } else {
-        setError('Ses efektleri başlatılamadı');
+        setError('Voice effects failed to start');
       }
     } catch (err) {
-      setError('Başlatma hatası: ' + err.message);
+      setError('Initialization error: ' + err.message);
     } finally {
       setIsInitializing(false);
     }
@@ -214,7 +214,7 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
         <div className="panel-header">
           <div className="header-title">
             <Sparkles className="icon" />
-            <h2>Ses Efektleri</h2>
+            <h2>Voice Effects</h2>
           </div>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
@@ -228,7 +228,7 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
         {isInitializing && (
           <div className="loading-state">
             <div className="spinner" />
-            <span>Ses motoru başlatılıyor...</span>
+            <span>Voice engine starting...</span>
           </div>
         )}
 
@@ -243,7 +243,7 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
             />
             <div className="visualization-label">
               <Activity size={14} />
-              <span>Real-time Spektrum</span>
+              <span>Real-time Spectrum</span>
             </div>
           </div>
 
@@ -253,7 +253,7 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
               <Settings2 size={18} />
               <div>
                 <span className="rnnoise-title">RNNoise AI</span>
-                <span className="rnnoise-desc">Yapay zeka gürültü engelleme</span>
+                <span className="rnnoise-desc">AI noise suppression</span>
               </div>
             </div>
             <button 
@@ -261,13 +261,13 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
               onClick={handleRNNoiseToggle}
             >
               {rnnoiseEnabled ? <Check size={16} /> : <span className="dot" />}
-              {rnnoiseEnabled ? 'Aktif' : 'Pasif'}
+              {rnnoiseEnabled ? 'Active' : 'Inactive'}
             </button>
           </div>
 
           {/* Presets Grid */}
           <div className="presets-section">
-            <h3>Efekt Presetleri</h3>
+            <h3>Effect Presets</h3>
             <div className="presets-grid">
               {presets.map(preset => {
                 const Icon = PRESET_ICONS[preset.id] || Mic;
@@ -300,14 +300,14 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
                 <Sparkles size={14} />
                 <span>{presets.find(p => p.id === currentPreset)?.name}</span>
               </div>
-              <span className="effect-status">Efekt aktif</span>
+              <span className="effect-status">Effect active</span>
             </div>
           )}
         </div>
 
         <div className="panel-footer">
           <p className="footer-note">
-            Web Audio API + WebAssembly ile çalışır
+            Powered by Web Audio API + WebAssembly
           </p>
         </div>
       </div>
