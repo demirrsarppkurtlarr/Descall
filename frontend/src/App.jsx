@@ -645,6 +645,7 @@ export default function App() {
           groupCall={groupCall}
           socket={socketApi}
           onClearDm={() => setActiveDmUser(null)}
+        />
       </div>
   );
 }
