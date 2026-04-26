@@ -72,17 +72,84 @@ export default function VideoConference({
   }, []);
 
   // Stable screen stream handling - prevents flickering
-  const screenVideoRef = useRef(null);
+  // Use Map for multiple participant screen shares
+  const screenVideoRefs = useRef(new Map());
+  
+  // Cleanup refs when unmounting
   useEffect(() => {
-    const video = screenVideoRef.current;
-    if (video && screenStream) {
-      // Only set srcObject if it's different to prevent flickering
-      if (video.srcObject !== screenStream) {
-        video.srcObject = screenStream;
-        video.play().catch(() => {});
+    return () => {
+      screenVideoRefs.current.forEach((video, id) => {
+        if (video) {
+          video.srcObject = null;
+        }
+      });
+      screenVideoRefs.current.clear();
+    };
+  }, []);
+  
+  // Handle local screen share
+  useEffect(() => {
+    if (screenStream && isScreenSharing) {
+      const localVideo = screenVideoRefs.current.get('local');
+      if (localVideo && localVideo.srcObject !== screenStream) {
+        localVideo.srcObject = screenStream;
+        localVideo.play().catch(() => {});
       }
     }
-  }, [screenStream]);
+    return () => {
+      const localVideo = screenVideoRefs.current.get('local');
+      if (localVideo && !isScreenSharing) {
+        localVideo.srcObject = null;
+      }
+    };
+  }, [screenStream, isScreenSharing]);
+  
+  // Handle remote screen shares - only update when screen streams change
+  const prevScreenStreams = useRef(new Map());
+  
+  useEffect(() => {
+    const currentIds = new Set(activeParticipants.map(p => p.id));
+    
+    // CLEANUP: Remove participants no longer present
+    screenVideoRefs.current.forEach((video, id) => {
+      if (!currentIds.has(id)) {
+        video.pause();
+        video.srcObject = null;
+        video.load(); // Force release
+        screenVideoRefs.current.delete(id);
+        prevScreenStreams.current.delete(id);
+        console.log(`[VideoConference] Cleaned up screen video for removed participant ${id}`);
+      }
+    });
+    
+    // UPDATE: Current participants
+    activeParticipants.forEach(p => {
+      if (p.screenStream && p.isScreenSharing) {
+        const video = screenVideoRefs.current.get(p.id);
+        const prevStream = prevScreenStreams.current.get(p.id);
+        
+        if (video && p.screenStream !== prevStream) {
+          video.srcObject = p.screenStream;
+          video.play().catch(() => {});
+          prevScreenStreams.current.set(p.id, p.screenStream);
+        }
+      } else {
+        // Cleanup when participant stops screen sharing
+        const video = screenVideoRefs.current.get(p.id);
+        if (video) {
+          video.srcObject = null;
+        }
+        prevScreenStreams.current.delete(p.id);
+      }
+    });
+    
+    return () => {
+      // Emergency cleanup on effect re-run
+      screenVideoRefs.current.forEach(video => {
+        video.pause();
+      });
+    };
+  }, [activeParticipants]);
 
   // Screen sharing quality handlers
   const handleStartScreenShare = useCallback(async () => {
@@ -187,7 +254,30 @@ export default function VideoConference({
 
           {/* Main Video Area - Rectangle 16:9 */}
           <div className="vc-pip-video-area">
-            {isCameraOn || isScreenSharing ? (
+            {isScreenSharing ? (
+              <video
+                ref={(el) => {
+                  if (el) {
+                    screenVideoRefs.current.set('local', el);
+                    if (screenStream && el.srcObject !== screenStream) {
+                      el.srcObject = screenStream;
+                    }
+                  } else {
+                    // Cleanup on unmount
+                    const video = screenVideoRefs.current.get('local');
+                    if (video) {
+                      video.pause();
+                      video.srcObject = null;
+                    }
+                    screenVideoRefs.current.delete('local');
+                  }
+                }}
+                autoPlay
+                playsInline
+                muted
+                className="vc-pip-video"
+              />
+            ) : isCameraOn ? (
               <video
                 ref={(el) => {
                   if (el && localStream) el.srcObject = localStream;
@@ -408,7 +498,19 @@ export default function VideoConference({
                       }}
                     >
                       <video
-                        ref={screenVideoRef}
+                        ref={(el) => {
+                          if (el) {
+                            screenVideoRefs.current.set(participant.id, el);
+                          } else {
+                            // Cleanup on unmount
+                            const video = screenVideoRefs.current.get(participant.id);
+                            if (video) {
+                              video.srcObject = null;
+                            }
+                            screenVideoRefs.current.delete(participant.id);
+                            prevScreenStreams.current.delete(participant.id);
+                          }
+                        }}
                         autoPlay
                         playsInline
                         className="vc-screen-video"
@@ -435,7 +537,22 @@ export default function VideoConference({
             {/* Main Focus Video */}
             <div className="vc-focus-main">
               {focusTarget === 'local' ? (
-                isCameraOn || isScreenSharing ? (
+                isScreenSharing ? (
+                  <video
+                    ref={(el) => {
+                      if (el) {
+                        screenVideoRefs.current.set('local', el);
+                        if (screenStream && el.srcObject !== screenStream) {
+                          el.srcObject = screenStream;
+                        }
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="vc-video"
+                  />
+                ) : isCameraOn ? (
                   <video
                     ref={(el) => {
                       if (el && localStream) el.srcObject = localStream;

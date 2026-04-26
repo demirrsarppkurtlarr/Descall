@@ -1264,30 +1264,58 @@ export default function ChatLayout({
 
   useEffect(() => () => flushTyping(), [flushTyping]);
 
-  // Load reactions when DM user changes
+  // Load reactions when DM user changes - with cancellation
   useEffect(() => {
-    if (!activeDmUser || !me) return;
-    const convId = [me.id, activeDmUser.id].sort().join("::");
-    const token = localStorage.getItem("descall_token");
-    console.log("[ChatLayout] Fetching DM reactions for:", convId);
-    fetch(`${API_BASE_URL}/reactions/conversation/dm/${convId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async res => {
-        console.log("[ChatLayout] DM reactions response:", res.status, res.ok);
-        if (res.ok) {
-          const data = await res.json();
-          console.log("[ChatLayout] DM reactions loaded:", data);
+    const controller = new AbortController();
+    
+    const loadReactions = async () => {
+      if (!activeDmUser || !me) return;
+      
+      const convId = [me.id, activeDmUser.id].sort().join("::");
+      const token = localStorage.getItem("descall_token");
+      const currentUserId = activeDmUser.id; // Capture for guard check
+      
+      console.log("[ChatLayout] Fetching DM reactions for:", convId);
+      
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/reactions/conversation/dm/${convId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          }
+        );
+        
+        console.log("[ChatLayout] DM reactions response:", response.status, response.ok);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("[ChatLayout] Failed to load DM reactions:", response.status, errorText);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log("[ChatLayout] DM reactions loaded:", data);
+        
+        // GUARD: Only update if still on same user and not aborted
+        if (!controller.signal.aborted && activeDmRef.current?.id === currentUserId) {
           if (data?.reactions) {
             setMessageReactions(data.reactions);
             console.log("[ChatLayout] Set DM messageReactions:", data.reactions);
           }
-        } else {
-          const errorText = await res.text();
-          console.error("[ChatLayout] Failed to load DM reactions:", res.status, errorText);
         }
-      })
-      .catch(err => console.error("[ChatLayout] Error loading DM reactions:", err));
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error("[ChatLayout] Error loading DM reactions:", err);
+        }
+      }
+    };
+    
+    loadReactions();
+    
+    return () => {
+      controller.abort();
+    };
   }, [activeDmUser, me]);
 
   const handleMessagesScroll = (e) => {

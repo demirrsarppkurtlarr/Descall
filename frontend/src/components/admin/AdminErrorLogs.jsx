@@ -608,22 +608,151 @@ export default function AdminErrorLogs({ socket }) {
                       initial={{ height: 0 }}
                       animate={{ height: "auto" }}
                     >
+                      {/* Error Info */}
+                      <div className="error-main-info">
+                        <h4>Error Details</h4>
+                        <div className="info-grid">
+                          <div className="info-item">
+                            <span className="label">Error Type:</span>
+                            <span className="value error-type">{log.name || 'Error'}</span>
+                          </div>
+                          {log.category && (
+                            <div className="info-item">
+                              <span className="label">Category:</span>
+                              <span className="value error-category">{log.category}</span>
+                            </div>
+                          )}
+                          {log.severity && (
+                            <div className="info-item">
+                              <span className="label">Severity:</span>
+                              <span className={`value severity-${log.severity.toLowerCase()}`}>{log.severity}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="error-message-box">
+                          <strong>Message:</strong>
+                          <p>{log.message}</p>
+                        </div>
+                      </div>
+
+                      {/* User Info */}
+                      <div className="user-info-section">
+                        <h4>User Information</h4>
+                        <div className="info-grid">
+                          <div className="info-item">
+                            <span className="label">Username:</span>
+                            <span className="value">{log.username || 'Anonymous'}</span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">User ID:</span>
+                            <span className="value user-id">{log.userId || 'anonymous'}</span>
+                          </div>
+                          {log.userEmail && (
+                            <div className="info-item">
+                              <span className="label">Email:</span>
+                              <span className="value">{log.userEmail}</span>
+                            </div>
+                          )}
+                          {log.userRole && (
+                            <div className="info-item">
+                              <span className="label">Role:</span>
+                              <span className="value">{log.userRole}</span>
+                            </div>
+                          )}
+                          {log.sessionId && (
+                            <div className="info-item">
+                              <span className="label">Session ID:</span>
+                              <span className="value session-id">{log.sessionId}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* System Info */}
+                      <div className="system-info-section">
+                        <h4>System Information</h4>
+                        <div className="info-grid">
+                          <div className="info-item">
+                            <span className="label">URL:</span>
+                            <span className="value url">{log.url || 'N/A'}</span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">Platform:</span>
+                            <span className="value">{log.platform || 'Unknown'}</span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">Language:</span>
+                            <span className="value">{log.language || 'Unknown'}</span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">Screen:</span>
+                            <span className="value">{log.screenResolution || 'Unknown'}</span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">Viewport:</span>
+                            <span className="value">{log.viewport || 'Unknown'}</span>
+                          </div>
+                          <div className="info-item">
+                            <span className="label">Timezone:</span>
+                            <span className="value">{log.timezone || 'Unknown'}</span>
+                          </div>
+                          <div className="info-item full-width">
+                            <span className="label">User Agent:</span>
+                            <span className="value user-agent">{log.userAgent || 'Unknown'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Connection Info */}
+                      {log.connection && (
+                        <div className="connection-info-section">
+                          <h4>Connection Information</h4>
+                          <div className="info-grid">
+                            <div className="info-item">
+                              <span className="label">Network Type:</span>
+                              <span className="value">{log.connection.effectiveType || 'Unknown'}</span>
+                            </div>
+                            {log.connection.downlink && (
+                              <div className="info-item">
+                                <span className="label">Downlink:</span>
+                                <span className="value">{log.connection.downlink} Mbps</span>
+                              </div>
+                            )}
+                            {log.connection.rtt && (
+                              <div className="info-item">
+                                <span className="label">RTT:</span>
+                                <span className="value">{log.connection.rtt} ms</span>
+                              </div>
+                            )}
+                            <div className="info-item">
+                              <span className="label">Online:</span>
+                              <span className="value">{log.isOnline !== false ? 'Yes' : 'No'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Stack Trace */}
                       {log.stack && (
                         <div className="stack-trace">
                           <h4>Stack Trace</h4>
                           <pre>{log.stack}</pre>
                         </div>
                       )}
-                      {log.metadata && (
-                        <div className="metadata">
-                          <h4>Metadata</h4>
-                          <pre>{JSON.stringify(log.metadata, null, 2)}</pre>
+
+                      {/* Component Stack (React) */}
+                      {log.componentStack && (
+                        <div className="component-stack">
+                          <h4>Component Stack</h4>
+                          <pre>{log.componentStack}</pre>
                         </div>
                       )}
-                      {log.request && (
-                        <div className="request-info">
-                          <h4>Request</h4>
-                          <pre>{JSON.stringify(log.request, null, 2)}</pre>
+
+                      {/* Additional Metadata */}
+                      {log.metadata && (
+                        <div className="metadata">
+                          <h4>Additional Metadata</h4>
+                          <pre>{JSON.stringify(log.metadata, null, 2)}</pre>
                         </div>
                       )}
                     </motion.div>
@@ -661,52 +790,15 @@ export default function AdminErrorLogs({ socket }) {
               </div>
               
               <div className="modal-body">
-                <div className="detail-section">
-                  <label>Severity</label>
-                  <div className="severity-badge" style={{ color: getSeverityStyle(selectedLog.severity).color }}>
-                    {selectedLog.severity}
-                  </div>
-                </div>
-                
-                <div className="detail-section">
-                  <label>Timestamp</label>
-                  <p>{new Date(selectedLog.timestamp).toLocaleString()}</p>
-                </div>
-                
-                <div className="detail-section">
-                  <label>Source</label>
-                  <p>{selectedLog.source}</p>
-                </div>
-                
-                {selectedLog.user && (
-                  <div className="detail-section">
-                    <label>User</label>
-                    <p>{selectedLog.user.username} (ID: {selectedLog.user.id})</p>
-                  </div>
-                )}
-                
-                <div className="detail-section">
-                  <label>Message</label>
-                  <p className="message-text">{selectedLog.message}</p>
-                </div>
-                
-                {selectedLog.stack && (
-                  <div className="detail-section">
-                    <label>Stack Trace</label>
-                    <pre className="code-block">{selectedLog.stack}</pre>
-                  </div>
-                )}
-                
-                {selectedLog.metadata && (
-                  <div className="detail-section">
-                    <label>Metadata</label>
-                    <pre className="code-block">{JSON.stringify(selectedLog.metadata, null, 2)}</pre>
-                  </div>
-                )}
               </div>
-              
-              <div className="modal-footer">
-                <RippleButton onClick={() => {
+              <div>
+                <label style={{ color: "#888" }}>Severity:</label>
+                <p style={{ 
+                  color: selectedLog.severity === 'critical' ? '#ff0000' : 
+                         selectedLog.severity === 'high' ? '#ff6b6b' : 
+                         selectedLog.severity === 'medium' ? '#ffa500' : '#4ecdc4',
+                  fontWeight: "bold",
+                  margin: 0 
                   navigator.clipboard.writeText(JSON.stringify(selectedLog, null, 2));
                 }}>
                   <Copy size={16} />

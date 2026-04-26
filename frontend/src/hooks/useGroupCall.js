@@ -104,11 +104,25 @@ export function useGroupCall(socket) {
 
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+    
+    // Stop all remote streams before clearing
+    remoteStreamsRef.current.forEach((stream, userId) => {
+      stream.getTracks().forEach(track => {
+        track.stop();
+        track.enabled = false;
+      });
+    });
     remoteStreamsRef.current.clear();
     
-    remoteAudioRefs.current.forEach((audioEl) => {
-      audioEl.srcObject = null;
-      audioEl.remove();
+    // Properly cleanup remote audio elements
+    remoteAudioRefs.current.forEach((audioEl, userId) => {
+      try {
+        audioEl.pause();
+        audioEl.srcObject = null;
+        audioEl.remove();
+      } catch (e) {
+        console.warn(`[GroupCall] Error removing audio for ${userId}:`, e);
+      }
     });
     remoteAudioRefs.current.clear();
 
@@ -241,12 +255,28 @@ export function useGroupCall(socket) {
 
   const flushIce = async (pc, userId) => {
     const peerData = pcMapRef.current.get(userId);
-    if (!peerData) return;
+    if (!peerData || !peerData.pendingIce?.length) return;
     
-    for (const c of peerData.pendingIce) {
-      await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
+    console.log(`[GroupCall] Flushing ${peerData.pendingIce.length} ICE candidates for ${userId}`);
+    
+    const failedCandidates = [];
+    
+    for (const candidate of peerData.pendingIce) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.warn(`[GroupCall] Failed to add ICE candidate for ${userId}:`, err.message);
+        failedCandidates.push(candidate);
+      }
     }
-    peerData.pendingIce = [];
+    
+    // Keep failed candidates if connection still viable
+    peerData.pendingIce = failedCandidates;
+    
+    // Clear if connection failed
+    if (failedCandidates.length > 0 && pc.connectionState === 'failed') {
+      peerData.pendingIce = [];
+    }
   };
 
   const startGroupCall = useCallback(async (groupId, type, memberIds = []) => {
@@ -465,14 +495,15 @@ export function useGroupCall(socket) {
       setScreenStream(stream);
       
       // Replace camera track with screen track or add if no video exists
-      pcMapRef.current.forEach(async (peerData, userId) => {
+      // CRITICAL: Sequential processing to prevent race conditions
+      for (const [userId, peerData] of pcMapRef.current.entries()) {
         try {
           const senders = peerData.pc.getSenders();
           const videoSender = senders.find(s => s.track?.kind === 'video');
           
           if (videoSender) {
             // Video call - replace camera with screen
-            videoSender.replaceTrack(screenTrack);
+            await videoSender.replaceTrack(screenTrack);
             screenSenderRef.current = videoSender;
             console.log(`[GroupCall] Replaced camera track with screen track for ${userId}`);
           } else {
@@ -495,8 +526,9 @@ export function useGroupCall(socket) {
           }
         } catch (err) {
           console.error(`[GroupCall] Failed to replace/add screen track for ${userId}:`, err);
+          // Continue with other peers - don't break entire operation
         }
-      });
+      }
 
       if (screenVideoRef.current) {
         screenVideoRef.current.srcObject = stream;
@@ -757,9 +789,12 @@ export function useGroupCall(socket) {
       
       if (!peerData || !peerData.pc.remoteDescription) {
         if (!peerData) {
+          // Store ICE candidate for later when peer connection is created
           const newPeerData = { pc: null, pendingIce: [candidate] };
           pcMapRef.current.set(fromUserId, newPeerData);
         } else {
+          // Queue ICE candidate until remote description is set
+          if (!peerData.pendingIce) peerData.pendingIce = [];
           peerData.pendingIce.push(candidate);
         }
         return;
@@ -768,7 +803,8 @@ export function useGroupCall(socket) {
       try {
         await peerData.pc.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (err) {
-        console.error("[GroupCall] ICE error:", err);
+        // Non-fatal error - connection may still work
+        console.warn(`[GroupCall] ICE error for ${fromUserId}:`, err.message);
       }
     };
 

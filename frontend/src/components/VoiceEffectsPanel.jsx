@@ -60,21 +60,99 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
   const animationRef = useRef(null);
   const processedStreamRef = useRef(null);
 
-  // Initialize voice effects
+  // Initialize voice effects with cancellation support
   useEffect(() => {
-    if (isOpen) {
-      initializeVoiceEffects();
-    }
+    let isCancelled = false;
+    
+    const init = async () => {
+      if (!isOpen) return;
+      
+      setIsInitializing(true);
+      setError(null);
+      
+      try {
+        const success = await voiceEffects.initialize();
+        
+        // GUARD: Component still mounted?
+        if (isCancelled) {
+          voiceEffects.stop();
+          return;
+        }
+        
+        if (success) {
+          setPresets(voiceEffects.getPresets());
+          setCurrentPreset(voiceEffects.getCurrentPreset());
+          setIsProcessing(true);
+          setRnnoiseEnabled(voiceEffects.isRNNoiseEnabled());
+        } else {
+          setError('Voice effects failed to start');
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          setError('Initialization error: ' + err.message);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsInitializing(false);
+        }
+      }
+    };
+    
+    init();
+    
     return () => {
+      isCancelled = true;
       stopVoiceEffects();
     };
   }, [isOpen]);
 
   // Process stream when localStream changes
   useEffect(() => {
-    if (isOpen && localStream && isProcessing) {
-      processStream();
-    }
+    let isActive = true;
+    
+    const process = async () => {
+      if (!isOpen || !localStream || !isProcessing) return;
+      
+      // GUARD: Voice effects must be initialized
+      if (!voiceEffects.audioContext || voiceEffects.audioContext.state !== 'running') {
+        console.log('[VoiceEffectsPanel] Waiting for initialization...');
+        return;
+      }
+      
+      try {
+        if (processedStreamRef.current) {
+          processedStreamRef.current.getTracks().forEach(track => track.stop());
+        }
+        
+        voiceEffects.stop();
+        
+        if (!isActive) return;
+        
+        const processedStream = await voiceEffects.start(localStream);
+        
+        if (!isActive) {
+          processedStream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        
+        processedStreamRef.current = processedStream;
+        
+        if (onProcessedStream) {
+          onProcessedStream(processedStream);
+        }
+      } catch (err) {
+        if (isActive) {
+          console.error('Stream processing error:', err);
+          setError('Audio processing failed: ' + err.message);
+        }
+      }
+    };
+    
+    process();
+    
+    return () => {
+      isActive = false;
+    };
   }, [isOpen, localStream, isProcessing]);
 
   const initializeVoiceEffects = async () => {
