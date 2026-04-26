@@ -726,7 +726,7 @@ export default function VideoConference({
           <span>End Call</span>
         </RippleButton>
       </motion.div>
-    </AnimatePresence>
+    </motion.div>
 
     {/* Voice Effects Panel */}
     <VoiceEffectsPanel
@@ -738,6 +738,5 @@ export default function VideoConference({
         console.log('Voice effects stream processed');
       }}
     />
-  </motion.div>
   );
 }
