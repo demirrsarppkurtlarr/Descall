@@ -104,6 +104,12 @@ export default function VideoConference({
     };
   }, [screenStream, isScreenSharing]);
   
+  // TDZ FIX: Define activeParticipants BEFORE useEffect that uses it
+  // Filter active participants (with streams)
+  const activeParticipants = safeParticipants.filter((p) =>
+    remoteStreamMap.has(p.id)
+  );
+
   // Handle remote screen shares - only update when screen streams change
   const prevScreenStreams = useRef(new Map());
   
@@ -337,11 +343,6 @@ export default function VideoConference({
       </motion.div>
     );
   }
-
-  // Filter active participants (with streams)
-  const activeParticipants = safeParticipants.filter((p) =>
-    remoteStreamMap.has(p.id)
-  );
 
   // Grid layout calculation
   const getGridCols = (count) => {
