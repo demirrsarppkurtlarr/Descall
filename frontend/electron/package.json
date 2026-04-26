@@ -68,7 +68,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Descall",
-      "artifactName": "Descall-Setup-${version}.exe"
+      "artifactName": "Descall-Setup-${version}.exe",
+      "deleteAppDataOnUninstall": true,
+      "include": "installer.nsh"
     },
     "portable": {
       "artifactName": "Descall-Portable-${version}.exe"

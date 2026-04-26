@@ -31,12 +31,25 @@
 !macroend
 
 !macro customUnInstall
-  ; Pre-uninstall actions
-  DetailPrint "Removing Descall..."
+  ; Pre-uninstall actions - Clean all残留
+  DetailPrint "Removing Descall and cleaning残留..."
   
-  ; Remove app data (optional - keep user data)
-  ; RMDir /r "$LOCALAPPDATA\Descall"
+  ; Remove app data from LOCALAPPDATA\Programs (installation directory)
+  RMDir /r "$LOCALAPPDATA\Programs\Descall"
+  
+  ; Remove app data from LOCALAPPDATA
+  RMDir /r "$LOCALAPPDATA\Descall"
+  
+  ; Remove app data from APPDATA (Roaming)
+  RMDir /r "$APPDATA\Descall"
+  
+  ; Remove electron-builder cache
+  RMDir /r "$LOCALAPPDATA\electron-builder"
+  RMDir /r "$APPDATA\electron-builder"
   
   ; Remove registry entries
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Descall"
+  DeleteRegKey HKCU "Software\Descall"
+  
+  DetailPrint "Cleanup complete"
 !macroend
