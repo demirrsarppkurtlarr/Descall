@@ -738,5 +738,6 @@ export default function VideoConference({
         console.log('Voice effects stream processed');
       }}
     />
+  </motion.div>
   );
 }
