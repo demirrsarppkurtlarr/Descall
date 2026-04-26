@@ -122,11 +122,11 @@ function createMainWindow() {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           "default-src 'self'; " +
-          "connect-src 'self' https://descall-qzkg.onrender.com https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://descall-qzkg.onrender.com http://localhost:5173; " +
-          "img-src 'self' https://*.supabase.co https://*.supabase.in data: blob:; " +
+          "connect-src 'self' https://descall-qzkg.onrender.com https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://descall-qzkg.onrender.com http://localhost:5173 https://api.github.com; " +
+          "img-src 'self' https://*.supabase.co https://*.supabase.in https://*.githubusercontent.com data: blob:; " +
           "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-          "style-src 'self' 'unsafe-inline'; " +
-          "font-src 'self'; " +
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+          "font-src 'self' https://fonts.gstatic.com; " +
           "media-src 'self' blob:;"
         ]
       }
