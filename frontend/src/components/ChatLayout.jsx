@@ -28,6 +28,7 @@ import {
   PanelLeftClose, Settings, Send, Paperclip,
   Phone, Video, X, Plus, Clock, Check, CheckCheck, Play,
   Mic, MicOff, Camera, CameraOff, Monitor, PhoneOff,
+  Minus, Square, Maximize2,
   Search, LogOut, Volume2, VolumeX, Maximize2, Minimize2, Grid,
   ChevronLeft, ChevronRight, MoreVertical, Trash2,
   Menu, Palette, Sparkles, User, Megaphone,
@@ -343,6 +344,66 @@ function AnimatedMessage({ children, delay = 0 }) {
     >
       {children}
     </motion.div>
+  );
+}
+
+// Custom Title Bar for frameless window
+function TitleBar() {
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  const handleMinimize = () => {
+    window.electron?.invoke('window:minimize');
+  };
+
+  const handleMaximize = () => {
+    window.electron?.invoke('window:maximize');
+    setIsMaximized(!isMaximized);
+  };
+
+  const handleClose = () => {
+    window.electron?.invoke('window:close');
+  };
+
+  return (
+    <div className="title-bar" style={{
+      height: '32px',
+      background: 'linear-gradient(90deg, #1a1a2e 0%, #16213e 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 12px',
+      WebkitAppRegion: 'drag',
+      userSelect: 'none',
+      borderBottom: '1px solid rgba(255,255,255,0.1)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <img src="/favicon.ico" alt="Descall" style={{ width: 18, height: 18 }} />
+        <span style={{ color: '#fff', fontSize: '13px', fontWeight: 500 }}>Descall</span>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', WebkitAppRegion: 'no-drag' }}>
+        <button onClick={handleMinimize} style={{
+          width: '30px', height: '24px', border: 'none', background: 'transparent',
+          color: '#fff', cursor: 'pointer', borderRadius: '4px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s'
+        }} onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.target.style.background = 'transparent'}>
+          <Minus size={14} />
+        </button>
+        <button onClick={handleMaximize} style={{
+          width: '30px', height: '24px', border: 'none', background: 'transparent',
+          color: '#fff', cursor: 'pointer', borderRadius: '4px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s'
+        }} onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.target.style.background = 'transparent'}>
+          {isMaximized ? <Maximize2 size={12} /> : <Square size={10} />}
+        </button>
+        <button onClick={handleClose} style={{
+          width: '30px', height: '24px', border: 'none', background: 'transparent',
+          color: '#fff', cursor: 'pointer', borderRadius: '4px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s'
+        }} onMouseEnter={e => e.target.style.background = '#e81123'} onMouseLeave={e => e.target.style.background = 'transparent'}>
+          <X size={14} />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1361,6 +1422,9 @@ export default function ChatLayout({
     <div 
       className={`app-root app-root-enhanced ${isMobile ? "mobile-view" : ""} ${!sidebarOpen ? "sidebar-collapsed" : ""}`}
     >
+      {/* Custom Title Bar for Electron */}
+      {window.electron && <TitleBar />}
+      
       {/* Desktop Sidebar - Hidden on Mobile */}
       {!isMobile && (
         <>

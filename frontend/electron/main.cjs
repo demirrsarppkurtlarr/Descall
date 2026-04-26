@@ -103,6 +103,7 @@ function createMainWindow() {
     minWidth: 1200,
     minHeight: 700,
     show: false,
+    frame: false,
     titleBarStyle: 'hidden',
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../public/favicon.ico'),
@@ -118,6 +119,23 @@ function createMainWindow() {
 
   // Hide menu bar completely
   mainWindow.setMenuBarVisibility(false);
+
+  // IPC handlers for window controls
+  ipcMain.handle('window:minimize', () => {
+    mainWindow?.minimize();
+  });
+
+  ipcMain.handle('window:maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow?.unmaximize();
+    } else {
+      mainWindow?.maximize();
+    }
+  });
+
+  ipcMain.handle('window:close', () => {
+    mainWindow?.close();
+  });
 
   // Set CSP headers to allow Supabase and API connections
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
