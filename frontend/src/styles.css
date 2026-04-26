@@ -636,6 +636,7 @@ select {
 
 .nav-rail {
   width: 72px;
+  height: 100vh;
   min-height: 100vh;
   background: #0a0c0f;
   border-right: 1px solid var(--border);
@@ -644,6 +645,13 @@ select {
   align-items: center;
   padding: 10px 0;
   gap: 6px;
+}
+
+/* When TitleBar is present (Electron app), adjust nav-rail */
+body.electron-app .nav-rail {
+  padding-top: 50px;
+  height: calc(100vh - 40px);
+  min-height: calc(100vh - 40px);
 }
 
 /* When TitleBar is present (Electron app), add padding to root when TitleBar is present */
@@ -657,15 +665,31 @@ body.electron-app #root {
   overflow: hidden !important;
 }
 
-/* Inner content should scroll, not the whole app */
-body.electron-app .app-container,
-body.electron-app main {
-  overflow: hidden;
+/* Ensure app fits within viewport */
+body.electron-app .app-container {
+  height: 100% !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
 }
 
 body.electron-app .chat-layout {
-  height: calc(100vh - 40px) !important;
+  height: 100% !important;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Messages area should scroll, not the whole app */
+body.electron-app .messages {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Composer should stay at bottom */
+body.electron-app .composer {
+  flex-shrink: 0;
 }
 
 .rail-btn {
