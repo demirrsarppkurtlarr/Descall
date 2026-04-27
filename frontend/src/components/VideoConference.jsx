@@ -51,6 +51,7 @@ export default function VideoConference({
   
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
+  const resizeTimeoutRef = useRef(null);
   
   useEffect(() => {
     const checkMobile = () => {
@@ -59,9 +60,22 @@ export default function VideoConference({
       setIsMobile(isMobileDevice);
     };
     
+    const debouncedCheckMobile = () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = setTimeout(checkMobile, 250);
+    };
+    
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener('resize', debouncedCheckMobile);
+    
+    return () => {
+      window.removeEventListener('resize', debouncedCheckMobile);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+    };
   }, []);
   
   // DEBUG: Log participants data

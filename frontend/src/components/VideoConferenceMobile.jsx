@@ -31,11 +31,13 @@ export default function VideoConferenceMobile({
   callType,
   screenQuality,
   setScreenQuality,
-  localStream: stream,
   onProcessedStream,
 }) {
   const safeParticipants = Array.isArray(participants) ? participants : [];
   const [showVoiceEffects, setShowVoiceEffects] = useState(false);
+  
+  // Get remote streams for mobile participants
+  const remoteStreamMap = remoteStreams?.current instanceof Map ? remoteStreams.current : new Map();
   
   // Stable element management for mobile
   const videoElementRefs = useRef(new Map());
@@ -91,7 +93,8 @@ export default function VideoConferenceMobile({
       // Handle main participant video
       if (safeParticipants.length > 0) {
         const participant = safeParticipants[0];
-        await assignStreamToVideo('main-participant', stream);
+        const participantStream = remoteStreamMap.get(participant.id);
+        await assignStreamToVideo('main-participant', participantStream);
       }
       
       // Handle screen sharing
@@ -105,7 +108,7 @@ export default function VideoConferenceMobile({
     updateStreams().catch(error => {
       console.error('[VideoConferenceMobile] Error updating streams:', error);
     });
-  }, [safeParticipants, screenStream, isScreenSharing, assignStreamToVideo, assignScreenStreamToVideo, stream]);
+  }, [safeParticipants, screenStream, isScreenSharing, assignStreamToVideo, assignScreenStreamToVideo, remoteStreamMap]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -123,6 +126,9 @@ export default function VideoConferenceMobile({
         }
       });
       screenVideoElementRefs.current.clear();
+      
+      streamAssignments.current.clear();
+      screenStreamAssignments.current.clear();
     };
   }, []);
 
