@@ -116,29 +116,57 @@ export default function VideoConference({
   const streamAssignments = useRef(new Map()); // participantId -> current stream
   const screenStreamAssignments = useRef(new Map()); // participantId -> current screen stream
   
-  // Manual stream assignment function - no React re-render interference
-  const assignStreamToVideo = useCallback((participantId, stream) => {
+  // Manual stream assignment function - async with proper sequencing
+  const assignStreamToVideo = useCallback(async (participantId, stream) => {
     const video = videoElementRefs.current.get(participantId);
     if (video && video.srcObject !== stream) {
       console.log(`[VideoConference] Assigning stream to ${participantId}`);
-      video.srcObject = stream;
-      if (stream) {
-        video.play().catch(() => {});
+      
+      // Stop current playback to prevent race condition
+      if (video.srcObject) {
+        video.pause();
+        video.currentTime = 0;
       }
+      
+      // Assign new stream
+      video.srcObject = stream;
       streamAssignments.current.set(participantId, stream);
+      
+      // Wait for stream to be ready before playing
+      if (stream) {
+        try {
+          await video.play();
+        } catch (error) {
+          console.warn(`[VideoConference] Failed to play video for ${participantId}:`, error);
+        }
+      }
     }
   }, []);
   
-  // Manual screen stream assignment function
-  const assignScreenStreamToVideo = useCallback((participantId, screenStream) => {
+  // Manual screen stream assignment function - async with proper sequencing
+  const assignScreenStreamToVideo = useCallback(async (participantId, screenStream) => {
     const video = screenVideoElementRefs.current.get(participantId);
     if (video && video.srcObject !== screenStream) {
       console.log(`[VideoConference] Assigning screen stream to ${participantId}`);
-      video.srcObject = screenStream;
-      if (screenStream) {
-        video.play().catch(() => {});
+      
+      // Stop current playback to prevent race condition
+      if (video.srcObject) {
+        video.pause();
+        video.currentTime = 0;
       }
+      
+      // Assign new stream
+      video.srcObject = screenStream;
       screenStreamAssignments.current.set(participantId, screenStream);
+      
+      // Wait for stream to be ready before playing
+      if (screenStream) {
+        try {
+          await video.play();
+        } catch (error) {
+          console.warn(`[VideoConference] Failed to play screen video for ${participantId}:`, error);
+        }
+      }
     }
   }, []);
   
@@ -163,25 +191,39 @@ export default function VideoConference({
   
   // Update streams when participants change - but only assign to existing elements
   useEffect(() => {
-    const currentIds = new Set(activeParticipants.map(p => p.id));
-    
-    // Cleanup removed participants
-    for (const [participantId] of videoElementRefs.current) {
-      if (!currentIds.has(participantId)) {
-        cleanupParticipant(participantId);
-      }
-    }
-    
-    // Update streams for existing participants
-    activeParticipants.forEach(p => {
-      const stream = remoteStreamMap.get(p.id);
-      assignStreamToVideo(p.id, stream);
+    const updateStreams = async () => {
+      const currentIds = new Set(activeParticipants.map(p => p.id));
       
-      if (p.screenStream && p.isScreenSharing) {
-        assignScreenStreamToVideo(p.id, p.screenStream);
-      } else {
-        assignScreenStreamToVideo(p.id, null);
+      // Cleanup removed participants - check BOTH video and screen refs
+      const allParticipantIds = new Set([
+        ...videoElementRefs.current.keys(),
+        ...screenVideoElementRefs.current.keys()
+      ]);
+      
+      for (const participantId of allParticipantIds) {
+        if (!currentIds.has(participantId)) {
+          cleanupParticipant(participantId);
+        }
       }
+      
+      // Update streams for existing participants - await all assignments
+      const streamPromises = activeParticipants.map(async (p) => {
+        const stream = remoteStreamMap.get(p.id);
+        await assignStreamToVideo(p.id, stream);
+        
+        if (p.screenStream && p.isScreenSharing) {
+          await assignScreenStreamToVideo(p.id, p.screenStream);
+        } else {
+          await assignScreenStreamToVideo(p.id, null);
+        }
+      });
+      
+      // Wait for all stream assignments to complete
+      await Promise.allSettled(streamPromises);
+    };
+    
+    updateStreams().catch(error => {
+      console.error('[VideoConference] Error updating streams:', error);
     });
   }, [activeParticipants, remoteStreamMap, assignStreamToVideo, assignScreenStreamToVideo, cleanupParticipant]);
 

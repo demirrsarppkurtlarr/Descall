@@ -18,6 +18,7 @@ class VoiceEffects {
     this.delayNode = null;
     this.convolver = null;
     this.compressor = null;
+    this.destinationNode = null; // Track destination node for cleanup
     
     // RNNoise simulation (since actual RNNoise requires WebAssembly)
     this.rnnoiseEnabled = false;
@@ -30,9 +31,18 @@ class VoiceEffects {
   // Initialize audio context and processing chain
   async initialize() {
     try {
-      if (this.isInitialized) {
+      // Check if already initialized and context is not closed
+      if (this.isInitialized && this.audioContext?.state !== 'closed') {
         console.log('[VoiceEffects] Already initialized');
         return;
+      }
+      
+      // Reset if context was closed
+      if (this.audioContext?.state === 'closed') {
+        console.log('[VoiceEffects] Audio context was closed, resetting');
+        this.audioContext = null;
+        this.isInitialized = false;
+        this.disconnectAll();
       }
 
       console.log('[VoiceEffects] Initializing audio engine');
@@ -159,8 +169,13 @@ class VoiceEffects {
       // Connect source to processing chain
       this.sourceNode.connect(this.inputGain);
       
-      // Create processed stream destination
+      // Create processed stream destination with proper cleanup
+      if (this.destinationNode) {
+        this.outputGain.disconnect(this.destinationNode);
+      }
+      
       const destination = this.audioContext.createMediaStreamDestination();
+      this.destinationNode = destination;
       
       // Connect output to destination
       this.outputGain.connect(destination);
@@ -186,6 +201,11 @@ class VoiceEffects {
       if (this.sourceNode) {
         this.sourceNode.disconnect();
         this.sourceNode = null;
+      }
+      
+      if (this.destinationNode) {
+        this.outputGain.disconnect(this.destinationNode);
+        this.destinationNode = null;
       }
       
       if (this.processedStream) {
@@ -443,6 +463,9 @@ class VoiceEffects {
       console.log('[VoiceEffects] Destroying voice effects');
       this.stop();
       this.disconnectAll();
+      
+      // Clear destination node reference
+      this.destinationNode = null;
       
       if (this.audioContext && this.audioContext.state !== 'closed') {
         this.audioContext.close();
