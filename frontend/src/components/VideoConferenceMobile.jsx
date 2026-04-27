@@ -89,44 +89,76 @@ export default function VideoConferenceMobile({
   const streamAssignments = useRef(new Map());
   const screenStreamAssignments = useRef(new Map());
 
-  // Assign stream to video element
+  // Assign stream to video element with enhanced error handling
   const assignStreamToVideo = useCallback(async (participantId, stream) => {
     const video = videoElementRefs.current.get(participantId);
-    if (video && video.srcObject !== stream) {
-      if (video.srcObject) {
-        video.pause();
-        video.currentTime = 0;
-      }
-      video.srcObject = stream;
-      streamAssignments.current.set(participantId, stream);
-      
-      if (stream) {
+    if (!video) return;
+    
+    // If same stream, just ensure it's playing
+    if (video.srcObject === stream) {
+      if (stream && video.paused) {
         try {
           await video.play();
         } catch (error) {
-          console.warn(`[VideoConferenceMobile] Failed to play video for ${participantId}:`, error);
+          // Silently ignore play errors
         }
+      }
+      return;
+    }
+    
+    // Stop current playback
+    if (video.srcObject) {
+      video.pause();
+      video.currentTime = 0;
+    }
+    
+    // Assign new stream
+    video.srcObject = stream;
+    streamAssignments.current.set(participantId, stream);
+    
+    if (stream) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        await video.play();
+      } catch (error) {
+        // Silently ignore play errors - video will autoplay when ready
       }
     }
   }, []);
 
-  // Assign screen stream to video element
-  const assignScreenStreamToVideo = useCallback(async (elementId, screenStream) => {
+  // Assign screen stream to video element with enhanced error handling
+  const assignScreenStreamToVideo = useCallback(async (elementId, screenStreamData) => {
     const video = screenVideoElementRefs.current.get(elementId);
-    if (video && video.srcObject !== screenStream) {
-      if (video.srcObject) {
-        video.pause();
-        video.currentTime = 0;
-      }
-      video.srcObject = screenStream;
-      screenStreamAssignments.current.set(elementId, screenStream);
-      
-      if (screenStream) {
+    if (!video) return;
+    
+    // If same stream, just ensure it's playing
+    if (video.srcObject === screenStreamData) {
+      if (screenStreamData && video.paused) {
         try {
           await video.play();
         } catch (error) {
-          console.warn(`[VideoConferenceMobile] Failed to play screen video for ${elementId}:`, error);
+          // Silently ignore play errors
         }
+      }
+      return;
+    }
+    
+    // Stop current playback
+    if (video.srcObject) {
+      video.pause();
+      video.currentTime = 0;
+    }
+    
+    // Assign new stream
+    video.srcObject = screenStreamData;
+    screenStreamAssignments.current.set(elementId, screenStreamData);
+    
+    if (screenStreamData) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        await video.play();
+      } catch (error) {
+        // Silently ignore play errors - video will autoplay when ready
       }
     }
   }, []);
@@ -297,14 +329,14 @@ export default function VideoConferenceMobile({
           <div className="vc-mobile-control-row">
             <RippleButton
               className={`vc-mobile-control-btn ${isMuted ? 'danger' : ''}`}
-              onClick={toggleMute}
+              onClick={() => toggleMute && toggleMute()}
             >
               {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
             </RippleButton>
             
             <RippleButton
               className={`vc-mobile-control-btn ${!isCameraOn ? 'danger' : ''}`}
-              onClick={toggleCamera}
+              onClick={() => toggleCamera && toggleCamera()}
             >
               {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
             </RippleButton>
@@ -313,26 +345,29 @@ export default function VideoConferenceMobile({
               className={`vc-mobile-control-btn ${isScreenSharing ? 'active' : ''}`}
               onClick={async () => {
                 if (isScreenSharing) {
-                  try {
-                    await stopScreenShare();
-                    // Exit fullscreen when stopping screen share
-                    if (document.fullscreenElement) {
-                      document.exitFullscreen();
+                  if (stopScreenShare) {
+                    try {
+                      await stopScreenShare();
+                      if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                      }
+                    } catch (error) {
+                      console.error('[VideoConferenceMobile] Error stopping screen share:', error);
                     }
-                  } catch (error) {
-                    console.error('[VideoConferenceMobile] Error stopping screen share:', error);
                   }
                 } else {
-                  try {
-                    await startScreenShare({ resolution: '720p', fps: 30 });
-                  } catch (error) {
-                    console.error('[VideoConferenceMobile] Error starting screen share:', error);
+                  if (startScreenShare) {
+                    try {
+                      await startScreenShare({ resolution: '720p', fps: 30 });
+                    } catch (error) {
+                      console.error('[VideoConferenceMobile] Error starting screen share:', error);
+                    }
                   }
                 }
               }}
             >
               <Monitor size={20} />
-          </RippleButton>
+            </RippleButton>
           
           <RippleButton
             className={`vc-mobile-control-btn ${showVoiceEffects ? 'active' : ''}`}
