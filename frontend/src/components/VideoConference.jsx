@@ -110,68 +110,80 @@ export default function VideoConference({
     remoteStreamMap.has(p.id)
   );
 
-  // Handle remote screen shares - optimized to prevent black screens
-  const prevScreenStreams = useRef(new Map());
-  const prevParticipantsHash = useRef('');
+  // COMPLETE REWRITE: Stable video element management
+  const videoElementRefs = useRef(new Map()); // participantId -> video element
+  const screenVideoElementRefs = useRef(new Map()); // participantId -> screen video element
+  const streamAssignments = useRef(new Map()); // participantId -> current stream
+  const screenStreamAssignments = useRef(new Map()); // participantId -> current screen stream
   
-  useEffect(() => {
-    // Create hash to detect actual changes vs re-renders
-    const currentHash = activeParticipants.map(p => `${p.id}:${p.isScreenSharing}:${!!p.screenStream}`).join('|');
-    
-    // Skip if no actual changes detected (prevents unnecessary video resets)
-    if (currentHash === prevParticipantsHash.current) {
-      return;
+  // Manual stream assignment function - no React re-render interference
+  const assignStreamToVideo = useCallback((participantId, stream) => {
+    const video = videoElementRefs.current.get(participantId);
+    if (video && video.srcObject !== stream) {
+      console.log(`[VideoConference] Assigning stream to ${participantId}`);
+      video.srcObject = stream;
+      if (stream) {
+        video.play().catch(() => {});
+      }
+      streamAssignments.current.set(participantId, stream);
     }
-    
-    console.log('[VideoConference] Participants changed, updating screen shares');
-    prevParticipantsHash.current = currentHash;
-    
+  }, []);
+  
+  // Manual screen stream assignment function
+  const assignScreenStreamToVideo = useCallback((participantId, screenStream) => {
+    const video = screenVideoElementRefs.current.get(participantId);
+    if (video && video.srcObject !== screenStream) {
+      console.log(`[VideoConference] Assigning screen stream to ${participantId}`);
+      video.srcObject = screenStream;
+      if (screenStream) {
+        video.play().catch(() => {});
+      }
+      screenStreamAssignments.current.set(participantId, screenStream);
+    }
+  }, []);
+  
+  // Cleanup function for removed participants
+  const cleanupParticipant = useCallback((participantId) => {
+    const video = videoElementRefs.current.get(participantId);
+    if (video) {
+      video.srcObject = null;
+      video.load();
+    }
+    const screenVideo = screenVideoElementRefs.current.get(participantId);
+    if (screenVideo) {
+      screenVideo.srcObject = null;
+      screenVideo.load();
+    }
+    videoElementRefs.current.delete(participantId);
+    screenVideoElementRefs.current.delete(participantId);
+    streamAssignments.current.delete(participantId);
+    screenStreamAssignments.current.delete(participantId);
+    console.log(`[VideoConference] Cleaned up participant ${participantId}`);
+  }, []);
+  
+  // Update streams when participants change - but only assign to existing elements
+  useEffect(() => {
     const currentIds = new Set(activeParticipants.map(p => p.id));
     
-    // CLEANUP: Remove participants no longer present
-    screenVideoRefs.current.forEach((video, id) => {
-      if (!currentIds.has(id)) {
-        video.pause();
-        video.srcObject = null;
-        video.load(); // Force release
-        screenVideoRefs.current.delete(id);
-        prevScreenStreams.current.delete(id);
-        console.log(`[VideoConference] Cleaned up screen video for removed participant ${id}`);
+    // Cleanup removed participants
+    for (const [participantId] of videoElementRefs.current) {
+      if (!currentIds.has(participantId)) {
+        cleanupParticipant(participantId);
       }
-    });
+    }
     
-    // UPDATE: Current participants - only update if stream actually changed
+    // Update streams for existing participants
     activeParticipants.forEach(p => {
+      const stream = remoteStreamMap.get(p.id);
+      assignStreamToVideo(p.id, stream);
+      
       if (p.screenStream && p.isScreenSharing) {
-        const video = screenVideoRefs.current.get(p.id);
-        const prevStream = prevScreenStreams.current.get(p.id);
-        
-        // Only update if stream actually changed (prevents black screen flicker)
-        if (video && p.screenStream !== prevStream) {
-          console.log(`[VideoConference] Updating screen stream for ${p.id}`);
-          video.srcObject = p.screenStream;
-          video.play().catch(() => {});
-          prevScreenStreams.current.set(p.id, p.screenStream);
-        }
+        assignScreenStreamToVideo(p.id, p.screenStream);
       } else {
-        // Only cleanup if previously had screen share
-        const prevStream = prevScreenStreams.current.get(p.id);
-        if (prevStream) {
-          const video = screenVideoRefs.current.get(p.id);
-          if (video) {
-            video.srcObject = null;
-          }
-          prevScreenStreams.current.delete(p.id);
-          console.log(`[VideoConference] Cleared screen stream for ${p.id}`);
-        }
+        assignScreenStreamToVideo(p.id, null);
       }
     });
-    
-    return () => {
-      // Only cleanup on actual unmount, not re-render
-      // This prevents video elements from going black during normal updates
-    };
-  }, [activeParticipants]);
+  }, [activeParticipants, remoteStreamMap, assignStreamToVideo, assignScreenStreamToVideo, cleanupParticipant]);
 
   // Screen sharing quality handlers
   const handleStartScreenShare = useCallback(async () => {
@@ -502,8 +514,16 @@ export default function VideoConference({
                   {stream && participant.hasVideo ? (
                     <video
                       ref={(el) => {
-                        if (el && el.srcObject !== stream) {
-                          el.srcObject = stream;
+                        if (el) {
+                          videoElementRefs.current.set(participant.id, el);
+                          // Assign current stream if available
+                          const currentStream = streamAssignments.current.get(participant.id);
+                          if (currentStream && el.srcObject !== currentStream) {
+                            el.srcObject = currentStream;
+                          }
+                        } else {
+                          // Cleanup on unmount
+                          videoElementRefs.current.delete(participant.id);
                         }
                       }}
                       autoPlay
@@ -533,15 +553,15 @@ export default function VideoConference({
                       <video
                         ref={(el) => {
                           if (el) {
-                            screenVideoRefs.current.set(participant.id, el);
+                            screenVideoElementRefs.current.set(participant.id, el);
+                            // Assign current screen stream if available
+                            const currentStream = screenStreamAssignments.current.get(participant.id);
+                            if (currentStream && el.srcObject !== currentStream) {
+                              el.srcObject = currentStream;
+                            }
                           } else {
                             // Cleanup on unmount
-                            const video = screenVideoRefs.current.get(participant.id);
-                            if (video) {
-                              video.srcObject = null;
-                            }
-                            screenVideoRefs.current.delete(participant.id);
-                            prevScreenStreams.current.delete(participant.id);
+                            screenVideoElementRefs.current.delete(participant.id);
                           }
                         }}
                         autoPlay
@@ -603,8 +623,13 @@ export default function VideoConference({
               ) : focusStream ? (
                 <video
                   ref={(el) => {
-                    if (el && el.srcObject !== focusStream) {
-                      el.srcObject = focusStream;
+                    if (el) {
+                      videoElementRefs.current.set(focusTarget, el);
+                      if (el.srcObject !== focusStream) {
+                        el.srcObject = focusStream;
+                      }
+                    } else {
+                      videoElementRefs.current.delete(focusTarget);
                     }
                   }}
                   autoPlay
@@ -641,8 +666,13 @@ export default function VideoConference({
                   {isCameraOn ? (
                     <video
                       ref={(el) => {
-                        if (el && el.srcObject !== localStream) {
-                          el.srcObject = localStream;
+                        if (el) {
+                          videoElementRefs.current.set('local', el);
+                          if (el.srcObject !== localStream) {
+                            el.srcObject = localStream;
+                          }
+                        } else {
+                          videoElementRefs.current.delete('local');
                         }
                       }}
                       autoPlay
@@ -668,8 +698,13 @@ export default function VideoConference({
                     {stream && (p.hasVideo || p.isScreenSharing) ? (
                       <video
                         ref={(el) => {
-                          if (el && el.srcObject !== stream) {
-                            el.srcObject = stream;
+                          if (el) {
+                            videoElementRefs.current.set(p.id, el);
+                            if (el.srcObject !== stream) {
+                              el.srcObject = stream;
+                            }
+                          } else {
+                            videoElementRefs.current.delete(p.id);
                           }
                         }}
                         autoPlay

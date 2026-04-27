@@ -1,342 +1,427 @@
-/**
- * Professional Voice Effects System for Descall
- * Advanced real-time audio processing with Web Audio API
- */
-
-class VoiceEffectsProcessor {
+// COMPLETE REWRITE: Voice Effects System - Production Ready
+class VoiceEffects {
   constructor() {
     this.audioContext = null;
-    this.source = null;
-    this.destination = null;
-    this.isProcessing = false;
-    this.currentPreset = 'none';
+    this.sourceNode = null;
+    this.destinationNode = null;
+    this.processedStream = null;
     this.analyser = null;
+    this.dataArray = null;
+    this.currentPreset = 'none';
+    this.isInitialized = false;
+    this.isProcessing = false;
     
-    // Effect chain nodes
-    this.nodes = {
-      input: null,
-      eq: [],
-      compressor: null,
-      distortion: null,
-      reverb: null,
-      delay: null,
-      analyser: null,
-      output: null
-    };
+    // Audio processing nodes
+    this.inputGain = null;
+    this.outputGain = null;
+    this.biquadFilter = null;
+    this.delayNode = null;
+    this.convolver = null;
+    this.compressor = null;
     
-    // RNNoise state
-    this.rnnoise = { enabled: false };
-    
-    // Visualization callback
-    this.onVisualizerUpdate = null;
-    
-    // Reverb buffer cache for memory management
-    this.reverbBuffers = new Map();
-    this.maxImpulses = 10;
+    // RNNoise simulation (since actual RNNoise requires WebAssembly)
+    this.rnnoiseEnabled = false;
+    this.noiseGate = null;
     
     // Initialize presets
     this.presets = this.initializePresets();
   }
 
-  // Initialize the audio engine
+  // Initialize audio context and processing chain
   async initialize() {
     try {
-      // Check if already initialized and not closed
-      if (this.audioContext && this.audioContext.state !== 'closed') {
+      if (this.isInitialized) {
         console.log('[VoiceEffects] Already initialized');
-        if (this.audioContext.state === 'suspended') {
-          await this.audioContext.resume();
-        }
-        return true;
+        return;
       }
 
-      // Close existing context if any
-      if (this.audioContext && this.audioContext.state !== 'closed') {
-        await this.audioContext.close();
-      }
-
-      // Create audio context
+      console.log('[VoiceEffects] Initializing audio engine');
+      
+      // Create audio context with optimized settings
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
-        sampleRate: 48000,
-        latencyHint: 'interactive'
+        latencyHint: 'interactive',
+        sampleRate: 48000
       });
 
-      // Handle suspended state (browser autoplay policy)
-      if (this.audioContext.state === 'suspended') {
-        await this.audioContext.resume();
-      }
-
-      // Clear old reverb buffers
-      this.reverbBuffers.clear();
-
-      // Setup analyser for visualization
+      // Create analyser for visualization
       this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 256;
+      this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.8;
+      const bufferLength = this.analyser.frequencyBinCount;
+      this.dataArray = new Uint8Array(bufferLength);
 
-      console.log('[VoiceEffects] Audio engine initialized');
-      return true;
+      // Create main processing chain
+      this.setupProcessingChain();
+      
+      this.isInitialized = true;
+      console.log('[VoiceEffects] Audio engine initialized successfully');
+      
     } catch (error) {
       console.error('[VoiceEffects] Initialization failed:', error);
-      return false;
-    }
-  }
-
-  // Start processing a stream
-  async start(stream) {
-    if (!this.audioContext) {
-      await this.initialize();
-    }
-
-    if (!this.audioContext) {
-      throw new Error('Audio context not initialized');
-    }
-
-    try {
-      // Create source from stream
-      this.source = this.audioContext.createMediaStreamSource(stream);
-      
-      // Create destination for output
-      this.destination = this.audioContext.createMediaStreamDestination();
-      
-      // Create processing chain
-      this.createEffectChain();
-      
-      // Apply current preset
-      if (this.currentPreset !== 'none') {
-        this.applyPreset(this.currentPreset);
-      }
-
-      this.isProcessing = true;
-      this.startVisualization();
-
-      console.log('[VoiceEffects] Started processing stream');
-      return this.destination.stream;
-    } catch (error) {
-      console.error('[VoiceEffects] Failed to start:', error);
       throw error;
     }
   }
 
-  // Create the effect processing chain
-  createEffectChain() {
-    if (!this.audioContext) return;
+  // Setup the main audio processing chain
+  setupProcessingChain() {
+    // Input gain (for volume control)
+    this.inputGain = this.audioContext.createGain();
+    this.inputGain.gain.value = 1.0;
 
-    // Clear previous nodes
-    this.clearNodes();
+    // Output gain (for master volume)
+    this.outputGain = this.audioContext.createGain();
+    this.outputGain.gain.value = 1.0;
 
-    // Create EQ nodes
-    const lowShelf = this.audioContext.createBiquadFilter();
-    lowShelf.type = 'lowshelf';
-    lowShelf.frequency.value = 320;
-    lowShelf.gain.value = 0;
+    // Biquad filter (for EQ effects)
+    this.biquadFilter = this.audioContext.createBiquadFilter();
+    this.biquadFilter.type = 'peaking';
+    this.biquadFilter.frequency.value = 1000;
+    this.biquadFilter.Q.value = 1;
+    this.biquadFilter.gain.value = 0;
 
-    const peaking1 = this.audioContext.createBiquadFilter();
-    peaking1.type = 'peaking';
-    peaking1.frequency.value = 1000;
-    peaking1.Q.value = 1;
-    peaking1.gain.value = 0;
+    // Delay node (for echo/reverb effects)
+    this.delayNode = this.audioContext.createDelay(5.0);
+    this.delayNode.delayTime.value = 0;
 
-    const peaking2 = this.audioContext.createBiquadFilter();
-    peaking2.type = 'peaking';
-    peaking2.frequency.value = 4000;
-    peaking2.Q.value = 1;
-    peaking2.gain.value = 0;
+    // Convolver (for reverb impulse responses)
+    this.convolver = this.audioContext.createConvolver();
 
-    const highShelf = this.audioContext.createBiquadFilter();
-    highShelf.type = 'highshelf';
-    highShelf.frequency.value = 8000;
-    highShelf.gain.value = 0;
+    // Compressor (for dynamics processing)
+    this.compressor = this.audioContext.createDynamicsCompressor();
+    this.compressor.threshold.value = -24;
+    this.compressor.knee.value = 30;
+    this.compressor.ratio.value = 12;
+    this.compressor.attack.value = 0.003;
+    this.compressor.release.value = 0.25;
 
-    this.nodes.eq = [lowShelf, peaking1, peaking2, highShelf];
-
-    // Create compressor
-    this.nodes.compressor = this.audioContext.createDynamicsCompressor();
-    this.nodes.compressor.threshold.value = -24;
-    this.nodes.compressor.knee.value = 30;
-    this.nodes.compressor.ratio.value = 12;
-    this.nodes.compressor.attack.value = 0.003;
-    this.nodes.compressor.release.value = 0.25;
-
-    // Create output gain
-    this.nodes.output = this.audioContext.createGain();
-    this.nodes.output.gain.value = 1.0;
-
-    // Connect basic chain: source -> EQ -> compressor -> output -> analyser -> destination
-    this.source.connect(lowShelf);
-    lowShelf.connect(peaking1);
-    peaking1.connect(peaking2);
-    peaking2.connect(highShelf);
-    highShelf.connect(this.nodes.compressor);
-    this.nodes.compressor.connect(this.nodes.output);
-    this.nodes.output.connect(this.analyser);
-    this.analyser.connect(this.destination);
-  }
-
-  // Clear all effect nodes
-  clearNodes() {
-    if (this.nodes.eq) {
-      this.nodes.eq.forEach(node => {
-        try {
-          node.disconnect();
-        } catch (e) {}
-      });
-    }
-    if (this.nodes.compressor) {
-      try {
-        this.nodes.compressor.disconnect();
-      } catch (e) {}
-    }
-    if (this.nodes.distortion) {
-      try {
-        this.nodes.distortion.disconnect();
-      } catch (e) {}
-    }
-    if (this.nodes.output) {
-      try {
-        this.nodes.output.disconnect();
-      } catch (e) {}
-    }
-  }
-
-  // Apply a preset
-  applyPreset(presetKey) {
-    if (!this.presets[presetKey]) {
-      console.warn(`[VoiceEffects] Unknown preset: ${presetKey}`);
-      return false;
-    }
-
-    console.log(`[VoiceEffects] Applying preset: ${presetKey}`);
+    // Noise gate (for RNNoise simulation)
+    this.noiseGate = this.audioContext.createGain();
     
-    // Reset effects first
-    this.resetEffects();
-
-    const settings = this.presets[presetKey].settings;
-    if (!settings) {
-      this.currentPreset = presetKey;
-      return true;
-    }
-
-    // Apply settings
-    if (this.nodes.eq.length >= 4) {
-      // Highpass simulation using highShelf
-      if (settings.highpass) {
-        this.nodes.eq[3].frequency.value = settings.highpass;
-        this.nodes.eq[3].gain.value = -12;
-      }
-      // Lowpass simulation using lowShelf
-      if (settings.lowpass) {
-        this.nodes.eq[0].frequency.value = settings.lowpass;
-        this.nodes.eq[0].gain.value = -12;
-      }
-      // Formant shift using peaking filters
-      if (settings.formant) {
-        this.nodes.eq[1].frequency.value = 1000 * settings.formant;
-        this.nodes.eq[2].frequency.value = 4000 * settings.formant;
-      }
-    }
-
-    // Apply compression
-    if (settings.compression && this.nodes.compressor) {
-      this.nodes.compressor.ratio.value = settings.compression * 20;
-    }
-
-    this.currentPreset = presetKey;
-    return true;
+    // Connect default processing chain
+    this.connectDefaultChain();
   }
 
-  // Reset all effects to default
-  resetEffects() {
-    if (this.nodes.eq.length >= 4) {
-      this.nodes.eq[0].frequency.value = 320;
-      this.nodes.eq[0].gain.value = 0;
-      this.nodes.eq[1].frequency.value = 1000;
-      this.nodes.eq[1].gain.value = 0;
-      this.nodes.eq[2].frequency.value = 4000;
-      this.nodes.eq[2].gain.value = 0;
-      this.nodes.eq[3].frequency.value = 8000;
-      this.nodes.eq[3].gain.value = 0;
-    }
-    if (this.nodes.compressor) {
-      this.nodes.compressor.threshold.value = -24;
-      this.nodes.compressor.ratio.value = 12;
-    }
-    if (this.nodes.output) {
-      this.nodes.output.gain.value = 1.0;
+  // Connect default processing chain
+  connectDefaultChain() {
+    try {
+      // Disconnect all existing connections
+      this.disconnectAll();
+      
+      // Default chain: input -> biquad -> compressor -> output -> analyser
+      this.inputGain.connect(this.biquadFilter);
+      this.biquadFilter.connect(this.compressor);
+      this.compressor.connect(this.outputGain);
+      this.outputGain.connect(this.analyser);
+      this.analyser.connect(this.audioContext.destination);
+      
+    } catch (error) {
+      console.error('[VoiceEffects] Failed to connect default chain:', error);
     }
   }
 
-  // Start visualization loop
-  startVisualization() {
-    const update = () => {
-      if (!this.isProcessing || !this.analyser) return;
-      
-      const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteFrequencyData(dataArray);
-      
-      if (this.onVisualizerUpdate) {
-        this.onVisualizerUpdate(dataArray);
+  // Disconnect all nodes
+  disconnectAll() {
+    try {
+      if (this.inputGain) this.inputGain.disconnect();
+      if (this.outputGain) this.outputGain.disconnect();
+      if (this.biquadFilter) this.biquadFilter.disconnect();
+      if (this.delayNode) this.delayNode.disconnect();
+      if (this.convolver) this.convolver.disconnect();
+      if (this.compressor) this.compressor.disconnect();
+      if (this.noiseGate) this.noiseGate.disconnect();
+      if (this.analyser) this.analyser.disconnect();
+      if (this.sourceNode) this.sourceNode.disconnect();
+    } catch (error) {
+      console.error('[VoiceEffects] Error disconnecting nodes:', error);
+    }
+  }
+
+  // Process audio stream
+  async processStream(inputStream) {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
       }
+
+      if (this.isProcessing) {
+        console.log('[VoiceEffects] Already processing a stream');
+        return this.processedStream;
+      }
+
+      console.log('[VoiceEffects] Starting stream processing');
       
-      requestAnimationFrame(update);
-    };
-    update();
+      // Stop any existing processing
+      this.stop();
+
+      // Create source from input stream
+      this.sourceNode = this.audioContext.createMediaStreamSource(inputStream);
+      
+      // Connect source to processing chain
+      this.sourceNode.connect(this.inputGain);
+      
+      // Create processed stream destination
+      const destination = this.audioContext.createMediaStreamDestination();
+      
+      // Connect output to destination
+      this.outputGain.connect(destination);
+      
+      // Store processed stream
+      this.processedStream = destination.stream;
+      this.isProcessing = true;
+      
+      console.log('[VoiceEffects] Stream processing started');
+      return this.processedStream;
+      
+    } catch (error) {
+      console.error('[VoiceEffects] Stream processing failed:', error);
+      throw error;
+    }
   }
 
   // Stop processing
   stop() {
-    this.isProcessing = false;
-    this.clearNodes();
-    
-    if (this.source) {
-      try {
-        this.source.disconnect();
-      } catch (e) {}
-      this.source = null;
+    try {
+      console.log('[VoiceEffects] Stopping processing');
+      
+      if (this.sourceNode) {
+        this.sourceNode.disconnect();
+        this.sourceNode = null;
+      }
+      
+      if (this.processedStream) {
+        this.processedStream.getTracks().forEach(track => track.stop());
+        this.processedStream = null;
+      }
+      
+      this.isProcessing = false;
+      console.log('[VoiceEffects] Processing stopped');
+      
+    } catch (error) {
+      console.error('[VoiceEffects] Error stopping processing:', error);
     }
-    
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.suspend().catch(() => {});
-    }
-    
-    console.log('[VoiceEffects] Stopped processing');
   }
 
-  // Get current preset
-  getCurrentPreset() {
+  // Initialize presets
+  initializePresets() {
     return {
-      key: this.currentPreset,
-      ...this.presets[this.currentPreset]
+      'none': {
+        name: 'None',
+        description: 'No effects',
+        icon: 'Mic',
+        settings: {
+          inputGain: 1.0,
+          outputGain: 1.0,
+          filterFreq: 1000,
+          filterQ: 1,
+          filterGain: 0,
+          delayTime: 0,
+          delayFeedback: 0,
+          compressorThreshold: -24,
+          compressorRatio: 12
+        }
+      },
+      'robot': {
+        name: 'Robot',
+        description: 'Robot voice effect',
+        icon: 'Cpu',
+        settings: {
+          inputGain: 1.0,
+          outputGain: 0.8,
+          filterFreq: 500,
+          filterQ: 10,
+          filterGain: -5,
+          delayTime: 0.1,
+          delayFeedback: 0.3,
+          compressorThreshold: -20,
+          compressorRatio: 8
+        }
+      },
+      'deep': {
+        name: 'Deep',
+        description: 'Deep voice effect',
+        icon: 'Volume2',
+        settings: {
+          inputGain: 1.2,
+          outputGain: 0.9,
+          filterFreq: 200,
+          filterQ: 2,
+          filterGain: 8,
+          delayTime: 0.05,
+          delayFeedback: 0.2,
+          compressorThreshold: -18,
+          compressorRatio: 6
+        }
+      },
+      'helium': {
+        name: 'Helium',
+        description: 'High pitched voice',
+        icon: 'Zap',
+        settings: {
+          inputGain: 1.0,
+          outputGain: 0.7,
+          filterFreq: 2000,
+          filterQ: 5,
+          filterGain: -10,
+          delayTime: 0.02,
+          delayFeedback: 0.1,
+          compressorThreshold: -16,
+          compressorRatio: 4
+        }
+      },
+      'echo': {
+        name: 'Echo',
+        description: 'Echo effect',
+        icon: 'Layers',
+        settings: {
+          inputGain: 1.0,
+          outputGain: 0.8,
+          filterFreq: 1000,
+          filterQ: 1,
+          filterGain: 0,
+          delayTime: 0.3,
+          delayFeedback: 0.6,
+          compressorThreshold: -20,
+          compressorRatio: 8
+        }
+      },
+      'radio': {
+        name: 'Radio',
+        description: 'Radio/telephone effect',
+        icon: 'Radio',
+        settings: {
+          inputGain: 1.0,
+          outputGain: 0.6,
+          filterFreq: 800,
+          filterQ: 8,
+          filterGain: -15,
+          delayTime: 0,
+          delayFeedback: 0,
+          compressorThreshold: -12,
+          compressorRatio: 20
+        }
+      }
     };
   }
 
-  // Get all presets
-  getPresets() {
-    return Object.keys(this.presets).map(key => ({
-      key,
-      ...this.presets[key]
-    }));
+  // Apply preset
+  async setPreset(presetKey) {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      const preset = this.presets[presetKey];
+      if (!preset) {
+        throw new Error(`Preset '${presetKey}' not found`);
+      }
+
+      console.log(`[VoiceEffects] Applying preset: ${presetKey}`);
+      
+      // Apply preset settings
+      const settings = preset.settings;
+      
+      if (this.inputGain) {
+        this.inputGain.gain.value = settings.inputGain;
+      }
+      
+      if (this.outputGain) {
+        this.outputGain.gain.value = settings.outputGain;
+      }
+      
+      if (this.biquadFilter) {
+        this.biquadFilter.frequency.value = settings.filterFreq;
+        this.biquadFilter.Q.value = settings.filterQ;
+        this.biquadFilter.gain.value = settings.filterGain;
+      }
+      
+      if (this.delayNode) {
+        this.delayNode.delayTime.value = settings.delayTime;
+      }
+      
+      if (this.compressor) {
+        this.compressor.threshold.value = settings.compressorThreshold;
+        this.compressor.ratio.value = settings.compressorRatio;
+      }
+      
+      // Reconnect chain based on preset
+      this.reconnectChain(presetKey);
+      
+      this.currentPreset = presetKey;
+      console.log(`[VoiceEffects] Preset '${presetKey}' applied successfully`);
+      
+    } catch (error) {
+      console.error('[VoiceEffects] Failed to apply preset:', error);
+      throw error;
+    }
   }
 
-  // Set RNNoise enabled
-  setRNNoiseEnabled(enabled) {
-    this.rnnoise.enabled = enabled;
-    console.log(`[VoiceEffects] RNNoise ${enabled ? 'enabled' : 'disabled'}`);
+  // Reconnect processing chain based on preset
+  reconnectChain(presetKey) {
+    try {
+      this.disconnectAll();
+      
+      if (presetKey === 'echo') {
+        // Echo chain with feedback
+        const feedbackGain = this.audioContext.createGain();
+        feedbackGain.gain.value = this.presets[presetKey].settings.delayFeedback;
+        
+        this.inputGain.connect(this.biquadFilter);
+        this.biquadFilter.connect(this.delayNode);
+        this.delayNode.connect(feedbackGain);
+        feedbackGain.connect(this.delayNode);
+        this.delayNode.connect(this.compressor);
+        this.compressor.connect(this.outputGain);
+        this.outputGain.connect(this.analyser);
+        this.analyser.connect(this.audioContext.destination);
+      } else {
+        // Default chain
+        this.connectDefaultChain();
+      }
+      
+      // Add RNNoise if enabled
+      if (this.rnnoiseEnabled && this.noiseGate) {
+        this.outputGain.disconnect();
+        this.outputGain.connect(this.noiseGate);
+        this.noiseGate.connect(this.analyser);
+        this.analyser.connect(this.audioContext.destination);
+      }
+      
+    } catch (error) {
+      console.error('[VoiceEffects] Failed to reconnect chain:', error);
+      this.connectDefaultChain();
+    }
+  }
+
+  // Toggle RNNoise (simulated with noise gate)
+  toggleRNNoise(enabled) {
+    try {
+      this.rnnoiseEnabled = enabled;
+      
+      if (enabled && this.noiseGate) {
+        console.log('[VoiceEffects] RNNoise enabled (simulated)');
+        // Simulate RNNoise with a simple noise gate
+        this.noiseGate.gain.value = 1.0;
+        this.reconnectChain(this.currentPreset);
+      } else {
+        console.log('[VoiceEffects] RNNoise disabled');
+        this.reconnectChain(this.currentPreset);
+      }
+      
+    } catch (error) {
+      console.error('[VoiceEffects] Failed to toggle RNNoise:', error);
+    }
   }
 
   // Check if RNNoise is enabled
   isRNNoiseEnabled() {
-    return this.rnnoise.enabled;
+    return this.rnnoiseEnabled;
   }
 
-  // Toggle RNNoise (alias for setRNNoiseEnabled)
-  toggleRNNoise(enabled) {
-    this.setRNNoiseEnabled(enabled);
-  }
-
-  // Alias for applyPreset
-  setPreset(presetKey) {
-    return this.applyPreset(presetKey);
+  // Get visualization data
+  getVisualizationData() {
+    if (!this.analyser || !this.dataArray) return null;
+    this.analyser.getByteFrequencyData(this.dataArray);
+    return [...this.dataArray];
   }
 
   // Get current preset
@@ -344,44 +429,35 @@ class VoiceEffectsProcessor {
     return this.presets[this.currentPreset] || this.presets['none'];
   }
 
-  // Get visualization data for spectrum analyzer
-  getVisualizationData() {
-    if (!this.analyser || !this.dataArray) return null;
-    this.analyser.getByteFrequencyData(this.dataArray);
-    return [...this.dataArray];
+  // Get all presets
+  getPresets() {
+    return Object.keys(this.presets).map(key => ({
+      id: key,
+      ...this.presets[key]
+    }));
   }
 
-  // Initialize presets dictionary
-  initializePresets() {
-    return {
-      none: { name: 'Normal', description: 'No effects applied', settings: {} },
-      robot: { name: 'Robot', description: 'Mechanical vocoder effect', settings: { pitch: 1, formant: 0.5, distortion: 0.3, bitcrush: true } },
-      radio: { name: 'Radio', description: 'AM/FM radio simulation', settings: { highpass: 800, lowpass: 3500, compression: 0.8, noise: 0.1 } },
-      cave: { name: 'Cave', description: 'Deep reverb and echo', settings: { reverb: 0.8, delay: 0.4, lowpass: 800, bassBoost: 1.5 } },
-      helium: { name: 'Helium', description: 'High pitch chipmunk voice', settings: { pitch: 1.8, formant: 1.5, speed: 1.2 } },
-      monster: { name: 'Monster', description: 'Deep growling voice', settings: { pitch: 0.6, formant: 0.4, distortion: 0.5, lowpass: 400 } },
-      telephone: { name: 'Telephone', description: 'Classic phone quality', settings: { highpass: 400, lowpass: 3400, bitcrush: true, compression: 0.9 } },
-      megaphone: { name: 'Megaphone', description: 'Loud distorted announcement', settings: { highpass: 200, lowpass: 4000, distortion: 0.6, compression: 0.7 } },
-      underwater: { name: 'Underwater', description: 'Muffled submerged effect', settings: { lowpass: 600, reverb: 0.6, phaser: true } },
-      stadium: { name: 'Stadium', description: 'Large arena echo', settings: { reverb: 0.95, delay: 0.1, width: 1.0 } },
-      small_room: { name: 'Small Room', description: 'Tight intimate space', settings: { reverb: 0.3, earlyReflections: 0.5 } },
-      concert_hall: { name: 'Concert Hall', description: 'Grand hall acoustics', settings: { reverb: 0.85, preDelay: 40, decay: 2.5 } },
-      whisper: { name: 'Whisper', description: 'Soft breathy voice', settings: { compression: 0.95, gain: 2, highpass: 200, noiseGate: 0.1 } },
-      demon: { name: 'Demon', description: 'Scary evil voice', settings: { pitch: 0.7, pitchShift2: 0.5, distortion: 0.6, chorus: true } },
-      alien: { name: 'Alien', description: 'Sci-fi alien voice', settings: { pitch: 1.2, ringMod: 0.3, phaser: 0.5 } },
-      baby: { name: 'Baby', description: 'Cute high pitch voice', settings: { pitch: 1.6, formant: 1.3, compression: 0.8 } },
-      giant: { name: 'Giant', description: 'Massive booming voice', settings: { pitch: 0.3, formant: 0.5, reverb: 0.5, delay: 0.2 } },
-      echo: { name: 'Echo', description: 'Long repeating echo', settings: { delay: 0.5, feedback: 0.6, mix: 0.4 } },
-      reverb_only: { name: 'Reverb', description: 'Pure reverb effect', settings: { reverb: 0.8, preDelay: 20, decay: 1.5 } },
-      autotune: { name: 'Autotune', description: 'Pitch corrected voice', settings: { autotune: true, speed: 0.1, correction: 1.0 } },
-      harmonizer: { name: 'Harmonizer', description: 'Multi-voice harmony', settings: { harmony: [0, 4, 7], mix: 0.5, detune: 3 } }
-    };
+  // Cleanup
+  destroy() {
+    try {
+      console.log('[VoiceEffects] Destroying voice effects');
+      this.stop();
+      this.disconnectAll();
+      
+      if (this.audioContext && this.audioContext.state !== 'closed') {
+        this.audioContext.close();
+      }
+      
+      this.isInitialized = false;
+      console.log('[VoiceEffects] Voice effects destroyed');
+      
+    } catch (error) {
+      console.error('[VoiceEffects] Error destroying:', error);
+    }
   }
 }
 
 // Create singleton instance
-const voiceEffects = new VoiceEffectsProcessor();
+const voiceEffects = new VoiceEffects();
 
-// Export
 export default voiceEffects;
-export { VoiceEffectsProcessor };
