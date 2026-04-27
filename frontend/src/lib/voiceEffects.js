@@ -329,6 +329,28 @@ class VoiceEffectsProcessor {
     return this.rnnoise.enabled;
   }
 
+  // Toggle RNNoise (alias for setRNNoiseEnabled)
+  toggleRNNoise(enabled) {
+    this.setRNNoiseEnabled(enabled);
+  }
+
+  // Alias for applyPreset
+  setPreset(presetKey) {
+    return this.applyPreset(presetKey);
+  }
+
+  // Get current preset
+  getCurrentPreset() {
+    return this.presets[this.currentPreset] || this.presets['none'];
+  }
+
+  // Get visualization data for spectrum analyzer
+  getVisualizationData() {
+    if (!this.analyser || !this.dataArray) return null;
+    this.analyser.getByteFrequencyData(this.dataArray);
+    return [...this.dataArray];
+  }
+
   // Initialize presets dictionary
   initializePresets() {
     return {
