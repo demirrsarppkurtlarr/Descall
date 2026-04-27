@@ -4,7 +4,6 @@ import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users
 import RippleButton from "./ui/RippleButton";
 import VoiceEffectsPanel from "./VoiceEffectsPanel";
 import VideoConferenceMobile from "./VideoConferenceMobile";
-import "./styles/VideoConferenceMobile.css";
 
 /**
  * Discord/Google Meet tarzı video conference UI
@@ -376,14 +375,16 @@ export default function VideoConference({
     [safeParticipants, remoteStreamMap]
   );
   
+  // Calculate focus target value (not a new variable, uses state)
+  const calculatedFocusTarget = dominantSpeaker?.id || 
+    (activeParticipants.length > 0 ? activeParticipants[0]?.id : 'local');
+  
   // Update focus target based on dominant speaker or active participants
   useEffect(() => {
-    const newFocusTarget = dominantSpeaker?.id || 
-      (activeParticipants.length > 0 ? activeParticipants[0]?.id : 'local');
-    if (newFocusTarget !== focusTarget) {
-      setFocusTarget(newFocusTarget);
+    if (calculatedFocusTarget !== focusTarget) {
+      setFocusTarget(calculatedFocusTarget);
     }
-  }, [dominantSpeaker, activeParticipants, focusTarget]);
+  }, [calculatedFocusTarget, focusTarget]);
 
   const focusParticipant = safeParticipants.find((p) => p.id === focusTarget);
   const focusStream = focusTarget ? remoteStreamMap.get(focusTarget) : null;
