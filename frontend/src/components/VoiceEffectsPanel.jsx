@@ -273,10 +273,19 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
 
   const handlePresetChange = async (presetId) => {
     try {
+      // Prevent clicking the same preset
+      if (currentPreset === presetId) {
+        console.log('[VoiceEffects] Preset already active:', presetId);
+        return;
+      }
+      
+      console.log('[VoiceEffects] Changing preset from', currentPreset, 'to', presetId);
       await voiceEffects.setPreset(presetId);
       setCurrentPreset(presetId);
     } catch (err) {
       console.error('Preset change error:', err);
+      // Reset to none on error
+      setCurrentPreset('none');
     }
   };
 

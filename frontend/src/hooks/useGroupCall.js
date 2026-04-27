@@ -489,34 +489,43 @@ export function useGroupCall(socket) {
         return;
       }
       
-      // Calculate resolution based on setting
+      // Calculate resolution based on setting with optimized performance
       const resolutionMap = {
         '720p': { width: 1280, height: 720 },
         '1080p': { width: 1920, height: 1080 },
       };
       
       const { width, height } = resolutionMap[effectiveQuality.resolution] || resolutionMap['1080p'];
-      const frameRate = effectiveQuality.fps || 30;
+      const frameRate = Math.min(effectiveQuality.fps || 30, 30); // Cap at 30fps for performance
       
       console.log(`[GroupCall] Requesting screen share: ${width}x${height} @ ${frameRate}fps`);
       
+      // OPTIMIZED: Get display media with performance constraints
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { 
           cursor: "always",
           displaySurface: "monitor",
           width: { ideal: width, max: width },
           height: { ideal: height, max: height },
-          frameRate: { ideal: frameRate, max: frameRate }
+          frameRate: { ideal: frameRate, max: frameRate },
+          // Performance optimizations
+          resizeMode: "crop-and-scale",
+          aspectRatio: width / height
         },
         audio: false,
       });
       
       const screenTrack = stream.getVideoTracks()[0];
+      
+      // Store original track settings for restoration
+      const originalConstraints = screenTrack.getConstraints();
       screenStreamRef.current = stream;
       setScreenStream(stream);
       
+      // OPTIMIZED: Batch track operations to prevent flicker
+      const trackOperations = [];
+      
       // Replace camera track with screen track or add if no video exists
-      // CRITICAL: Sequential processing to prevent race conditions
       for (const [userId, peerData] of pcMapRef.current.entries()) {
         try {
           const senders = peerData.pc.getSenders();
@@ -524,38 +533,62 @@ export function useGroupCall(socket) {
           
           if (videoSender) {
             // Video call - replace camera with screen
-            await videoSender.replaceTrack(screenTrack);
+            trackOperations.push({
+              type: 'replace',
+              userId,
+              sender: videoSender,
+              track: screenTrack
+            });
             screenSenderRef.current = videoSender;
-            console.log(`[GroupCall] Replaced camera track with screen track for ${userId}`);
           } else {
             // Voice-only call - need to add track and renegotiate
-            peerData.pc.addTrack(screenTrack, stream);
-            screenSenderRef.current = senders.find(s => s.track === screenTrack);
-            console.log(`[GroupCall] Added screen track for ${userId} (voice call, needs renegotiation)`);
+            trackOperations.push({
+              type: 'add',
+              userId,
+              peerConnection: peerData.pc,
+              track: screenTrack,
+              stream
+            });
+          }
+        } catch (err) {
+          console.error(`[GroupCall] Failed to prepare track operation for ${userId}:`, err);
+        }
+      }
+      
+      // Execute all track operations in sequence to prevent flicker
+      for (const operation of trackOperations) {
+        try {
+          if (operation.type === 'replace') {
+            await operation.sender.replaceTrack(operation.track);
+            console.log(`[GroupCall] Replaced camera track with screen track for ${operation.userId}`);
+          } else if (operation.type === 'add') {
+            operation.peerConnection.addTrack(operation.track, operation.stream);
+            console.log(`[GroupCall] Added screen track for ${operation.userId} (voice call, needs renegotiation)`);
             
             // Renegotiate - create new offer
-            const offer = await peerData.pc.createOffer();
-            await peerData.pc.setLocalDescription(offer);
+            const offer = await operation.peerConnection.createOffer();
+            await operation.peerConnection.setLocalDescription(offer);
             
             socketRef.current.emit("group:call:offer", {
               groupId: activeGroupId,
-              toUserId: userId,
-              offer: peerData.pc.localDescription,
+              toUserId: operation.userId,
+              offer: operation.peerConnection.localDescription,
               callType: "video", // Upgrade to video for screen share
             });
-            console.log(`[GroupCall] Renegotiation offer sent to ${userId}`);
+            console.log(`[GroupCall] Renegotiation offer sent to ${operation.userId}`);
           }
         } catch (err) {
-          console.error(`[GroupCall] Failed to replace/add screen track for ${userId}:`, err);
-          // Continue with other peers - don't break entire operation
+          console.error(`[GroupCall] Failed to execute track operation for ${operation.userId}:`, err);
         }
       }
 
+      // Set local preview after all operations complete
       if (screenVideoRef.current) {
         screenVideoRef.current.srcObject = stream;
         screenVideoRef.current.play().catch(() => {});
       }
 
+      // Handle screen share end
       screenTrack.onended = () => {
         console.log("[GroupCall] Screen share ended");
         stopScreenShare();
@@ -572,56 +605,90 @@ export function useGroupCall(socket) {
         console.log("[GroupCall] User denied screen share permission");
       }
     }
-  }, [isScreenSharing, activeGroupId]);
+  }, [isScreenSharing, activeGroupId, screenQuality]);
 
   const stopScreenShare = useCallback(async () => {
     if (!isScreenSharing) return;
 
     const hadCamera = localStreamRef.current?.getVideoTracks().length > 0;
+    const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
     
-    // Replace screen track back with camera track or remove if no camera
+    // OPTIMIZED: Batch track operations to prevent flicker
+    const trackOperations = [];
+    
+    // Prepare track restoration operations
     if (screenSenderRef.current) {
-      const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
-      pcMapRef.current.forEach(async (peerData, userId) => {
+      for (const [userId, peerData] of pcMapRef.current.entries()) {
         try {
           if (cameraTrack) {
             // Has camera - replace screen with camera
-            screenSenderRef.current.replaceTrack(cameraTrack);
-            console.log(`[GroupCall] Replaced screen track with camera track for ${userId}`);
+            trackOperations.push({
+              type: 'replace',
+              userId,
+              sender: screenSenderRef.current,
+              track: cameraTrack
+            });
           } else {
             // Voice-only call - remove screen track and renegotiate
             const senders = peerData.pc.getSenders();
             const screenSender = senders.find(s => s.track?.label?.toLowerCase().includes("screen"));
             if (screenSender) {
-              peerData.pc.removeTrack(screenSender);
-              console.log(`[GroupCall] Removed screen track for ${userId} (voice call)`);
-              
-              // Renegotiate back to audio-only
-              const offer = await peerData.pc.createOffer();
-              await peerData.pc.setLocalDescription(offer);
-              
-              socketRef.current.emit("group:call:offer", {
-                groupId: activeGroupId,
-                toUserId: userId,
-                offer: peerData.pc.localDescription,
-                callType: "voice",
+              trackOperations.push({
+                type: 'remove',
+                userId,
+                peerConnection: peerData.pc,
+                sender: screenSender
               });
-              console.log(`[GroupCall] Renegotiation offer (back to voice) sent to ${userId}`);
             }
           }
         } catch (err) {
-          console.error(`[GroupCall] Failed to replace/remove screen track for ${userId}:`, err);
+          console.error(`[GroupCall] Failed to prepare stop operation for ${userId}:`, err);
         }
-      });
-      screenSenderRef.current = null;
+      }
     }
+    
+    // Execute all track operations in sequence to prevent flicker
+    for (const operation of trackOperations) {
+      try {
+        if (operation.type === 'replace') {
+          await operation.sender.replaceTrack(operation.track);
+          console.log(`[GroupCall] Replaced screen track with camera track for ${operation.userId}`);
+        } else if (operation.type === 'remove') {
+          operation.peerConnection.removeTrack(operation.sender);
+          console.log(`[GroupCall] Removed screen track for ${operation.userId} (voice call)`);
+          
+          // Renegotiate back to audio-only
+          const offer = await operation.peerConnection.createOffer();
+          await operation.peerConnection.setLocalDescription(offer);
+          
+          socketRef.current.emit("group:call:offer", {
+            groupId: activeGroupId,
+            toUserId: operation.userId,
+            offer: operation.peerConnection.localDescription,
+            callType: "voice",
+          });
+          console.log(`[GroupCall] Renegotiation offer (back to voice) sent to ${operation.userId}`);
+        }
+      } catch (err) {
+        console.error(`[GroupCall] Failed to execute stop operation for ${operation.userId}:`, err);
+      }
+    }
+    
+    // Clean up references and state
+    screenSenderRef.current = null;
     
     if (screenStreamRef.current) {
       screenStreamRef.current.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
     }
     
-    if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+    // Clear local preview after cleanup
+    if (screenVideoRef.current) {
+      screenVideoRef.current.srcObject = null;
+      screenVideoRef.current.load(); // Force release
+    }
+    
+    setScreenStream(null);
     setIsScreenSharing(false);
     
     if (socketRef.current?.connected) {
