@@ -53,6 +53,12 @@ class VoiceEffects {
         sampleRate: 48000
       });
 
+      // Resume audio context if suspended (required by most browsers)
+      if (this.audioContext.state === 'suspended') {
+        console.log('[VoiceEffects] Resuming suspended audio context');
+        await this.audioContext.resume();
+      }
+
       // Create analyser for visualization
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;

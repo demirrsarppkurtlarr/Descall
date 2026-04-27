@@ -218,6 +218,13 @@ export default function VideoConference({
         }
       });
       
+      // Handle local screen sharing preview
+      if (screenStream && isScreenSharing) {
+        await assignScreenStreamToVideo('local', screenStream);
+      } else {
+        await assignScreenStreamToVideo('local', null);
+      }
+      
       // Wait for all stream assignments to complete
       await Promise.allSettled(streamPromises);
     };
@@ -225,7 +232,7 @@ export default function VideoConference({
     updateStreams().catch(error => {
       console.error('[VideoConference] Error updating streams:', error);
     });
-  }, [activeParticipants, remoteStreamMap, assignStreamToVideo, assignScreenStreamToVideo, cleanupParticipant]);
+  }, [activeParticipants, remoteStreamMap, screenStream, isScreenSharing, assignStreamToVideo, assignScreenStreamToVideo, cleanupParticipant]);
 
   // Screen sharing quality handlers
   const handleStartScreenShare = useCallback(async () => {
@@ -234,9 +241,22 @@ export default function VideoConference({
     }
   }, [startScreenShare, screenQuality]);
 
+  const [applyingSettings, setApplyingSettings] = useState(false);
+  const [settingsApplied, setSettingsApplied] = useState(false);
+
   const handleResolutionChange = useCallback(async (resolution) => {
     if (setScreenQuality) {
+      setApplyingSettings(true);
+      setSettingsApplied(false);
+      
       setScreenQuality(prev => ({ ...prev, resolution }));
+      
+      // Show feedback animation
+      setTimeout(() => {
+        setSettingsApplied(true);
+        setTimeout(() => setSettingsApplied(false), 2000);
+      }, 300);
+      
       // If already screen sharing, restart with new quality
       if (isScreenSharing && stopScreenShare && startScreenShare) {
         console.log('[VideoConference] Restarting screen share with new resolution:', resolution);
@@ -244,12 +264,24 @@ export default function VideoConference({
         // Small delay to ensure cleanup
         setTimeout(() => startScreenShare({ resolution, fps: screenQuality.fps }), 100);
       }
+      
+      setTimeout(() => setApplyingSettings(false), 500);
     }
   }, [setScreenQuality, isScreenSharing, stopScreenShare, startScreenShare, screenQuality]);
 
   const handleFpsChange = useCallback(async (fps) => {
     if (setScreenQuality) {
+      setApplyingSettings(true);
+      setSettingsApplied(false);
+      
       setScreenQuality(prev => ({ ...prev, fps }));
+      
+      // Show feedback animation
+      setTimeout(() => {
+        setSettingsApplied(true);
+        setTimeout(() => setSettingsApplied(false), 2000);
+      }, 300);
+      
       // If already screen sharing, restart with new quality
       if (isScreenSharing && stopScreenShare && startScreenShare) {
         console.log('[VideoConference] Restarting screen share with new FPS:', fps);
@@ -257,6 +289,8 @@ export default function VideoConference({
         // Small delay to ensure cleanup
         setTimeout(() => startScreenShare({ resolution: screenQuality.resolution, fps }), 100);
       }
+      
+      setTimeout(() => setApplyingSettings(false), 500);
     }
   }, [setScreenQuality, isScreenSharing, stopScreenShare, startScreenShare, screenQuality]);
 
@@ -636,10 +670,14 @@ export default function VideoConference({
                   <video
                     ref={(el) => {
                       if (el) {
-                        screenVideoRefs.current.set('local', el);
-                        if (screenStream && el.srcObject !== screenStream) {
-                          el.srcObject = screenStream;
+                        screenVideoElementRefs.current.set('local', el);
+                        // Assign current screen stream if available
+                        const currentStream = screenStreamAssignments.current.get('local');
+                        if (currentStream && el.srcObject !== currentStream) {
+                          el.srcObject = currentStream;
                         }
+                      } else {
+                        screenVideoElementRefs.current.delete('local');
                       }
                     }}
                     autoPlay
@@ -925,8 +963,9 @@ export default function VideoConference({
                       ].map((res) => (
                         <button
                           key={res.value}
-                          className={`quality-option-card ${screenQuality?.resolution === res.value ? 'active' : ''}`}
+                          className={`quality-option-card ${screenQuality?.resolution === res.value ? 'active' : ''} ${applyingSettings ? 'applying' : ''} ${settingsApplied && screenQuality?.resolution === res.value ? 'applied' : ''}`}
                           onClick={() => handleResolutionChange(res.value)}
+                          disabled={applyingSettings}
                         >
                           <div className="quality-option-icon">{res.icon}</div>
                           <div className="quality-option-content">
@@ -934,6 +973,11 @@ export default function VideoConference({
                             <div className="quality-option-desc">{res.desc}</div>
                           </div>
                           {screenQuality?.resolution === res.value && <Check size={16} />}
+                          {applyingSettings && screenQuality?.resolution === res.value && (
+                            <div className="quality-spinner">
+                              <div className="spinner-dot"></div>
+                            </div>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -957,8 +1001,9 @@ export default function VideoConference({
                       ].map((fps) => (
                         <button
                           key={fps.value}
-                          className={`quality-option-card ${screenQuality?.fps === fps.value ? 'active' : ''}`}
+                          className={`quality-option-card ${screenQuality?.fps === fps.value ? 'active' : ''} ${applyingSettings ? 'applying' : ''} ${settingsApplied && screenQuality?.fps === fps.value ? 'applied' : ''}`}
                           onClick={() => handleFpsChange(fps.value)}
+                          disabled={applyingSettings}
                         >
                           <div className="quality-option-icon">{fps.icon}</div>
                           <div className="quality-option-content">
@@ -966,6 +1011,11 @@ export default function VideoConference({
                             <div className="quality-option-desc">{fps.desc}</div>
                           </div>
                           {screenQuality?.fps === fps.value && <Check size={16} />}
+                          {applyingSettings && screenQuality?.fps === fps.value && (
+                            <div className="quality-spinner">
+                              <div className="spinner-dot"></div>
+                            </div>
+                          )}
                         </button>
                       ))}
                     </div>
