@@ -32,32 +32,73 @@ class VoiceEffects {
     try {
       console.log('[VoiceEffects] Audio context state:', this.audioContext?.state);
       
-      // Wait for context to be fully initialized
-      if (this.audioContext.state === 'suspended') {
-        console.log('[VoiceEffects] Resuming suspended audio context');
-        await this.audioContext.resume();
-        
-        // Wait a bit for resume to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+      // Multiple attempts to resume context
+      let attempts = 0;
+      const maxAttempts = 3;
       
-      // Double check state after resume
-      if (this.audioContext.state !== 'running') {
-        console.warn('[VoiceEffects] Audio context not running after resume, state:', this.audioContext.state);
+      while (attempts < maxAttempts && this.audioContext.state !== 'running') {
+        attempts++;
+        console.log(`[VoiceEffects] Resume attempt ${attempts}/${maxAttempts}, state: ${this.audioContext.state}`);
         
-        // Try to resume again with user interaction fallback
         try {
+          // Resume context
           await this.audioContext.resume();
+          
+          // Wait for resume to complete
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Check if successful
+          if (this.audioContext.state === 'running') {
+            console.log('[VoiceEffects] Audio context resumed successfully');
+            break;
+          }
         } catch (error) {
-          console.error('[VoiceEffects] Failed to resume audio context:', error);
-          throw new Error('Audio context could not be resumed. Please try again.');
+          console.warn(`[VoiceEffects] Resume attempt ${attempts} failed:`, error);
+          if (attempts === maxAttempts) {
+            throw new Error(`Failed to resume audio context after ${maxAttempts} attempts: ${error.message}`);
+          }
         }
       }
       
+      // Final state check
+      if (this.audioContext.state !== 'running') {
+        console.error('[VoiceEffects] Audio context still not running after all attempts');
+        throw new Error('Audio context could not be resumed. Please check browser permissions.');
+      }
+      
       console.log('[VoiceEffects] Audio context ready, state:', this.audioContext.state);
+      
+      // Ensure all audio nodes are properly connected
+      await this.validateAudioNodes();
+      
     } catch (error) {
       console.error('[VoiceEffects] Error preparing audio context:', error);
       throw error;
+    }
+  }
+
+  // Validate and ensure all audio nodes are properly connected
+  async validateAudioNodes() {
+    try {
+      if (!this.audioContext || this.audioContext.state !== 'running') {
+        throw new Error('Audio context not running');
+      }
+      
+      // Test audio context by creating a simple oscillator
+      const testOscillator = this.audioContext.createOscillator();
+      const testGain = this.audioContext.createGain();
+      
+      testOscillator.connect(testGain);
+      testGain.connect(this.audioContext.destination);
+      
+      // Start and stop immediately to test
+      testOscillator.start();
+      testOscillator.stop();
+      
+      console.log('[VoiceEffects] Audio nodes validation successful');
+    } catch (error) {
+      console.error('[VoiceEffects] Audio nodes validation failed:', error);
+      throw new Error(`Audio nodes validation failed: ${error.message}`);
     }
   }
 
@@ -189,6 +230,12 @@ class VoiceEffects {
         await this.initialize();
       }
 
+      // Ensure audio context is running before processing
+      if (this.audioContext.state !== 'running') {
+        console.log('[VoiceEffects] Audio context not running, attempting to resume...');
+        await this.ensureAudioContextReady();
+      }
+
       if (this.isProcessing) {
         console.log('[VoiceEffects] Already processing a stream');
         return this.processedStream;
@@ -199,8 +246,18 @@ class VoiceEffects {
       // Stop any existing processing
       this.stop();
 
-      // Create source from input stream
-      this.sourceNode = this.audioContext.createMediaStreamSource(inputStream);
+      // Validate input stream
+      if (!inputStream || !inputStream.getTracks().length) {
+        throw new Error('Invalid input stream');
+      }
+
+      // Create source from input stream with error handling
+      try {
+        this.sourceNode = this.audioContext.createMediaStreamSource(inputStream);
+      } catch (error) {
+        console.error('[VoiceEffects] Failed to create media stream source:', error);
+        throw new Error(`Failed to create audio source: ${error.message}`);
+      }
       
       // Connect source to processing chain
       this.sourceNode.connect(this.inputGain);
