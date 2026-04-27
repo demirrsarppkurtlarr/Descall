@@ -32,6 +32,12 @@ class VoiceEffects {
     
     // Initialize presets
     this.presets = this.initializePresets();
+    
+    // Bind methods to prevent tree-shaking and ensure 'this' context
+    this.start = this.start.bind(this);
+    this.processStream = this.processStream.bind(this);
+    this.stop = this.stop.bind(this);
+    this.initialize = this.initialize.bind(this);
   }
 
   // Initialize real RNNoise WASM module

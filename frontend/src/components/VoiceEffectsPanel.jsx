@@ -214,14 +214,14 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
       console.log('[VoiceEffectsPanel] Starting stream processing...');
       let processedStream;
       
-      if (typeof voiceEffects.start === 'function') {
-        console.log('[VoiceEffectsPanel] Using voiceEffects.start()');
-        processedStream = await voiceEffects.start(localStream);
-      } else if (typeof voiceEffects.processStream === 'function') {
-        console.log('[VoiceEffectsPanel] Fallback to voiceEffects.processStream()');
-        processedStream = await voiceEffects.processStream(localStream);
+      const processFn = voiceEffects.start || voiceEffects.processStream;
+        
+      if (typeof processFn === 'function') {
+        console.log('[VoiceEffectsPanel] Calling process method');
+        processedStream = await processFn.call(voiceEffects, localStream);
       } else {
-        throw new Error('Neither start() nor processStream() methods available');
+        console.error('[VoiceEffectsPanel] Available methods:', Object.keys(voiceEffects));
+        throw new Error('No processing method available on voiceEffects');
       }
       
       console.log('[VoiceEffectsPanel] Stream processed successfully');
