@@ -49,6 +49,50 @@ export function useGroupCall(socket) {
 
   useEffect(() => { socketRef.current = socket; }, [socket]);
 
+  // Cleanup on unmount - prevent resource leaks
+  useEffect(() => {
+    return () => {
+      // Clear timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      
+      // Stop all local streams
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      
+      // Close all peer connections
+      pcMapRef.current.forEach(peerData => {
+        try {
+          peerData.pc.close();
+        } catch (error) {
+          console.warn('[GroupCall] Error closing peer connection:', error);
+        }
+      });
+      pcMapRef.current.clear();
+      
+      // Clear remote streams
+      remoteStreamsRef.current.forEach(stream => {
+        stream.getTracks().forEach(track => track.stop());
+      });
+      remoteStreamsRef.current.clear();
+      
+      // Clear audio refs
+      remoteAudioRefs.current.forEach(audio => {
+        if (audio) {
+          audio.srcObject = null;
+        }
+      });
+      remoteAudioRefs.current.clear();
+      
+      console.log('[GroupCall] Cleanup completed');
+    };
+  }, []);
+
   // Enumerate audio devices on mount
   useEffect(() => {
     const getDevices = async () => {

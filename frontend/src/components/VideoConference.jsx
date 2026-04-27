@@ -243,56 +243,92 @@ export default function VideoConference({
 
   const [applyingSettings, setApplyingSettings] = useState(false);
   const [settingsApplied, setSettingsApplied] = useState(false);
+  const [currentOperation, setCurrentOperation] = useState(null);
+  const timersRef = useRef([]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(timer => clearTimeout(timer));
+      timersRef.current = [];
+    };
+  }, []);
 
   const handleResolutionChange = useCallback(async (resolution) => {
-    if (setScreenQuality) {
+    // Prevent concurrent operations
+    if (currentOperation || !setScreenQuality) return;
+    setCurrentOperation('resolution');
+    
+    try {
       setApplyingSettings(true);
       setSettingsApplied(false);
       
       setScreenQuality(prev => ({ ...prev, resolution }));
       
-      // Show feedback animation
-      setTimeout(() => {
+      // Show feedback animation with proper cleanup
+      const feedbackTimer1 = setTimeout(() => {
         setSettingsApplied(true);
-        setTimeout(() => setSettingsApplied(false), 2000);
+        const feedbackTimer2 = setTimeout(() => setSettingsApplied(false), 2000);
+        timersRef.current.push(feedbackTimer2);
       }, 300);
+      timersRef.current.push(feedbackTimer1);
       
       // If already screen sharing, restart with new quality
       if (isScreenSharing && stopScreenShare && startScreenShare) {
         console.log('[VideoConference] Restarting screen share with new resolution:', resolution);
         await stopScreenShare();
         // Small delay to ensure cleanup
-        setTimeout(() => startScreenShare({ resolution, fps: screenQuality.fps }), 100);
+        const restartTimer = setTimeout(() => startScreenShare({ resolution, fps: screenQuality.fps }), 100);
+        timersRef.current.push(restartTimer);
       }
       
-      setTimeout(() => setApplyingSettings(false), 500);
+      const clearTimer = setTimeout(() => setApplyingSettings(false), 500);
+      timersRef.current.push(clearTimer);
+    } catch (error) {
+      console.error('[VideoConference] Error changing resolution:', error);
+      setApplyingSettings(false);
+    } finally {
+      setTimeout(() => setCurrentOperation(null), 600);
     }
-  }, [setScreenQuality, isScreenSharing, stopScreenShare, startScreenShare, screenQuality]);
+  }, [currentOperation, setScreenQuality, isScreenSharing, stopScreenShare, startScreenShare, screenQuality]);
 
   const handleFpsChange = useCallback(async (fps) => {
-    if (setScreenQuality) {
+    // Prevent concurrent operations
+    if (currentOperation || !setScreenQuality) return;
+    setCurrentOperation('fps');
+    
+    try {
       setApplyingSettings(true);
       setSettingsApplied(false);
       
       setScreenQuality(prev => ({ ...prev, fps }));
       
-      // Show feedback animation
-      setTimeout(() => {
+      // Show feedback animation with proper cleanup
+      const feedbackTimer1 = setTimeout(() => {
         setSettingsApplied(true);
-        setTimeout(() => setSettingsApplied(false), 2000);
+        const feedbackTimer2 = setTimeout(() => setSettingsApplied(false), 2000);
+        timersRef.current.push(feedbackTimer2);
       }, 300);
+      timersRef.current.push(feedbackTimer1);
       
       // If already screen sharing, restart with new quality
       if (isScreenSharing && stopScreenShare && startScreenShare) {
         console.log('[VideoConference] Restarting screen share with new FPS:', fps);
         await stopScreenShare();
         // Small delay to ensure cleanup
-        setTimeout(() => startScreenShare({ resolution: screenQuality.resolution, fps }), 100);
+        const restartTimer = setTimeout(() => startScreenShare({ resolution: screenQuality.resolution, fps }), 100);
+        timersRef.current.push(restartTimer);
       }
       
-      setTimeout(() => setApplyingSettings(false), 500);
+      const clearTimer = setTimeout(() => setApplyingSettings(false), 500);
+      timersRef.current.push(clearTimer);
+    } catch (error) {
+      console.error('[VideoConference] Error changing FPS:', error);
+      setApplyingSettings(false);
+    } finally {
+      setTimeout(() => setCurrentOperation(null), 600);
     }
-  }, [setScreenQuality, isScreenSharing, stopScreenShare, startScreenShare, screenQuality]);
+  }, [currentOperation, setScreenQuality, isScreenSharing, stopScreenShare, startScreenShare, screenQuality]);
 
   // Enumerate audio devices
   useEffect(() => {

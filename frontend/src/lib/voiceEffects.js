@@ -18,7 +18,6 @@ class VoiceEffects {
     this.delayNode = null;
     this.convolver = null;
     this.compressor = null;
-    this.destinationNode = null; // Track destination node for cleanup
     
     // RNNoise simulation (since actual RNNoise requires WebAssembly)
     this.rnnoiseEnabled = false;
