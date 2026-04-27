@@ -194,24 +194,46 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
   const processStream = async () => {
     if (!localStream) return;
     
+    console.log('[VoiceEffectsPanel] processStream called, voiceEffects methods:', {
+      hasStart: typeof voiceEffects.start === 'function',
+      hasProcessStream: typeof voiceEffects.processStream === 'function',
+      isInitialized: voiceEffects.isInitialized,
+      hasAudioContext: !!voiceEffects.audioContext
+    });
+    
     try {
       // Stop previous processing
       if (processedStreamRef.current) {
         processedStreamRef.current.getTracks().forEach(track => track.stop());
       }
       
+      console.log('[VoiceEffectsPanel] Calling voiceEffects.stop()');
       voiceEffects.stop();
       
-      // Start new processing
-      const processedStream = await voiceEffects.start(localStream);
+      // Start new processing - use processStream directly as fallback
+      console.log('[VoiceEffectsPanel] Starting stream processing...');
+      let processedStream;
+      
+      if (typeof voiceEffects.start === 'function') {
+        console.log('[VoiceEffectsPanel] Using voiceEffects.start()');
+        processedStream = await voiceEffects.start(localStream);
+      } else if (typeof voiceEffects.processStream === 'function') {
+        console.log('[VoiceEffectsPanel] Fallback to voiceEffects.processStream()');
+        processedStream = await voiceEffects.processStream(localStream);
+      } else {
+        throw new Error('Neither start() nor processStream() methods available');
+      }
+      
+      console.log('[VoiceEffectsPanel] Stream processed successfully');
       processedStreamRef.current = processedStream;
       
       if (onProcessedStream) {
         onProcessedStream(processedStream);
       }
     } catch (err) {
-      console.error('Stream processing error:', err);
-      setError('Ses işleme hatası');
+      console.error('[VoiceEffectsPanel] Stream processing error:', err);
+      console.error('[VoiceEffectsPanel] Error stack:', err.stack);
+      setError('Ses işleme hatası: ' + err.message);
     }
   };
 
