@@ -491,12 +491,16 @@ export function useGroupCall(socket) {
       
       // Calculate resolution based on setting with optimized performance
       const resolutionMap = {
+        '480p': { width: 854, height: 480 },
         '720p': { width: 1280, height: 720 },
         '1080p': { width: 1920, height: 1080 },
+        '1440p': { width: 2560, height: 1440 },
+        '2160p': { width: 3840, height: 2160 },
+        'custom': { width: 1920, height: 1080 }, // Default to 1080p for custom
       };
       
       const { width, height } = resolutionMap[effectiveQuality.resolution] || resolutionMap['1080p'];
-      const frameRate = Math.min(effectiveQuality.fps || 30, 30); // Cap at 30fps for performance
+      const frameRate = effectiveQuality.fps || 30; // Support higher FPS now
       
       console.log(`[GroupCall] Requesting screen share: ${width}x${height} @ ${frameRate}fps`);
       

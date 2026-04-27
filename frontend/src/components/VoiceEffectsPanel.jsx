@@ -85,7 +85,7 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
       setError(null);
       
       try {
-        const success = await voiceEffects.initialize();
+        await voiceEffects.initialize();
         
         // GUARD: Component still mounted?
         if (isCancelled) {
@@ -93,7 +93,8 @@ export default function VoiceEffectsPanel({ isOpen, onClose, localStream, onProc
           return;
         }
         
-        if (success) {
+        // Check if initialization was successful
+        if (voiceEffects.isInitialized) {
           setPresets(voiceEffects.getPresets());
           setCurrentPreset(voiceEffects.getCurrentPreset());
           setIsProcessing(true);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users, Minimize2, Volume2, Headphones, ChevronDown, Settings, Sparkles, Activity, Check } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Grid, Maximize2, Users, Minimize2, Volume2, Headphones, ChevronDown, Settings, Sparkles, Activity, Check, X } from "lucide-react";
 import RippleButton from "./ui/RippleButton";
 import VoiceEffectsPanel from "./VoiceEffectsPanel";
 
@@ -886,7 +886,7 @@ export default function VideoConference({
               </button>
             )}
             
-            {/* Quality Selector Panel */}
+            {/* Advanced Quality Selector Panel */}
             <AnimatePresence>
               {showScreenQuality && !isScreenSharing && (
                 <motion.div
@@ -894,28 +894,46 @@ export default function VideoConference({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
-                  className="screen-quality-panel"
+                  className="screen-quality-panel advanced"
                 >
                   <div className="quality-header">
-                    <Monitor size={16} />
-                    <span>Screen Quality</span>
+                    <Monitor size={18} />
+                    <span>Advanced Screen Settings</span>
+                    <button 
+                      className="quality-close-btn"
+                      onClick={() => setShowScreenQuality(false)}
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
                   
                   {/* Resolution Selector */}
                   <div className="quality-section">
                     <label className="quality-label">
-                      <Maximize2 size={14} />
+                      <Maximize2 size={16} />
                       Resolution
+                      <span className="quality-description">Select display resolution</span>
                     </label>
-                    <div className="quality-options">
-                      {['720p', '1080p'].map((res) => (
+                    <div className="quality-options-grid">
+                      {[
+                        { value: '480p', label: '480p', desc: '854×480', icon: '📱' },
+                        { value: '720p', label: '720p HD', desc: '1280×720', icon: '🎥' },
+                        { value: '1080p', label: '1080p FHD', desc: '1920×1080', icon: '📺' },
+                        { value: '1440p', label: '1440p QHD', desc: '2560×1440', icon: '🖥️' },
+                        { value: '2160p', label: '2160p 4K', desc: '3840×2160', icon: '🎬' },
+                        { value: 'custom', label: 'Custom', desc: 'Custom size', icon: '⚙️' }
+                      ].map((res) => (
                         <button
-                          key={res}
-                          className={`quality-option ${screenQuality?.resolution === res ? 'active' : ''}`}
-                          onClick={() => handleResolutionChange(res)}
+                          key={res.value}
+                          className={`quality-option-card ${screenQuality?.resolution === res.value ? 'active' : ''}`}
+                          onClick={() => handleResolutionChange(res.value)}
                         >
-                          {res}
-                          {screenQuality?.resolution === res && <Check size={12} />}
+                          <div className="quality-option-icon">{res.icon}</div>
+                          <div className="quality-option-content">
+                            <div className="quality-option-label">{res.label}</div>
+                            <div className="quality-option-desc">{res.desc}</div>
+                          </div>
+                          {screenQuality?.resolution === res.value && <Check size={16} />}
                         </button>
                       ))}
                     </div>
@@ -924,29 +942,87 @@ export default function VideoConference({
                   {/* FPS Selector */}
                   <div className="quality-section">
                     <label className="quality-label">
-                      <Activity size={14} />
-                      FPS (FRAMES/SECOND)
+                      <Activity size={16} />
+                      Frame Rate (FPS)
+                      <span className="quality-description">Higher FPS = smoother video</span>
                     </label>
-                    <div className="quality-options fps-options">
-                      {[30, 60, 120, 240].map((fps) => (
+                    <div className="quality-options-grid">
+                      {[
+                        { value: 15, label: '15 FPS', desc: 'Low bandwidth', icon: '🐌' },
+                        { value: 24, label: '24 FPS', desc: 'Cinema standard', icon: '🎬' },
+                        { value: 30, label: '30 FPS', desc: 'Standard smooth', icon: '📹' },
+                        { value: 60, label: '60 FPS', desc: 'High quality', icon: '🎮' },
+                        { value: 120, label: '120 FPS', desc: 'Ultra smooth', icon: '⚡' },
+                        { value: 144, label: '144 FPS', desc: 'Gaming grade', icon: '🚀' }
+                      ].map((fps) => (
                         <button
-                          key={fps}
-                          className={`quality-option ${screenQuality?.fps === fps ? 'active' : ''}`}
-                          onClick={() => handleFpsChange(fps)}
+                          key={fps.value}
+                          className={`quality-option-card ${screenQuality?.fps === fps.value ? 'active' : ''}`}
+                          onClick={() => handleFpsChange(fps.value)}
                         >
-                          {fps}
-                          {screenQuality?.fps === fps && <Check size={12} />}
+                          <div className="quality-option-icon">{fps.icon}</div>
+                          <div className="quality-option-content">
+                            <div className="quality-option-label">{fps.label}</div>
+                            <div className="quality-option-desc">{fps.desc}</div>
+                          </div>
+                          {screenQuality?.fps === fps.value && <Check size={16} />}
                         </button>
                       ))}
                     </div>
                   </div>
                   
+                  {/* Additional Settings */}
+                  <div className="quality-section">
+                    <label className="quality-label">
+                      <Settings size={16} />
+                      Additional Settings
+                      <span className="quality-description">Optimize your sharing experience</span>
+                    </label>
+                    <div className="quality-toggles">
+                      <div className="quality-toggle-item">
+                        <label className="toggle-label">
+                          <input type="checkbox" defaultChecked />
+                          <span className="toggle-slider"></span>
+                          <span className="toggle-text">Show cursor</span>
+                        </label>
+                      </div>
+                      <div className="quality-toggle-item">
+                        <label className="toggle-label">
+                          <input type="checkbox" defaultChecked />
+                          <span className="toggle-slider"></span>
+                          <span className="toggle-text">Optimize for motion</span>
+                        </label>
+                      </div>
+                      <div className="quality-toggle-item">
+                        <label className="toggle-label">
+                          <input type="checkbox" />
+                          <span className="toggle-slider"></span>
+                          <span className="toggle-text">Hardware acceleration</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div className="quality-footer">
-                    <span className="quality-hint">
-                      {screenQuality?.resolution === '1080p' && screenQuality?.fps >= 60 
-                        ? '⚡ Requires high performance' 
-                        : '💡 720p/30fps for low performance'}
-                    </span>
+                    <div className="quality-stats">
+                      <div className="quality-stat">
+                        <span className="stat-label">Estimated Bandwidth:</span>
+                        <span className="stat-value">
+                          {screenQuality?.resolution === '2160p' && screenQuality?.fps >= 60 ? '15-25 Mbps' :
+                           screenQuality?.resolution === '1440p' && screenQuality?.fps >= 60 ? '10-15 Mbps' :
+                           screenQuality?.resolution === '1080p' && screenQuality?.fps >= 60 ? '8-12 Mbps' :
+                           screenQuality?.resolution === '1080p' ? '5-8 Mbps' :
+                           screenQuality?.resolution === '720p' ? '3-5 Mbps' : '1-3 Mbps'}
+                        </span>
+                      </div>
+                      <div className="quality-stat">
+                        <span className="stat-label">Performance Impact:</span>
+                        <span className={`stat-value ${screenQuality?.resolution === '2160p' || (screenQuality?.resolution === '1440p' && screenQuality?.fps >= 60) ? 'high' : screenQuality?.resolution === '1440p' || (screenQuality?.resolution === '1080p' && screenQuality?.fps >= 60) ? 'medium' : 'low'}`}>
+                          {screenQuality?.resolution === '2160p' || (screenQuality?.resolution === '1440p' && screenQuality?.fps >= 60) ? 'High' :
+                           screenQuality?.resolution === '1440p' || (screenQuality?.resolution === '1080p' && screenQuality?.fps >= 60) ? 'Medium' : 'Low'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}
