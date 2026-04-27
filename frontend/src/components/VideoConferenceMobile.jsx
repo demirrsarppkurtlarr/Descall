@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Users, Minimize2, Sparkles } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Monitor, PhoneOff, Users, Minimize2, Sparkles, Maximize2, Minimize } from "lucide-react";
 import RippleButton from "./ui/RippleButton";
 import VoiceEffectsPanel from "./VoiceEffectsPanel";
 
@@ -36,9 +36,52 @@ export default function VideoConferenceMobile({
 }) {
   const safeParticipants = Array.isArray(participants) ? participants : [];
   const [showVoiceEffects, setShowVoiceEffects] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(true);
+  const overlayTimeoutRef = useRef(null);
   
   // Get remote streams for mobile participants
   const remoteStreamMap = remoteStreams?.current instanceof Map ? remoteStreams.current : new Map();
+  
+  // Fullscreen toggle for mobile screen sharing
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+        setShowOverlay(true);
+      }).catch(err => {
+        console.log('[VideoConferenceMobile] Fullscreen error:', err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+        setShowOverlay(true);
+      }).catch(err => {
+        console.log('[VideoConferenceMobile] Exit fullscreen error:', err);
+      });
+    }
+  }, []);
+  
+  // Auto-hide overlay in fullscreen mode
+  const handleVideoTap = useCallback(() => {
+    if (isScreenSharing) {
+      if (!isFullscreen) {
+        toggleFullscreen();
+      } else {
+        setShowOverlay(prev => !prev);
+      }
+    }
+  }, [isScreenSharing, isFullscreen, toggleFullscreen]);
+  
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
   
   // Stable element management for mobile
   const videoElementRefs = useRef(new Map());
@@ -167,7 +210,10 @@ export default function VideoConferenceMobile({
       </motion.div>
 
       {/* Mobile Video Area - Full Screen */}
-      <div className="vc-mobile-video-area">
+      <div 
+        className={`vc-mobile-video-area ${isScreenSharing ? 'screen-sharing' : ''} ${isFullscreen ? 'fullscreen' : ''}`}
+        onClick={handleVideoTap}
+      >
         {isScreenSharing ? (
           <div className="vc-mobile-screen-share">
             <video
@@ -175,7 +221,10 @@ export default function VideoConferenceMobile({
                 if (el) {
                   screenVideoElementRefs.current.set('mobile-main', el);
                   const currentStream = screenStreamAssignments.current.get('mobile-main');
-                  if (currentStream && el.srcObject !== currentStream) {
+                  if (screenStream && el.srcObject !== screenStream) {
+                    el.srcObject = screenStream;
+                    screenStreamAssignments.current.set('mobile-main', screenStream);
+                  } else if (currentStream && el.srcObject !== currentStream) {
                     el.srcObject = currentStream;
                   }
                 } else {
@@ -187,10 +236,17 @@ export default function VideoConferenceMobile({
               muted
               className="vc-mobile-video"
             />
-            <div className="vc-mobile-screen-badge">
-              <Monitor size={14} />
-              <span>Screen Sharing</span>
-            </div>
+            {showOverlay && (
+              <>
+                <div className="vc-mobile-screen-badge">
+                  <Monitor size={14} />
+                  <span>Screen Sharing</span>
+                </div>
+                <div className="vc-mobile-fullscreen-hint">
+                  {isFullscreen ? 'Tap to show/hide controls' : 'Tap for fullscreen'}
+                </div>
+              </>
+            )}
           </div>
         ) : safeParticipants.length > 0 ? (
           <div className="vc-mobile-participant">
@@ -235,42 +291,47 @@ export default function VideoConferenceMobile({
         )}
       </div>
 
-      {/* Mobile Controls - Fixed Bottom with Safe Area */}
-      <div className="vc-mobile-controls">
-        <div className="vc-mobile-control-row">
-          <RippleButton
-            className={`vc-mobile-control-btn ${isMuted ? 'danger' : ''}`}
-            onClick={toggleMute}
-          >
-            {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-          </RippleButton>
-          
-          <RippleButton
-            className={`vc-mobile-control-btn ${!isCameraOn ? 'danger' : ''}`}
-            onClick={toggleCamera}
-          >
-            {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
-          </RippleButton>
-          
-          <RippleButton
-            className={`vc-mobile-control-btn ${isScreenSharing ? 'active' : ''}`}
-            onClick={async () => {
-              if (isScreenSharing) {
-                try {
-                  await stopScreenShare();
-                } catch (error) {
-                  console.error('[VideoConferenceMobile] Error stopping screen share:', error);
+      {/* Mobile Controls - Fixed Bottom with Safe Area - Hidden in fullscreen when overlay is off */}
+      {(!isFullscreen || showOverlay) && (
+        <div className={`vc-mobile-controls ${isFullscreen ? 'fullscreen-mode' : ''}`}>
+          <div className="vc-mobile-control-row">
+            <RippleButton
+              className={`vc-mobile-control-btn ${isMuted ? 'danger' : ''}`}
+              onClick={toggleMute}
+            >
+              {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+            </RippleButton>
+            
+            <RippleButton
+              className={`vc-mobile-control-btn ${!isCameraOn ? 'danger' : ''}`}
+              onClick={toggleCamera}
+            >
+              {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
+            </RippleButton>
+            
+            <RippleButton
+              className={`vc-mobile-control-btn ${isScreenSharing ? 'active' : ''}`}
+              onClick={async () => {
+                if (isScreenSharing) {
+                  try {
+                    await stopScreenShare();
+                    // Exit fullscreen when stopping screen share
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen();
+                    }
+                  } catch (error) {
+                    console.error('[VideoConferenceMobile] Error stopping screen share:', error);
+                  }
+                } else {
+                  try {
+                    await startScreenShare({ resolution: '720p', fps: 30 });
+                  } catch (error) {
+                    console.error('[VideoConferenceMobile] Error starting screen share:', error);
+                  }
                 }
-              } else {
-                try {
-                  await startScreenShare(screenQuality);
-                } catch (error) {
-                  console.error('[VideoConferenceMobile] Error starting screen share:', error);
-                }
-              }
-            }}
-          >
-            <Monitor size={20} />
+              }}
+            >
+              <Monitor size={20} />
           </RippleButton>
           
           <RippleButton
@@ -279,8 +340,9 @@ export default function VideoConferenceMobile({
           >
             <Sparkles size={20} />
           </RippleButton>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Voice Effects Panel - Mobile Optimized */}
       <AnimatePresence>

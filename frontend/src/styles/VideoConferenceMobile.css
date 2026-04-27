@@ -77,6 +77,46 @@
   width: 100%;
   height: 100%;
   background: #000;
+  cursor: pointer;
+}
+
+/* Fullscreen mode for video area */
+.vc-mobile-video-area.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9998;
+  height: 100vh !important;
+  width: 100vw !important;
+}
+
+.vc-mobile-video-area.screen-sharing {
+  cursor: pointer;
+}
+
+/* Fullscreen hint overlay */
+.vc-mobile-fullscreen-hint {
+  position: absolute;
+  bottom: 140px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  animation: fadeInOut 3s ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  10%, 90% { opacity: 1; }
 }
 
 .vc-mobile-screen-share,
@@ -158,6 +198,16 @@
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
   z-index: 10;
   backdrop-filter: blur(15px);
+  /* Fix for navigation bar overlap */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Fullscreen mode controls */
+.vc-mobile-controls.fullscreen-mode {
+  background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,0.4) 100%);
+  padding-bottom: max(20px, calc(20px + env(safe-area-inset-bottom)));
+  z-index: 100;
 }
 
 .vc-mobile-control-row {

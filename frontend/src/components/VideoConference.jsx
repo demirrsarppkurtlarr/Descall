@@ -283,13 +283,14 @@ export default function VideoConference({
       }, 300);
       timersRef.current.push(feedbackTimer1);
       
-      // If already screen sharing, restart with new quality
+      // If already screen sharing, restart with new quality immediately
       if (isScreenSharing && stopScreenShare && startScreenShare) {
         console.log('[VideoConference] Restarting screen share with new resolution:', resolution);
         await stopScreenShare();
-        // Small delay to ensure cleanup
-        const restartTimer = setTimeout(() => startScreenShare({ resolution, fps: screenQuality.fps }), 100);
-        timersRef.current.push(restartTimer);
+        // Wait for cleanup and restart with new quality
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await startScreenShare({ resolution, fps: screenQuality.fps });
+        console.log('[VideoConference] Screen share restarted with new resolution');
       }
       
       const clearTimer = setTimeout(() => setApplyingSettings(false), 500);
@@ -321,13 +322,14 @@ export default function VideoConference({
       }, 300);
       timersRef.current.push(feedbackTimer1);
       
-      // If already screen sharing, restart with new quality
+      // If already screen sharing, restart with new quality immediately
       if (isScreenSharing && stopScreenShare && startScreenShare) {
         console.log('[VideoConference] Restarting screen share with new FPS:', fps);
         await stopScreenShare();
-        // Small delay to ensure cleanup
-        const restartTimer = setTimeout(() => startScreenShare({ resolution: screenQuality.resolution, fps }), 100);
-        timersRef.current.push(restartTimer);
+        // Wait for cleanup and restart with new quality
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await startScreenShare({ resolution: screenQuality.resolution, fps });
+        console.log('[VideoConference] Screen share restarted with new FPS');
       }
       
       const clearTimer = setTimeout(() => setApplyingSettings(false), 500);
@@ -377,8 +379,14 @@ export default function VideoConference({
     remoteStreamMap.has(p.id) || p.screenStream
   );
   
-  const focusTarget = dominantSpeaker?.id || 
-    (activeParticipants.length > 0 ? activeParticipants[0]?.id : 'local');
+  // Update focus target based on dominant speaker or active participants
+  useEffect(() => {
+    const newFocusTarget = dominantSpeaker?.id || 
+      (activeParticipants.length > 0 ? activeParticipants[0]?.id : 'local');
+    if (newFocusTarget !== focusTarget) {
+      setFocusTarget(newFocusTarget);
+    }
+  }, [dominantSpeaker, activeParticipants, focusTarget]);
 
   const focusParticipant = safeParticipants.find((p) => p.id === focusTarget);
   const focusStream = focusTarget ? remoteStreamMap.get(focusTarget) : null;
