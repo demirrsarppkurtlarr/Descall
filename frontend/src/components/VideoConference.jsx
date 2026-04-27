@@ -164,17 +164,31 @@ export default function VideoConference({
     }
   }, [startScreenShare, screenQuality]);
 
-  const handleResolutionChange = useCallback((resolution) => {
+  const handleResolutionChange = useCallback(async (resolution) => {
     if (setScreenQuality) {
       setScreenQuality(prev => ({ ...prev, resolution }));
+      // If already screen sharing, restart with new quality
+      if (isScreenSharing && stopScreenShare && startScreenShare) {
+        console.log('[VideoConference] Restarting screen share with new resolution:', resolution);
+        await stopScreenShare();
+        // Small delay to ensure cleanup
+        setTimeout(() => startScreenShare({ resolution, fps: screenQuality.fps }), 100);
+      }
     }
-  }, [setScreenQuality]);
+  }, [setScreenQuality, isScreenSharing, stopScreenShare, startScreenShare, screenQuality]);
 
-  const handleFpsChange = useCallback((fps) => {
+  const handleFpsChange = useCallback(async (fps) => {
     if (setScreenQuality) {
       setScreenQuality(prev => ({ ...prev, fps }));
+      // If already screen sharing, restart with new quality
+      if (isScreenSharing && stopScreenShare && startScreenShare) {
+        console.log('[VideoConference] Restarting screen share with new FPS:', fps);
+        await stopScreenShare();
+        // Small delay to ensure cleanup
+        setTimeout(() => startScreenShare({ resolution: screenQuality.resolution, fps }), 100);
+      }
     }
-  }, [setScreenQuality]);
+  }, [setScreenQuality, isScreenSharing, stopScreenShare, startScreenShare, screenQuality]);
 
   // Enumerate audio devices
   useEffect(() => {
