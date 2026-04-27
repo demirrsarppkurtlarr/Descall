@@ -31,6 +31,7 @@ export default function VideoConferenceMobile({
   callType,
   screenQuality,
   setScreenQuality,
+  remoteStreams,
   onProcessedStream,
 }) {
   const safeParticipants = Array.isArray(participants) ? participants : [];

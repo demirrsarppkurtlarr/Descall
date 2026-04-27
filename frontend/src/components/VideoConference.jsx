@@ -228,6 +228,13 @@ export default function VideoConference({
         await assignScreenStreamToVideo('pip-local', null);
       }
       
+      // Handle focus participant screen sharing
+      if (focusParticipant && focusParticipant.isScreenSharing && screenStream) {
+        await assignScreenStreamToVideo(`focus-${focusParticipant.id}`, screenStream);
+      } else if (focusParticipant) {
+        await assignScreenStreamToVideo(`focus-${focusParticipant.id}`, null);
+      }
+      
       // Wait for all stream assignments to complete
       await Promise.allSettled(streamPromises);
     };
@@ -235,7 +242,7 @@ export default function VideoConference({
     updateStreams().catch(error => {
       console.error('[VideoConference] Error updating streams:', error);
     });
-  }, [safeParticipants, remoteStreamMap, screenStream, isScreenSharing, assignStreamToVideo, assignScreenStreamToVideo, cleanupParticipant]);
+  }, [safeParticipants, remoteStreamMap, screenStream, isScreenSharing, assignStreamToVideo, assignScreenStreamToVideo, cleanupParticipant, focusParticipant]);
 
   // Screen sharing quality handlers
   const handleStartScreenShare = useCallback(async () => {
@@ -404,7 +411,7 @@ export default function VideoConference({
         callType={callType}
         screenQuality={screenQuality}
         setScreenQuality={setScreenQuality}
-        localStream={localStream}
+        remoteStreams={remoteStreams}
         onProcessedStream={(stream) => {
           // Handle processed stream for mobile
         }}
@@ -579,17 +586,20 @@ export default function VideoConference({
                 )
               ) : focusParticipant ? (
                 <div className="vc-focus-participant">
-                  {focusParticipant.screenStream && focusParticipant.isScreenSharing ? (
+                  {screenStream && focusParticipant?.isScreenSharing ? (
                     <video
                       ref={(el) => {
                         if (el) {
-                          screenVideoElementRefs.current.set(focusParticipant.id, el);
-                          const currentStream = screenStreamAssignments.current.get(focusParticipant.id);
+                          screenVideoElementRefs.current.set(`focus-${focusParticipant.id}`, el);
+                          const currentStream = screenStreamAssignments.current.get(`focus-${focusParticipant.id}`);
                           if (currentStream && el.srcObject !== currentStream) {
                             el.srcObject = currentStream;
+                          } else if (screenStream && el.srcObject !== screenStream) {
+                            el.srcObject = screenStream;
+                            screenStreamAssignments.current.set(`focus-${focusParticipant.id}`, screenStream);
                           }
                         } else {
-                          screenVideoElementRefs.current.delete(focusParticipant.id);
+                          screenVideoElementRefs.current.delete(`focus-${focusParticipant.id}`);
                         }
                       }}
                       autoPlay

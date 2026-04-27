@@ -297,15 +297,31 @@
 
 /* Notch and Safe Area Support */
 @supports (padding: max(0px)) {
+  .video-conference-mobile {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
   .vc-mobile-header {
     padding-left: max(20px, env(safe-area-inset-left));
     padding-right: max(20px, env(safe-area-inset-right));
     padding-top: max(0px, env(safe-area-inset-top));
+    height: max(60px, calc(60px + env(safe-area-inset-top)));
   }
   
   .vc-mobile-controls {
     padding-left: max(20px, env(safe-area-inset-left));
     padding-right: max(20px, env(safe-area-inset-right));
+    padding-bottom: max(20px, calc(20px + env(safe-area-inset-bottom)));
+  }
+  
+  .vc-mobile-screen-badge,
+  .vc-mobile-participant-info {
+    left: max(20px, env(safe-area-inset-left));
+  }
+  
+  .vc-mobile-video-area {
+    height: calc(100vh - max(60px, calc(60px + env(safe-area-inset-top))) - max(80px, calc(80px + env(safe-area-inset-bottom))));
   }
 }
 
