@@ -580,7 +580,13 @@ export default function VideoConference({
                 ) : isCameraOn ? (
                   <video
                     ref={(el) => {
-                      if (el && localStream) el.srcObject = localStream;
+                      if (el && localStream) {
+                        if (el.srcObject !== localStream) {
+                          el.srcObject = localStream;
+                        }
+                        // Try to play but don't throw errors
+                        el.play().catch(() => {});
+                      }
                     }}
                     autoPlay
                     playsInline

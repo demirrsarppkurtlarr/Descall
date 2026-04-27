@@ -844,6 +844,18 @@ export function useGroupCall(socket) {
       }
 
       try {
+        // Check if we already have a remote description (duplicate answer)
+        if (peerData.pc.remoteDescription) {
+          console.log(`[GroupCall] Already have remote description for ${fromUserId}, ignoring duplicate answer`);
+          return;
+        }
+        
+        // Only set remote description if we're in the right state
+        if (peerData.pc.signalingState === 'stable') {
+          console.log(`[GroupCall] Connection already stable for ${fromUserId}, answer not needed`);
+          return;
+        }
+        
         await peerData.pc.setRemoteDescription(new RTCSessionDescription(answer));
         await flushIce(peerData.pc, fromUserId);
         
@@ -854,7 +866,12 @@ export function useGroupCall(socket) {
         
         console.log(`[GroupCall] Answer processed from ${fromUserId}`);
       } catch (err) {
-        console.error("[GroupCall] Answer handler error:", err);
+        // Only log error if it's not a state-related error we already handle
+        if (!err.message?.includes('Called in wrong state')) {
+          console.error("[GroupCall] Answer handler error:", err);
+        } else {
+          console.log(`[GroupCall] Answer ignored for ${fromUserId}: connection already established`);
+        }
       }
     };
 

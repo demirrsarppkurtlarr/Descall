@@ -329,14 +329,26 @@ export default function VideoConferenceMobile({
           <div className="vc-mobile-control-row">
             <RippleButton
               className={`vc-mobile-control-btn ${isMuted ? 'danger' : ''}`}
-              onClick={() => toggleMute && toggleMute()}
+              onClick={() => {
+                if (typeof toggleMute === 'function') {
+                  toggleMute();
+                } else {
+                  console.warn('[VideoConferenceMobile] toggleMute is not available');
+                }
+              }}
             >
               {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
             </RippleButton>
             
             <RippleButton
               className={`vc-mobile-control-btn ${!isCameraOn ? 'danger' : ''}`}
-              onClick={() => toggleCamera && toggleCamera()}
+              onClick={() => {
+                if (typeof toggleCamera === 'function') {
+                  toggleCamera();
+                } else {
+                  console.warn('[VideoConferenceMobile] toggleCamera is not available');
+                }
+              }}
             >
               {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
             </RippleButton>
@@ -345,7 +357,7 @@ export default function VideoConferenceMobile({
               className={`vc-mobile-control-btn ${isScreenSharing ? 'active' : ''}`}
               onClick={async () => {
                 if (isScreenSharing) {
-                  if (stopScreenShare) {
+                  if (typeof stopScreenShare === 'function') {
                     try {
                       await stopScreenShare();
                       if (document.fullscreenElement) {
@@ -354,14 +366,18 @@ export default function VideoConferenceMobile({
                     } catch (error) {
                       console.error('[VideoConferenceMobile] Error stopping screen share:', error);
                     }
+                  } else {
+                    console.warn('[VideoConferenceMobile] stopScreenShare is not available');
                   }
                 } else {
-                  if (startScreenShare) {
+                  if (typeof startScreenShare === 'function') {
                     try {
                       await startScreenShare({ resolution: '720p', fps: 30 });
                     } catch (error) {
                       console.error('[VideoConferenceMobile] Error starting screen share:', error);
                     }
+                  } else {
+                    console.warn('[VideoConferenceMobile] startScreenShare is not available');
                   }
                 }
               }}
@@ -369,12 +385,12 @@ export default function VideoConferenceMobile({
               <Monitor size={20} />
             </RippleButton>
           
-          <RippleButton
-            className={`vc-mobile-control-btn ${showVoiceEffects ? 'active' : ''}`}
-            onClick={() => setShowVoiceEffects(!showVoiceEffects)}
-          >
-            <Sparkles size={20} />
-          </RippleButton>
+            <RippleButton
+              className={`vc-mobile-control-btn ${showVoiceEffects ? 'active' : ''}`}
+              onClick={() => setShowVoiceEffects(!showVoiceEffects)}
+            >
+              <Sparkles size={20} />
+            </RippleButton>
           </div>
         </div>
       )}
