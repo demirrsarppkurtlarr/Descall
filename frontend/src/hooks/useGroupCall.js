@@ -285,9 +285,30 @@ export function useGroupCall(socket) {
     try {
       console.log(`[GroupCall] Starting ${type} call in group ${groupId}`);
       
+      // OPTIMIZED: Low latency audio constraints to reduce 1-2 second delay
       const constraints = type === "video"
-        ? { audio: true, video: { width: 1280, height: 720, facingMode: "user" } }
-        : { audio: true, video: false };
+        ? { 
+            audio: { 
+              echoCancellation: true, 
+              noiseSuppression: true,
+              autoGainControl: true,
+              latency: { ideal: 0.01 }, // 10ms target latency
+              sampleRate: { ideal: 48000 }, // Standard VoIP sample rate
+              channelCount: { ideal: 2 }
+            }, 
+            video: { width: 1280, height: 720, facingMode: "user" } 
+          }
+        : { 
+            audio: { 
+              echoCancellation: true, 
+              noiseSuppression: true,
+              autoGainControl: true,
+              latency: { ideal: 0.01 }, // 10ms target latency
+              sampleRate: { ideal: 48000 },
+              channelCount: { ideal: 2 }
+            }, 
+            video: false 
+          };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
