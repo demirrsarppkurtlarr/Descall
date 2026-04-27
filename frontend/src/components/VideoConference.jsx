@@ -110,10 +110,22 @@ export default function VideoConference({
     remoteStreamMap.has(p.id)
   );
 
-  // Handle remote screen shares - only update when screen streams change
+  // Handle remote screen shares - optimized to prevent black screens
   const prevScreenStreams = useRef(new Map());
+  const prevParticipantsHash = useRef('');
   
   useEffect(() => {
+    // Create hash to detect actual changes vs re-renders
+    const currentHash = activeParticipants.map(p => `${p.id}:${p.isScreenSharing}:${!!p.screenStream}`).join('|');
+    
+    // Skip if no actual changes detected (prevents unnecessary video resets)
+    if (currentHash === prevParticipantsHash.current) {
+      return;
+    }
+    
+    console.log('[VideoConference] Participants changed, updating screen shares');
+    prevParticipantsHash.current = currentHash;
+    
     const currentIds = new Set(activeParticipants.map(p => p.id));
     
     // CLEANUP: Remove participants no longer present
@@ -128,32 +140,36 @@ export default function VideoConference({
       }
     });
     
-    // UPDATE: Current participants
+    // UPDATE: Current participants - only update if stream actually changed
     activeParticipants.forEach(p => {
       if (p.screenStream && p.isScreenSharing) {
         const video = screenVideoRefs.current.get(p.id);
         const prevStream = prevScreenStreams.current.get(p.id);
         
+        // Only update if stream actually changed (prevents black screen flicker)
         if (video && p.screenStream !== prevStream) {
+          console.log(`[VideoConference] Updating screen stream for ${p.id}`);
           video.srcObject = p.screenStream;
           video.play().catch(() => {});
           prevScreenStreams.current.set(p.id, p.screenStream);
         }
       } else {
-        // Cleanup when participant stops screen sharing
-        const video = screenVideoRefs.current.get(p.id);
-        if (video) {
-          video.srcObject = null;
+        // Only cleanup if previously had screen share
+        const prevStream = prevScreenStreams.current.get(p.id);
+        if (prevStream) {
+          const video = screenVideoRefs.current.get(p.id);
+          if (video) {
+            video.srcObject = null;
+          }
+          prevScreenStreams.current.delete(p.id);
+          console.log(`[VideoConference] Cleared screen stream for ${p.id}`);
         }
-        prevScreenStreams.current.delete(p.id);
       }
     });
     
     return () => {
-      // Emergency cleanup on effect re-run
-      screenVideoRefs.current.forEach(video => {
-        video.pause();
-      });
+      // Only cleanup on actual unmount, not re-render
+      // This prevents video elements from going black during normal updates
     };
   }, [activeParticipants]);
 
@@ -486,7 +502,9 @@ export default function VideoConference({
                   {stream && participant.hasVideo ? (
                     <video
                       ref={(el) => {
-                        if (el) el.srcObject = stream;
+                        if (el && el.srcObject !== stream) {
+                          el.srcObject = stream;
+                        }
                       }}
                       autoPlay
                       playsInline
@@ -585,7 +603,9 @@ export default function VideoConference({
               ) : focusStream ? (
                 <video
                   ref={(el) => {
-                    if (el) el.srcObject = focusStream;
+                    if (el && el.srcObject !== focusStream) {
+                      el.srcObject = focusStream;
+                    }
                   }}
                   autoPlay
                   playsInline
@@ -621,7 +641,9 @@ export default function VideoConference({
                   {isCameraOn ? (
                     <video
                       ref={(el) => {
-                        if (el && localStream) el.srcObject = localStream;
+                        if (el && el.srcObject !== localStream) {
+                          el.srcObject = localStream;
+                        }
                       }}
                       autoPlay
                       playsInline
@@ -646,7 +668,9 @@ export default function VideoConference({
                     {stream && (p.hasVideo || p.isScreenSharing) ? (
                       <video
                         ref={(el) => {
-                          if (el) el.srcObject = stream;
+                          if (el && el.srcObject !== stream) {
+                            el.srcObject = stream;
+                          }
                         }}
                         autoPlay
                         playsInline
