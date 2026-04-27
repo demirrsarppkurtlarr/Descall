@@ -27,6 +27,40 @@ class VoiceEffects {
     this.presets = this.initializePresets();
   }
 
+  // Ensure audio context is ready and running
+  async ensureAudioContextReady() {
+    try {
+      console.log('[VoiceEffects] Audio context state:', this.audioContext?.state);
+      
+      // Wait for context to be fully initialized
+      if (this.audioContext.state === 'suspended') {
+        console.log('[VoiceEffects] Resuming suspended audio context');
+        await this.audioContext.resume();
+        
+        // Wait a bit for resume to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Double check state after resume
+      if (this.audioContext.state !== 'running') {
+        console.warn('[VoiceEffects] Audio context not running after resume, state:', this.audioContext.state);
+        
+        // Try to resume again with user interaction fallback
+        try {
+          await this.audioContext.resume();
+        } catch (error) {
+          console.error('[VoiceEffects] Failed to resume audio context:', error);
+          throw new Error('Audio context could not be resumed. Please try again.');
+        }
+      }
+      
+      console.log('[VoiceEffects] Audio context ready, state:', this.audioContext.state);
+    } catch (error) {
+      console.error('[VoiceEffects] Error preparing audio context:', error);
+      throw error;
+    }
+  }
+
   // Initialize audio context and processing chain
   async initialize() {
     try {
@@ -52,11 +86,8 @@ class VoiceEffects {
         sampleRate: 48000
       });
 
-      // Resume audio context if suspended (required by most browsers)
-      if (this.audioContext.state === 'suspended') {
-        console.log('[VoiceEffects] Resuming suspended audio context');
-        await this.audioContext.resume();
-      }
+      // Wait for context to be ready and resume if needed
+      await this.ensureAudioContextReady();
 
       // Create analyser for visualization
       this.analyser = this.audioContext.createAnalyser();

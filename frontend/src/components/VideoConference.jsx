@@ -221,8 +221,10 @@ export default function VideoConference({
       // Handle local screen sharing preview
       if (screenStream && isScreenSharing) {
         await assignScreenStreamToVideo('local', screenStream);
+        await assignScreenStreamToVideo('preview', screenStream);
       } else {
         await assignScreenStreamToVideo('local', null);
+        await assignScreenStreamToVideo('preview', null);
       }
       
       // Wait for all stream assignments to complete
@@ -962,7 +964,7 @@ export default function VideoConference({
             
             {/* Advanced Quality Selector Panel */}
             <AnimatePresence>
-              {showScreenQuality && !isScreenSharing && (
+              {showScreenQuality && (
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -979,6 +981,41 @@ export default function VideoConference({
                     >
                       <X size={14} />
                     </button>
+                  </div>
+                  
+                  {/* Screen Preview */}
+                  <div className="quality-section">
+                    <label className="quality-label">
+                      <Monitor size={16} />
+                      Screen Preview
+                      <span className="quality-description">Your shared screen will appear here</span>
+                    </label>
+                    <div className="screen-preview-container">
+                      {isScreenSharing && screenStream ? (
+                        <video
+                          ref={(el) => {
+                            if (el) {
+                              screenVideoElementRefs.current.set('preview', el);
+                              const currentStream = screenStreamAssignments.current.get('preview');
+                              if (currentStream && el.srcObject !== currentStream) {
+                                el.srcObject = currentStream;
+                              }
+                            } else {
+                              screenVideoElementRefs.current.delete('preview');
+                            }
+                          }}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="screen-preview-video"
+                        />
+                      ) : (
+                        <div className="screen-preview-placeholder">
+                          <Monitor size={32} />
+                          <span>Start screen sharing to see preview</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   {/* Resolution Selector */}
