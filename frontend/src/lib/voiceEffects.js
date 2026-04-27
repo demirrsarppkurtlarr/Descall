@@ -1,4 +1,9 @@
 // COMPLETE REWRITE: Voice Effects System - Production Ready
+// Real RNNoise integration via rnnoise-wasm
+
+// Dynamic import for RNNoise WASM module
+let RNNoiseModule = null;
+
 class VoiceEffects {
   constructor() {
     this.audioContext = null;
@@ -19,12 +24,45 @@ class VoiceEffects {
     this.convolver = null;
     this.compressor = null;
     
-    // RNNoise simulation (since actual RNNoise requires WebAssembly)
+    // RNNoise - Real implementation
     this.rnnoiseEnabled = false;
-    this.noiseGate = null;
+    this.rnnoiseContext = null; // Real RNNoise WASM context
+    this.noiseGate = null; // Fallback noise gate
+    this.rnnoiseBufferSize = 480; // RNNoise processes 480 samples at a time
     
     // Initialize presets
     this.presets = this.initializePresets();
+  }
+
+  // Initialize real RNNoise WASM module
+  async initRNNoise() {
+    try {
+      if (this.rnnoiseContext) {
+        console.log('[VoiceEffects] RNNoise already initialized');
+        return true;
+      }
+
+      // Dynamic import to avoid loading if not needed
+      if (!RNNoiseModule) {
+        console.log('[VoiceEffects] Loading RNNoise WASM module...');
+        // Use dynamic import for the rnnoise-wasm package
+        try {
+          const rnnoise = await import('rnnoise-wasm');
+          RNNoiseModule = rnnoise;
+        } catch (importError) {
+          console.warn('[VoiceEffects] rnnoise-wasm not available, using fallback:', importError.message);
+          return false;
+        }
+      }
+
+      // Create RNNoise context
+      this.rnnoiseContext = new RNNoiseModule.RNNoise();
+      console.log('[VoiceEffects] Real RNNoise initialized successfully');
+      return true;
+    } catch (error) {
+      console.error('[VoiceEffects] Failed to initialize RNNoise:', error);
+      return false;
+    }
   }
 
   // Ensure audio context is ready and running
@@ -286,6 +324,12 @@ class VoiceEffects {
     }
   }
 
+  // Start processing - alias for processStream for API compatibility
+  async start(inputStream) {
+    console.log('[VoiceEffects] start() called, delegating to processStream()');
+    return this.processStream(inputStream);
+  }
+
   // Stop processing
   stop() {
     try {
@@ -492,10 +536,20 @@ class VoiceEffects {
       }
       
       // Add RNNoise if enabled
-      if (this.rnnoiseEnabled && this.noiseGate) {
+      if (this.rnnoiseEnabled) {
         this.outputGain.disconnect();
-        this.outputGain.connect(this.noiseGate);
-        this.noiseGate.connect(this.analyser);
+        
+        // Use real RNNoise WASM processor if available
+        if (this.rnnoiseProcessor) {
+          console.log('[VoiceEffects] Using real RNNoise WASM processor');
+          this.outputGain.connect(this.rnnoiseProcessor);
+          this.rnnoiseProcessor.connect(this.analyser);
+        } else if (this.noiseGate) {
+          // Fallback to noise gate
+          console.log('[VoiceEffects] Using fallback noise gate');
+          this.outputGain.connect(this.noiseGate);
+          this.noiseGate.connect(this.analyser);
+        }
         this.analyser.connect(this.audioContext.destination);
       }
       
@@ -505,20 +559,74 @@ class VoiceEffects {
     }
   }
 
-  // Toggle RNNoise (simulated with noise gate)
-  toggleRNNoise(enabled) {
+  // Real RNNoise processing using ScriptProcessorNode
+  createRNNoiseProcessor() {
+    if (!this.audioContext || !this.rnnoiseContext) return null;
+    
+    const bufferSize = this.rnnoiseBufferSize;
+    const processor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
+    const rnnoise = this.rnnoiseContext;
+    
+    processor.onaudioprocess = (e) => {
+      const inputData = e.inputBuffer.getChannelData(0);
+      const outputData = e.outputBuffer.getChannelData(0);
+      
+      // Process in chunks of 480 samples (RNNoise frame size)
+      for (let i = 0; i < inputData.length; i += bufferSize) {
+        const chunk = inputData.slice(i, i + bufferSize);
+        
+        // Pad if needed
+        if (chunk.length < bufferSize) {
+          const padded = new Float32Array(bufferSize);
+          padded.set(chunk);
+          // Process with real RNNoise
+          const processed = rnnoise.processFrame(padded);
+          outputData.set(processed.slice(0, chunk.length), i);
+        } else {
+          // Process with real RNNoise
+          const processed = rnnoise.processFrame(chunk);
+          outputData.set(processed, i);
+        }
+      }
+    };
+    
+    return processor;
+  }
+
+  // Toggle RNNoise - Real WASM implementation with fallback
+  async toggleRNNoise(enabled) {
     try {
       this.rnnoiseEnabled = enabled;
       
-      if (enabled && this.noiseGate) {
-        console.log('[VoiceEffects] RNNoise enabled (simulated)');
-        // Simulate RNNoise with a simple noise gate
-        this.noiseGate.gain.value = 1.0;
-        this.reconnectChain(this.currentPreset);
+      if (enabled) {
+        // Try to initialize real RNNoise
+        const rnnoiseAvailable = await this.initRNNoise();
+        
+        if (rnnoiseAvailable && this.rnnoiseContext) {
+          console.log('[VoiceEffects] Real RNNoise WASM enabled');
+          
+          // Create real RNNoise processor node
+          if (this.audioContext) {
+            this.rnnoiseProcessor = this.createRNNoiseProcessor();
+          }
+        } else {
+          console.log('[VoiceEffects] RNNoise enabled (fallback noise gate)');
+          // Fallback to noise gate
+          if (this.noiseGate) {
+            this.noiseGate.gain.value = 1.0;
+          }
+        }
       } else {
         console.log('[VoiceEffects] RNNoise disabled');
-        this.reconnectChain(this.currentPreset);
+        // Clean up RNNoise processor
+        if (this.rnnoiseProcessor) {
+          this.rnnoiseProcessor.disconnect();
+          this.rnnoiseProcessor = null;
+        }
       }
+      
+      // Reconnect audio chain
+      this.reconnectChain(this.currentPreset);
       
     } catch (error) {
       console.error('[VoiceEffects] Failed to toggle RNNoise:', error);

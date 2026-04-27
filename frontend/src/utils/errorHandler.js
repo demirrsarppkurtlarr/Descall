@@ -137,16 +137,31 @@ function categorizeError(error) {
  */
 async function sendToBackend(errorData) {
   try {
-    const response = await fetch('/api/client-errors', {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || window.location.origin;
+    const response = await fetch(`${API_BASE_URL}/api/errors`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('descall_token') || ''}`
       },
-      body: JSON.stringify(errorData),
+      body: JSON.stringify({
+        message: errorData.message,
+        stack: errorData.stack,
+        componentStack: errorData.component,
+        url: errorData.url,
+        userAgent: errorData.userAgent,
+        timestamp: errorData.timestamp,
+        userId: errorData.userId,
+        username: errorData.username,
+        severity: errorData.severity || 'error',
+        source: errorData.type || 'frontend'
+      }),
     });
     
     if (!response.ok) {
       console.error('[ErrorHandler] Failed to send error:', response.status);
+    } else {
+      console.log('[ErrorHandler] Error reported successfully');
     }
   } catch (e) {
     // Silent fail - don't cause infinite loop

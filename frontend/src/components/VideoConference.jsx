@@ -195,44 +195,38 @@ export default function VideoConference({
     screenStreamAssignments.current.delete(participantId);
   }, []);
 
-  // Update streams for existing participants - await all assignments
+  // Update streams for existing participants - optimized to prevent flicker
   useEffect(() => {
     const updateStreams = async () => {
-      // Get active participants with streams
-      const activeParticipants = safeParticipants.filter(p => 
-        remoteStreamMap.has(p.id) || p.screenStream
-      );
-      
-      console.log('[VideoConference] Active participants:', activeParticipants.length);
-      
-      // Process each participant
-      const streamPromises = activeParticipants.map(async (p) => {
-        const stream = remoteStreamMap.get(p.id);
-        await assignStreamToVideo(p.id, stream);
-        
-        if (p.screenStream && p.isScreenSharing) {
-          await assignScreenStreamToVideo(p.id, p.screenStream);
-        } else {
-          await assignScreenStreamToVideo(p.id, null);
-        }
+      // Only update if we have actual changes
+      const changedParticipants = safeParticipants.filter(p => {
+        const currentStream = streamAssignments.current.get(p.id);
+        const newStream = remoteStreamMap.get(p.id);
+        return currentStream !== newStream;
       });
       
-      // Handle local screen sharing preview
-      if (screenStream && isScreenSharing) {
+      if (changedParticipants.length === 0 && !screenStream) {
+        return; // No changes, skip update to prevent flicker
+      }
+      
+      console.log('[VideoConference] Updating streams for', changedParticipants.length, 'participants');
+      
+      // Process only changed participants
+      const streamPromises = changedParticipants.map(async (p) => {
+        const stream = remoteStreamMap.get(p.id);
+        await assignStreamToVideo(p.id, stream);
+      });
+      
+      // Handle local screen sharing preview (only if changed)
+      const currentLocalScreen = screenStreamAssignments.current.get('local');
+      if (screenStream && isScreenSharing && currentLocalScreen !== screenStream) {
         await assignScreenStreamToVideo('local', screenStream);
         await assignScreenStreamToVideo('preview', screenStream);
         await assignScreenStreamToVideo('pip-local', screenStream);
-      } else {
+      } else if (!screenStream && currentLocalScreen) {
         await assignScreenStreamToVideo('local', null);
         await assignScreenStreamToVideo('preview', null);
         await assignScreenStreamToVideo('pip-local', null);
-      }
-      
-      // Handle focus participant screen sharing
-      if (focusParticipant && focusParticipant.isScreenSharing && screenStream) {
-        await assignScreenStreamToVideo(`focus-${focusParticipant.id}`, screenStream);
-      } else if (focusParticipant) {
-        await assignScreenStreamToVideo(`focus-${focusParticipant.id}`, null);
       }
       
       // Wait for all stream assignments to complete
@@ -242,7 +236,7 @@ export default function VideoConference({
     updateStreams().catch(error => {
       console.error('[VideoConference] Error updating streams:', error);
     });
-  }, [safeParticipants, remoteStreamMap, screenStream, isScreenSharing, assignStreamToVideo, assignScreenStreamToVideo, cleanupParticipant, focusParticipant]);
+  }, [safeParticipants, remoteStreamMap, screenStream, isScreenSharing, assignStreamToVideo, assignScreenStreamToVideo]);
 
   // Screen sharing quality handlers
   const handleStartScreenShare = useCallback(async () => {
@@ -374,9 +368,12 @@ export default function VideoConference({
   const gridCols = getGridCols(totalParticipants);
   const gridRows = getGridRows(totalParticipants, gridCols);
 
-  // Focus view calculations
-  const activeParticipants = safeParticipants.filter(p => 
-    remoteStreamMap.has(p.id) || p.screenStream
+  // Focus view calculations - memoized to prevent flicker
+  const activeParticipants = useMemo(() => 
+    safeParticipants.filter(p => 
+      remoteStreamMap.has(p.id) || p.screenStream
+    ), 
+    [safeParticipants, remoteStreamMap]
   );
   
   // Update focus target based on dominant speaker or active participants
