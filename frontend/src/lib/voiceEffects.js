@@ -36,6 +36,12 @@ class VoiceEffects {
 
   // Initialize real RNNoise WASM module
   async initRNNoise() {
+    // TEMPORARY: RNNoise WASM disabled - using fallback noise gate
+    // The rnnoise-wasm package needs proper installation and configuration
+    console.log('[VoiceEffects] RNNoise WASM disabled, using fallback noise gate');
+    return false;
+    
+    /*
     try {
       if (this.rnnoiseContext) {
         console.log('[VoiceEffects] RNNoise already initialized');
@@ -48,14 +54,19 @@ class VoiceEffects {
         // Use dynamic import for the rnnoise-wasm package
         try {
           const rnnoise = await import('rnnoise-wasm');
-          RNNoiseModule = rnnoise;
+          RNNoiseModule = rnnoise.default || rnnoise;
         } catch (importError) {
           console.warn('[VoiceEffects] rnnoise-wasm not available, using fallback:', importError.message);
           return false;
         }
       }
 
-      // Create RNNoise context
+      // Create RNNoise context - check if constructor exists
+      if (!RNNoiseModule.RNNoise) {
+        console.warn('[VoiceEffects] RNNoise constructor not found in module');
+        return false;
+      }
+      
       this.rnnoiseContext = new RNNoiseModule.RNNoise();
       console.log('[VoiceEffects] Real RNNoise initialized successfully');
       return true;
@@ -63,6 +74,7 @@ class VoiceEffects {
       console.error('[VoiceEffects] Failed to initialize RNNoise:', error);
       return false;
     }
+    */
   }
 
   // Ensure audio context is ready and running
