@@ -2426,8 +2426,10 @@ export default function ChatLayout({
 
       <audio ref={call?.remoteAudioRef} autoPlay playsInline className="hidden-audio" />
 
-      {/* Call UI - Fullscreen modal on both desktop and mobile */}
-      <CallBar call={call} peerScreenSharing={peerScreenSharing} />
+      {/* Call UI - Only show when there's an active call */}
+      {(call?.isInCall || call?.isCalling || call?.isReceiving) && (
+        <CallBar call={call} peerScreenSharing={peerScreenSharing} />
+      )}
 
       <AnimatePresence>
         {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
