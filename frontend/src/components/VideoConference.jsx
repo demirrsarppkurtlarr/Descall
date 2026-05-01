@@ -98,18 +98,7 @@ export default function VideoConference({
   const videoElementRefs = useRef(new Map());
   const screenVideoElementRefs = useRef(new Map());
   const streamAssignments = useRef(new Map());
-  const screenStreamAssignments = useRef(new Map());
-
-  // Auto-hide controls timer
-  useEffect(() => {
-    if (!showControls) return;
-    
-    const timer = setTimeout(() => {
-      setShowControls(false);
-    }, 3000);
-    
-    return () => clearTimeout(timer);
-  }, [showControls]);
+  const screenStreamAssignments = useRef(new Map());  // Controls always visible - no auto-hide
 
   // Stable screen stream handling - prevents flickering
   // Use Map for multiple participant screen shares
@@ -428,8 +417,10 @@ export default function VideoConference({
       />
     );
   }
+// Desktop interface
+  // Early return if not open - after all hooks
+  if (!isOpen) return null;
 
-  // Desktop interface
   return (
     <motion.div
       className={`video-conference ${minimized ? 'minimized' : ''}`}
@@ -733,12 +724,26 @@ export default function VideoConference({
       </div>
 
       {/* Controls */}
-      <motion.div 
-        className={`vc-controls ${showControls ? 'visible' : ''}`}
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: showControls ? 0 : 20, opacity: showControls ? 1 : 0 }}
+      <motion.div
+        className='vc-controls visible'
+        initial={{ y: 0, opacity: 1 }}
+        animate={{ y: 0, opacity: 1 }}
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '12px 24px',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          borderRadius: '12px',
+          zIndex: 1001,
+        }}
       >
-        <div className="vc-controls-left">
+        <div className='vc-controls-left' style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
           <RippleButton
             className={`vc-btn ${isMuted ? 'danger' : ''}`}
             onClick={toggleMute}
@@ -782,7 +787,7 @@ export default function VideoConference({
           )}
         </div>
 
-        <div className="vc-controls-center">
+        <div className='vc-controls-center' style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '0 16px' }}>
           {duration > 0 && (
             <span className="vc-duration">
               {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
@@ -790,7 +795,7 @@ export default function VideoConference({
           )}
         </div>
 
-        <div className="vc-controls-right">
+        <div className='vc-controls-right' style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <RippleButton
             className="vc-btn danger"
             onClick={leaveCall}
