@@ -505,6 +505,49 @@ router.get("/audit", (req, res) => {
   res.json({ entries: state.auditLog.slice(0, limit) });
 });
 
+// POST /errors - Receive frontend error logs
+router.post("/errors", (req, res) => {
+  try {
+    const errorData = req.body;
+    
+    if (!errorData || typeof errorData !== 'object') {
+      return res.status(400).json({ error: "Invalid error data" });
+    }
+    
+    // Create error log entry
+    const logEntry = {
+      id: `frontend-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: errorData.timestamp || new Date().toISOString(),
+      message: errorData.message || errorData.name || "Unknown error",
+      stack: errorData.stack || "",
+      componentStack: errorData.componentStack || "",
+      source: errorData.source || "frontend",
+      severity: errorData.severity || "error",
+      userId: errorData.userId || req.user?.id || null,
+      username: errorData.username || req.user?.username || null,
+      url: errorData.url || req.headers.referer || null,
+      userAgent: errorData.userAgent || req.headers["user-agent"],
+      platform: errorData.platform || null,
+      category: errorData.category || "UNKNOWN_ERROR",
+    };
+    
+    // Add to server error log
+    if (!state.serverErrorLog) state.serverErrorLog = [];
+    state.serverErrorLog.unshift(logEntry);
+    
+    // Keep only last 1000 errors
+    if (state.serverErrorLog.length > 1000) {
+      state.serverErrorLog = state.serverErrorLog.slice(0, 1000);
+    }
+    
+    console.log("[Admin] Frontend error logged:", logEntry.message);
+    res.json({ ok: true, id: logEntry.id });
+  } catch (e) {
+    console.error("[Admin] Failed to log frontend error:", e);
+    res.status(500).json({ error: "Failed to log error" });
+  }
+});
+
 router.get("/errors", (req, res) => {
   try {
     const limit = Math.min(500, parseInt(req.query.limit || "200", 10) || 200);
@@ -512,7 +555,7 @@ router.get("/errors", (req, res) => {
     const source = req.query.source;
     const search = String(req.query.search || "").trim().toLowerCase();
     
-    let errors = [...state.serverErrorLog];
+    let errors = [...(state.serverErrorLog || [])];
     
     // Filter by userId if provided
     if (userId) {
