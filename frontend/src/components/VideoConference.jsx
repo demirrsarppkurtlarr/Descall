@@ -6,11 +6,11 @@ import VoiceEffectsPanel from "./VoiceEffectsPanel";
 import VideoConferenceMobile from "./VideoConferenceMobile";
 
 /**
- * Discord/Google Meet tarz¦- video conference UI
- * - Grid view: T+-m kat¦-l¦-mc¦-lar e+þit boyutta
- * - Focus view: Aktif konu+þan/ekran payla+þan b+-y+-k, di¦þerleri altta thumbnail
- * - T¦-klama ile b+-y+-tme/k+-+ð+-ltme
- * - Ekran payla+þ¦-m¦- otomatik focus
+ * Discord/Google Meet tarzÄ± video conference UI
+ * - Grid view: TÃ¼m katÄ±lÄ±mcÄ±lar eÅŸit boyutta
+ * - Focus view: Aktif konuÅŸan/ekran paylaÅŸan bÃ¼yÃ¼k, diÄŸerleri altta thumbnail
+ * - TÄ±klama ile bÃ¼yÃ¼tme/kÃ¼Ã§Ã¼ltme
+ * - Ekran paylaÅŸÄ±mÄ± otomatik focus
  */
 export default function VideoConference({
   isOpen,
@@ -87,10 +87,6 @@ export default function VideoConference({
   const [showScreenQuality, setShowScreenQuality] = useState(false);
   const [localAudioInputs, setLocalAudioInputs] = useState([]);
   const [localAudioOutputs, setLocalAudioOutputs] = useState([]);
-
-  // Early return if not open - don't render anything when call is not active
-  if (!isOpen) return null;
-
   const [focusTarget, setFocusTarget] = useState(null);
   const screenQualityRef = useRef(null);
 
@@ -98,7 +94,9 @@ export default function VideoConference({
   const videoElementRefs = useRef(new Map());
   const screenVideoElementRefs = useRef(new Map());
   const streamAssignments = useRef(new Map());
-  const screenStreamAssignments = useRef(new Map());  // Controls always visible - no auto-hide
+  const screenStreamAssignments = useRef(new Map());
+
+  // Controls always visible - no auto-hide
 
   // Stable screen stream handling - prevents flickering
   // Use Map for multiple participant screen shares
@@ -417,22 +415,37 @@ export default function VideoConference({
       />
     );
   }
-// Desktop interface
+
+  // Desktop interface
   // Early return if not open - after all hooks
   if (!isOpen) return null;
 
   return (
     <motion.div
       className={`video-conference ${minimized ? 'minimized' : ''}`}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 1000,
+        backgroundColor: '#0f0f0f',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
       {/* Header */}
       <motion.div 
-        className={`vc-header ${showControls ? 'visible' : ''}`}
+        className={`vc-header`}
         initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
         animate={{ y: showControls ? 0 : -20, opacity: showControls ? 1 : 0 }}
       >
         <div className="vc-title">
@@ -724,7 +737,7 @@ export default function VideoConference({
       </div>
 
       {/* Controls */}
-      <motion.div
+      <motion.div 
         className='vc-controls visible'
         initial={{ y: 0, opacity: 1 }}
         animate={{ y: 0, opacity: 1 }}
@@ -787,7 +800,7 @@ export default function VideoConference({
           )}
         </div>
 
-        <div className='vc-controls-center' style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '0 16px' }}>
+        <div className="vc-controls-center">
           {duration > 0 && (
             <span className="vc-duration">
               {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
@@ -795,7 +808,7 @@ export default function VideoConference({
           )}
         </div>
 
-        <div className='vc-controls-right' style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+        <div className="vc-controls-right">
           <RippleButton
             className="vc-btn danger"
             onClick={leaveCall}
@@ -871,12 +884,12 @@ export default function VideoConference({
               </label>
               <div className="quality-options-grid">
                 {[
-                  { value: '480p', label: '480p', desc: '854+ù480', icon: '­þô-' },
-                  { value: '720p', label: '720p HD', desc: '1280+ù720', icon: '­þÄÑ' },
-                  { value: '1080p', label: '1080p FHD', desc: '1920+ù1080', icon: '­þô¦' },
-                  { value: '1440p', label: '1440p QHD', desc: '2560+ù1440', icon: '­þûÑ´©Å' },
-                  { value: '2160p', label: '2160p 4K', desc: '3840+ù2160', icon: '­þÄ¼' },
-                  { value: 'custom', label: 'Custom', desc: 'Custom size', icon: 'ÔÜÖ´©Å' }
+                  { value: '480p', label: '480p', desc: '854Ã—480', icon: 'ðŸ“±' },
+                  { value: '720p', label: '720p HD', desc: '1280Ã—720', icon: 'ðŸŽ¥' },
+                  { value: '1080p', label: '1080p FHD', desc: '1920Ã—1080', icon: 'ðŸ“º' },
+                  { value: '1440p', label: '1440p QHD', desc: '2560Ã—1440', icon: 'ðŸ–¥ï¸' },
+                  { value: '2160p', label: '2160p 4K', desc: '3840Ã—2160', icon: 'ðŸŽ¬' },
+                  { value: 'custom', label: 'Custom', desc: 'Custom size', icon: 'âš™ï¸' }
                 ].map((res) => (
                   <button
                     key={res.value}
@@ -909,12 +922,12 @@ export default function VideoConference({
               </label>
               <div className="quality-options-grid">
                 {[
-                  { value: 15, label: '15 FPS', desc: 'Low bandwidth', icon: '­þÉî' },
-                  { value: 24, label: '24 FPS', desc: 'Cinema standard', icon: '­þÄ¼' },
-                  { value: 30, label: '30 FPS', desc: 'Standard smooth', icon: '­þô¦' },
-                  { value: 60, label: '60 FPS', desc: 'High quality', icon: '­þÄ«' },
-                  { value: 120, label: '120 FPS', desc: 'Ultra smooth', icon: 'ÔÜí' },
-                  { value: 144, label: '144 FPS', desc: 'Gaming grade', icon: '­þÜÇ' }
+                  { value: 15, label: '15 FPS', desc: 'Low bandwidth', icon: 'ðŸŒ' },
+                  { value: 24, label: '24 FPS', desc: 'Cinema standard', icon: 'ðŸŽ¬' },
+                  { value: 30, label: '30 FPS', desc: 'Standard smooth', icon: 'ðŸ“¹' },
+                  { value: 60, label: '60 FPS', desc: 'High quality', icon: 'ðŸŽ®' },
+                  { value: 120, label: '120 FPS', desc: 'Ultra smooth', icon: 'âš¡' },
+                  { value: 144, label: '144 FPS', desc: 'Gaming grade', icon: 'ðŸš€' }
                 ].map((fps) => (
                   <button
                     key={fps.value}
