@@ -2677,44 +2677,18 @@ export default function ChatLayout({
         </div>
       )}
 
-      {/* Group Video Conference Overlay */}
-      <VideoConference
-        key={`${groupCall?.activeGroupId || "none"}-${groups.call.minimized ? "mini" : "full"}`}
-        isOpen={groupCall?.isInCall || false}
-        onClose={groupCall?.leaveCall || (() => {})}
-        minimized={groups.call.minimized}
-        onMinimize={() => setGroups(g => ({ ...g, call: { ...g.call, minimized: !g.call.minimized } }))}
-        call={groupCall}
-        participants={groupCall?.participants || []}
-        localStream={groupCall?.localStream}
-        screenStream={groupCall?.screenStream}
-        isMuted={groupCall?.isMuted || false}
-        isCameraOn={groupCall?.isCameraOn || false}
-        isScreenSharing={groupCall?.isScreenSharing || false}
-        toggleMute={groupCall?.toggleMute || (() => {})}
-        toggleCamera={groupCall?.toggleCamera || (() => {})}
-        startScreenShare={groupCall?.startScreenShare || (() => {})}
-        stopScreenShare={groupCall?.stopScreenShare || (() => {})}
-        leaveCall={groupCall?.leaveCall || (() => {})}
-        callType={groupCall?.callType}
-        dominantSpeaker={groupCall?.dominantSpeaker}
-        focusedParticipant={groupCall?.focusedParticipant}
-        setFocusedParticipant={groupCall?.setFocusedParticipant}
-        remoteStreams={groupCall?.remoteStreams}
-        duration={groupCall?.duration || 0}
-        selectedAudioInput={groupCall?.selectedAudioInput || ""}
-        selectedAudioOutput={groupCall?.selectedAudioOutput || ""}
-        audioInputDevices={groupCall?.audioInputDevices || []}
-        audioOutputDevices={groupCall?.audioOutputDevices || []}
-        onAudioInputChange={(deviceId) => {
-          console.log("[ChatLayout] Audio input changed:", deviceId);
-          groupCall?.setAudioInput?.(deviceId);
-        }}
-        onAudioOutputChange={(deviceId) => {
-          console.log("[ChatLayout] Audio output changed:", deviceId);
-          groupCall?.setAudioOutput?.(deviceId);
-        }}
-      />
+      {/* Group Video Conference Overlay - only render when in call */}
+      {(call?.isInCall || call?.isCalling || call?.isReceiving || groupCall?.isInCall) && (
+        <VideoConference
+          key={`${groupCall?.activeGroupId || "none"}-${groups.call.minimized ? "mini" : "full"}`}
+          isOpen={call?.isInCall || call?.isCalling || call?.isReceiving || groupCall?.isInCall || false}
+          onClose={groupCall?.leaveCall || (() => {})}
+          minimized={groups.call.minimized}
+          onMinimize={() => setGroups(g => ({ ...g, call: { ...g.call, minimized: !g.call.minimized } }))}
+          call={groupCall}
+          participants={groupCall?.participants || []}
+        />
+      )}
 
       {/* Profile Customization Modal */}
       <Modal open={customizationOpen} onClose={() => setCustomizationOpen(false)} wide>
