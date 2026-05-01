@@ -87,10 +87,6 @@ export default function VideoConference({
   const [showScreenQuality, setShowScreenQuality] = useState(false);
   const [localAudioInputs, setLocalAudioInputs] = useState([]);
   const [localAudioOutputs, setLocalAudioOutputs] = useState([]);
-
-  // Early return if not open - don't render anything when call is not active
-  if (!isOpen) return null;
-
   const [focusTarget, setFocusTarget] = useState(null);
   const screenQualityRef = useRef(null);
 
@@ -421,6 +417,9 @@ export default function VideoConference({
   }
 
   // Desktop interface - Fullscreen modal overlay
+  // Early return if not open - don't render anything when call is not active
+  if (!isOpen) return null;
+
   return (
     <motion.div
       className={`video-conference ${minimized ? 'minimized' : ''}`}

@@ -103,8 +103,8 @@ export default class ErrorBoundary extends React.Component {
         connection: this.getConnectionInfo(),
       };
 
-      // Send to backend
-      const response = await fetch(`${window.location.origin}/api/client-errors`, {
+      const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
+      const response = await fetch(`${API_URL}/api/errors`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(errorData),
