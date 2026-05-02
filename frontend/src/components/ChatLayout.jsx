@@ -476,7 +476,7 @@ export default function ChatLayout({
   } = voiceRecorder;
 
   // Group call hook for video conference
-  const groupCall = useGroupCall(me?.id, (data) => {
+  const localGroupCall = useGroupCall(me?.id, (data) => {
     // Send signaling messages through socket
     if (socket && groups.active) {
       socket.emit("group-call-signal", {
@@ -485,6 +485,9 @@ export default function ChatLayout({
       });
     }
   });
+  
+  // Use local hook if available, otherwise fall back to prop
+  const activeGroupCall = localGroupCall?.isInCall ? localGroupCall : groupCall;
 
   // ========== MOBILE & CUSTOMIZATION ==========
   const { isMobile, isPortrait, touchSupported, vibrate } = useMobile();
@@ -2693,31 +2696,31 @@ export default function ChatLayout({
       )}
 
       {/* Group Video Conference Overlay - only render when in call */}
-      {(call?.isInCall || call?.isCalling || call?.isReceiving || groupCall?.isInCall) && (
+      {(call?.isInCall || call?.isCalling || call?.isReceiving || activeGroupCall?.isInCall) && (
         <VideoConference
-          key={`${groupCall?.activeGroupId || "none"}-${groups.call.minimized ? "mini" : "full"}`}
-          isOpen={call?.isInCall || call?.isCalling || call?.isReceiving || groupCall?.isInCall || false}
-          onClose={groupCall?.leaveCall || (() => {})}
+          key={`${activeGroupCall?.activeGroupId || "none"}-${groups.call.minimized ? "mini" : "full"}`}
+          isOpen={call?.isInCall || call?.isCalling || call?.isReceiving || activeGroupCall?.isInCall || false}
+          onClose={activeGroupCall?.leaveCall || (() => {})}
           minimized={groups.call.minimized}
           onMinimize={() => setGroups(g => ({ ...g, call: { ...g.call, minimized: !g.call.minimized } }))}
-          call={groupCall}
-          participants={groupCall?.participants || []}
-          toggleMute={groupCall?.toggleMute}
-          toggleCamera={groupCall?.toggleCamera}
-          startScreenShare={groupCall?.startScreenShare}
-          stopScreenShare={groupCall?.stopScreenShare}
-          onAudioInputChange={groupCall?.setAudioInput}
-          onAudioOutputChange={groupCall?.setAudioOutput}
-          audioInputDevices={groupCall?.audioInputDevices}
-          audioOutputDevices={groupCall?.audioOutputDevices}
-          selectedAudioInput={groupCall?.selectedAudioInput}
-          selectedAudioOutput={groupCall?.selectedAudioOutput}
-          isMuted={groupCall?.isMuted}
-          isCameraOn={groupCall?.isCameraOn}
-          isScreenSharing={groupCall?.isScreenSharing}
-          localStream={groupCall?.localStream}
-          remoteStreams={groupCall?.remoteStreams}
-          screenStream={groupCall?.screenStream}
+          call={activeGroupCall}
+          participants={activeGroupCall?.participants || []}
+          toggleMute={activeGroupCall?.toggleMute}
+          toggleCamera={activeGroupCall?.toggleCamera}
+          startScreenShare={activeGroupCall?.startScreenShare}
+          stopScreenShare={activeGroupCall?.stopScreenShare}
+          onAudioInputChange={activeGroupCall?.setAudioInput}
+          onAudioOutputChange={activeGroupCall?.setAudioOutput}
+          audioInputDevices={activeGroupCall?.audioInputDevices}
+          audioOutputDevices={activeGroupCall?.audioOutputDevices}
+          selectedAudioInput={activeGroupCall?.selectedAudioInput}
+          selectedAudioOutput={activeGroupCall?.selectedAudioOutput}
+          isMuted={activeGroupCall?.isMuted}
+          isCameraOn={activeGroupCall?.isCameraOn}
+          isScreenSharing={activeGroupCall?.isScreenSharing}
+          localStream={activeGroupCall?.localStream}
+          remoteStreams={activeGroupCall?.remoteStreams}
+          screenStream={activeGroupCall?.screenStream}
         />
       )}
 
