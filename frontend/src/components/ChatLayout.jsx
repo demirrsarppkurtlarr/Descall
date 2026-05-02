@@ -549,15 +549,7 @@ export default function ChatLayout({
   } = voiceRecorder;
 
   // Group call hook for video conference
-  const localGroupCall = useGroupCall(me?.id, (data) => {
-    // Send signaling messages through socket
-    if (socket && groups.active) {
-      socket.emit("group-call-signal", {
-        groupId: groups.active.id,
-        ...data,
-      });
-    }
-  });
+  const localGroupCall = useGroupCall(socket);
   
   // Use local hook if available, otherwise fall back to prop
   const activeGroupCall = localGroupCall?.isInCall ? localGroupCall : groupCall;
