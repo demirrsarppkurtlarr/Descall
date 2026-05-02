@@ -2293,7 +2293,7 @@ export default function ChatLayout({
                   <Send size={18} />
                 </button>
               </div>
-            ) : audioBlob ? (
+            ) : audioBlobRef.current ? (
               <div className="voice-preview-ui">
                 <div className="voice-inline-preview">
                   <Play size={16} />
@@ -2371,7 +2371,7 @@ export default function ChatLayout({
                   <Send size={18} />
                 </button>
               </div>
-            ) : audioBlob ? (
+            ) : audioBlobRef.current ? (
               <div className="voice-preview-ui">
                 <div className="voice-inline-preview">
                   <Play size={16} />
