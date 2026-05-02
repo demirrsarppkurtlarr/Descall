@@ -460,10 +460,74 @@ export default function ChatLayout({
     },
     call: { minimized: false },
   });
+  // Voice recorder state refs to avoid circular dependency
+  const audioBlobRef = useRef(null);
+  const recordingDurationRef = useRef(0);
+
+  // Send voice message - defined early to avoid circular dependency
+  const sendVoiceMessage = useCallback(async () => {
+    const blob = audioBlobRef.current;
+    const duration = recordingDurationRef.current;
+    if (!blob || !activeDmUser) return;
+    
+    try {
+      setUploading(true);
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      const result = await uploadFile(file);
+      
+      onSendDmMedia(activeDmUser.id, {
+        url: result.url,
+        mediaType: 'audio',
+        mimeType: 'audio/webm',
+        duration: duration,
+      });
+      
+      audioBlobRef.current = null;
+      recordingDurationRef.current = 0;
+    } catch (error) {
+      console.error('Failed to send voice message:', error);
+      toast('Ses mesajı gönderilemedi', 'error');
+    } finally {
+      setUploading(false);
+    }
+  }, [activeDmUser, onSendDmMedia, toast]);
+
+  // Send group voice message - defined early to avoid circular dependency
+  const sendGroupVoiceMessage = useCallback(async () => {
+    const blob = audioBlobRef.current;
+    const duration = recordingDurationRef.current;
+    if (!blob || !groups.active) return;
+    
+    try {
+      setUploading(true);
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+      const result = await uploadFile(file);
+      
+      socket?.emit("group:message", {
+        groupId: groups.active.id,
+        content: "",
+        mediaUrl: result.url,
+        mediaType: 'audio',
+        duration: duration,
+      });
+      
+      audioBlobRef.current = null;
+      recordingDurationRef.current = 0;
+    } catch (error) {
+      console.error('Failed to send group voice message:', error);
+      toast('Ses mesajı gönderilemedi', 'error');
+    } finally {
+      setUploading(false);
+    }
+  }, [groups.active, socket, toast]);
+
   // ========== VOICE RECORDER ==========
   // Handle voice recording completion
-  const handleVoiceRecordingComplete = useCallback((blob) => {
-    console.log("Voice recording completed:", blob);
+  const handleVoiceRecordingComplete = useCallback((blob, duration) => {
+    console.log("Voice recording completed:", blob, duration);
+    audioBlobRef.current = blob;
+    recordingDurationRef.current = duration || 0;
+    
     // Auto-send voice message if DM is active
     if (blob && activeDmUser) {
       sendVoiceMessage();
@@ -478,11 +542,9 @@ export default function ChatLayout({
   const {
     isRecording,
     recordingDuration,
-    audioBlob,
     startRecording,
     stopRecording,
     cancelRecording,
-    resetRecording,
     formattedDuration,
   } = voiceRecorder;
 
@@ -532,56 +594,6 @@ export default function ChatLayout({
   const cancelEditing = useCallback(() => {
     setEditingMessage(null);
   }, []);
-
-  // Send voice message
-  const sendVoiceMessage = useCallback(async () => {
-    if (!audioBlob || !activeDmUser) return;
-    
-    try {
-      setUploading(true);
-      const file = new File([audioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
-      const result = await uploadFile(file);
-      
-      onSendDmMedia(activeDmUser.id, {
-        url: result.url,
-        mediaType: 'audio',
-        mimeType: 'audio/webm',
-        duration: recordingDuration,
-      });
-      
-      resetRecording();
-    } catch (error) {
-      console.error('Failed to send voice message:', error);
-      toast('Ses mesajı gönderilemedi', 'error');
-    } finally {
-      setUploading(false);
-    }
-  }, [audioBlob, activeDmUser, recordingDuration, onSendDmMedia, resetRecording, toast]);
-
-  // Send group voice message
-  const sendGroupVoiceMessage = useCallback(async () => {
-    if (!audioBlob || !groups.active) return;
-    
-    try {
-      setUploading(true);
-      const file = new File([audioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
-      const result = await uploadFile(file);
-      
-      socket?.emit("group:message", {
-        groupId: groups.active.id,
-        content: "",
-        mediaUrl: result.url,
-        mediaType: 'audio',
-      });
-      
-      resetRecording();
-    } catch (error) {
-      console.error('Failed to send group voice message:', error);
-      toast('Ses mesajı gönderilemedi', 'error');
-    } finally {
-      setUploading(false);
-    }
-  }, [audioBlob, groups.active, recordingDuration, socket, resetRecording, toast]);
 
   const saveEditedMessage = useCallback((newText) => {
     if (!editingMessage || !newText.trim()) return;
