@@ -461,6 +461,17 @@ export default function ChatLayout({
     call: { minimized: false },
   });
   // ========== VOICE RECORDER ==========
+  // Handle voice recording completion
+  const handleVoiceRecordingComplete = useCallback((blob) => {
+    console.log("Voice recording completed:", blob);
+    // Auto-send voice message if DM is active
+    if (blob && activeDmUser) {
+      sendVoiceMessage();
+    } else if (blob && groups.active) {
+      sendGroupVoiceMessage();
+    }
+  }, [activeDmUser, groups.active, sendVoiceMessage, sendGroupVoiceMessage]);
+
   const voiceRecorder = useVoiceRecorder({
     onRecordingComplete: handleVoiceRecordingComplete,
   });
