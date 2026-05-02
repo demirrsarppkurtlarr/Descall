@@ -4,6 +4,7 @@ import { useToast } from "../context/ToastContext";
 import { useMobile } from "../hooks/useMobile";
 import { useProfileCustomization } from "../hooks/useProfileCustomization";
 import { useVoiceRecorder } from "../hooks/useVoiceRecorder";
+import { useGroupCall } from "../hooks/useGroupCall";
 import VoiceMessagePlayer from "./chat/VoiceMessagePlayer";
 import TypingIndicator from "./chat/TypingIndicator";
 import MessageReactions from "./chat/MessageReactions";
@@ -460,6 +461,9 @@ export default function ChatLayout({
     call: { minimized: false },
   });
   // ========== VOICE RECORDER ==========
+  const voiceRecorder = useVoiceRecorder({
+    onRecordingComplete: handleVoiceRecordingComplete,
+  });
   const {
     isRecording,
     recordingDuration,
@@ -469,7 +473,18 @@ export default function ChatLayout({
     cancelRecording,
     resetRecording,
     formattedDuration,
-  } = useVoiceRecorder();
+  } = voiceRecorder;
+
+  // Group call hook for video conference
+  const groupCall = useGroupCall(me?.id, (data) => {
+    // Send signaling messages through socket
+    if (socket && groups.active) {
+      socket.emit("group-call-signal", {
+        groupId: groups.active.id,
+        ...data,
+      });
+    }
+  });
 
   // ========== MOBILE & CUSTOMIZATION ==========
   const { isMobile, isPortrait, touchSupported, vibrate } = useMobile();
@@ -2687,6 +2702,22 @@ export default function ChatLayout({
           onMinimize={() => setGroups(g => ({ ...g, call: { ...g.call, minimized: !g.call.minimized } }))}
           call={groupCall}
           participants={groupCall?.participants || []}
+          toggleMute={groupCall?.toggleMute}
+          toggleCamera={groupCall?.toggleCamera}
+          startScreenShare={groupCall?.startScreenShare}
+          stopScreenShare={groupCall?.stopScreenShare}
+          onAudioInputChange={groupCall?.setAudioInput}
+          onAudioOutputChange={groupCall?.setAudioOutput}
+          audioInputDevices={groupCall?.audioInputDevices}
+          audioOutputDevices={groupCall?.audioOutputDevices}
+          selectedAudioInput={groupCall?.selectedAudioInput}
+          selectedAudioOutput={groupCall?.selectedAudioOutput}
+          isMuted={groupCall?.isMuted}
+          isCameraOn={groupCall?.isCameraOn}
+          isScreenSharing={groupCall?.isScreenSharing}
+          localStream={groupCall?.localStream}
+          remoteStreams={groupCall?.remoteStreams}
+          screenStream={groupCall?.screenStream}
         />
       )}
 

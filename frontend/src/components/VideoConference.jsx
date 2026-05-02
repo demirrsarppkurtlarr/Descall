@@ -736,6 +736,93 @@ export default function VideoConference({
         )}
       </div>
 
+      {/* Audio Settings Panel */}
+      {showAudioSettings && (
+        <div className="audio-settings-panel" style={{
+          position: 'absolute',
+          bottom: '100px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          padding: '20px',
+          borderRadius: '12px',
+          zIndex: 1002,
+          minWidth: '300px',
+        }}>
+          <h4 style={{ color: '#fff', margin: '0 0 15px 0', fontSize: '14px' }}>Ses Cihazları</h4>
+          
+          {/* Audio Input Selection */}
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ color: '#aaa', fontSize: '12px', display: 'block', marginBottom: '8px' }}>
+              Mikrofon (Giriş)
+            </label>
+            <select
+              value={selectedAudioInput || ''}
+              onChange={(e) => onAudioInputChange?.(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                backgroundColor: '#333',
+                color: '#fff',
+                border: '1px solid #555',
+                borderRadius: '6px',
+                fontSize: '13px',
+              }}
+            >
+              <option value="">Varsayılan</option>
+              {(audioInputDevices || []).map((device) => (
+                <option key={device.deviceId} value={device.deviceId}>
+                  {device.label || `Mikrofon ${device.deviceId.slice(0, 8)}...`}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Audio Output Selection */}
+          <div>
+            <label style={{ color: '#aaa', fontSize: '12px', display: 'block', marginBottom: '8px' }}>
+              Hoparlör (Çıkış)
+            </label>
+            <select
+              value={selectedAudioOutput || ''}
+              onChange={(e) => onAudioOutputChange?.(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                backgroundColor: '#333',
+                color: '#fff',
+                border: '1px solid #555',
+                borderRadius: '6px',
+                fontSize: '13px',
+              }}
+            >
+              <option value="">Varsayılan</option>
+              {(audioOutputDevices || []).map((device) => (
+                <option key={device.deviceId} value={device.deviceId}>
+                  {device.label || `Hoparlör ${device.deviceId.slice(0, 8)}...`}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <button
+            onClick={() => setShowAudioSettings(false)}
+            style={{
+              marginTop: '15px',
+              width: '100%',
+              padding: '8px',
+              backgroundColor: '#444',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Kapat
+          </button>
+        </div>
+      )}
+
       {/* Controls */}
       <motion.div 
         className='vc-controls visible'
@@ -763,7 +850,16 @@ export default function VideoConference({
           >
             {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
           </RippleButton>
-          
+
+          {/* Audio Device Settings */}
+          <button
+            className="quality-toggle-btn"
+            onClick={() => setShowAudioSettings(!showAudioSettings)}
+            title="Ses Cihazı Ayarları"
+          >
+            <Settings size={14} />
+          </button>
+
           <RippleButton
             className={`vc-btn ${!isCameraOn ? 'danger' : ''}`}
             onClick={toggleCamera}
